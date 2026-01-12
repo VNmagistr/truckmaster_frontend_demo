@@ -1,0 +1,58 @@
+name: Deploy Frontend to DigitalOcean
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run build
+        env:
+          VITE_API_URL: http://REMOVED/api
+          VITE_APP_TITLE: TruckMaster CRM
+
+      - name: Install sshpass
+        run: sudo apt-get install -y sshpass
+
+      - name: Deploy to Server
+        env:
+          SSHPASS: ${{ secrets.DO_PASSWORD }}
+        run: |
+          sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
+            set -e
+            echo "🧹 Cleaning old files..."
+            rm -rf /var/www/truckmaster-frontend/*
+          EOF
+
+          echo "📦 Uploading new build..."
+          sshpass -e scp -o StrictHostKeyChecking=no -r dist/* ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }}:/var/www/truckmaster-frontend/
+
+          sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
+            set -e
+            echo "🔄 Reloading nginx..."
+            sudo systemctl reload nginx
+            echo "✅ Frontend deployment completed!"
+          EOF
+
+      - name: Verify Deployment
+        run: |
+          sleep 5
+          echo "🔍 Verifying deployment..."
+          curl -f http://${{ secrets.DO_HOST }}/ || echo "⚠️ Warning: Frontend not responding"
