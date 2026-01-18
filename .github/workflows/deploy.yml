@@ -28,40 +28,25 @@ jobs:
           VITE_API_URL: http://157.230.114.19/api
           VITE_APP_TITLE: TruckMaster CRM
 
-      - name: Setup SSH
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.DO_SSH_KEY }}
-          SSH_HOST: ${{ secrets.DO_HOST }}
-        run: |
-          mkdir -p ~/.ssh
-          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts 2>/dev/null
-          
-          # Debug: check key format
-          echo "Key file permissions:"
-          ls -la ~/.ssh/id_ed25519
-          echo "Key starts with:"
-          head -1 ~/.ssh/id_ed25519
+      - name: Deploy via rsync
+        uses: burnett01/rsync-deployments@6.0.0
+        with:
+          switches: -avzr --delete
+          path: dist/
+          remote_path: /var/www/truckmaster-frontend/
+          remote_host: ${{ secrets.DO_HOST }}
+          remote_user: ${{ secrets.DO_USERNAME }}
+          remote_key: ${{ secrets.DO_SSH_KEY }}
 
-      - name: Deploy to Server
-        env:
-          SSH_USER: ${{ secrets.DO_USERNAME }}
-          SSH_HOST: ${{ secrets.DO_HOST }}
-        run: |
-          # Test connection
-          ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_USER}@${SSH_HOST} "echo 'SSH connection OK'"
-          
-          # Clean old files
-          ssh ${SSH_USER}@${SSH_HOST} "rm -rf /var/www/truckmaster-frontend/*"
-          
-          # Upload new build
-          scp -r dist/* ${SSH_USER}@${SSH_HOST}:/var/www/truckmaster-frontend/
-          
-          # Reload nginx
-          ssh ${SSH_USER}@${SSH_HOST} "sudo systemctl reload nginx"
-          
-          echo "✅ Frontend deployment completed!"
+      - name: Reload nginx
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          script: |
+            sudo systemctl reload nginx
+            echo "✅ Deployment completed!"
 
       - name: Verify Deployment
         run: |
