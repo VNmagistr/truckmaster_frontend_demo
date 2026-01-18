@@ -29,32 +29,41 @@ jobs:
           VITE_APP_TITLE: TruckMaster CRM
 
       - name: Setup SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.DO_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DO_HOST }}
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.DO_SSH_KEY }}" > ~/.ssh/id_ed25519
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
-          ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H $SSH_HOST >> ~/.ssh/known_hosts 2>/dev/null
+          
+          # Debug: check key format
+          echo "Key file permissions:"
+          ls -la ~/.ssh/id_ed25519
+          echo "Key starts with:"
+          head -1 ~/.ssh/id_ed25519
 
       - name: Deploy to Server
+        env:
+          SSH_USER: ${{ secrets.DO_USERNAME }}
+          SSH_HOST: ${{ secrets.DO_HOST }}
         run: |
-          ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
-            set -e
-            echo "🧹 Cleaning old files..."
-            rm -rf /var/www/truckmaster-frontend/*
-          EOF
-
-          echo "📦 Uploading new build..."
-          scp -r dist/* ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }}:/var/www/truckmaster-frontend/
-
-          ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
-            set -e
-            echo "🔄 Reloading nginx..."
-            sudo systemctl reload nginx
-            echo "✅ Frontend deployment completed!"
-          EOF
+          # Test connection
+          ssh -o BatchMode=yes -o ConnectTimeout=10 ${SSH_USER}@${SSH_HOST} "echo 'SSH connection OK'"
+          
+          # Clean old files
+          ssh ${SSH_USER}@${SSH_HOST} "rm -rf /var/www/truckmaster-frontend/*"
+          
+          # Upload new build
+          scp -r dist/* ${SSH_USER}@${SSH_HOST}:/var/www/truckmaster-frontend/
+          
+          # Reload nginx
+          ssh ${SSH_USER}@${SSH_HOST} "sudo systemctl reload nginx"
+          
+          echo "✅ Frontend deployment completed!"
 
       - name: Verify Deployment
         run: |
           sleep 5
-          echo "🔍 Verifying deployment..."
           curl -f http://${{ secrets.DO_HOST }}/ || echo "⚠️ Warning: Frontend not responding"
