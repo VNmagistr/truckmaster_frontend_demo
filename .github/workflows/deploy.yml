@@ -14,12 +14,12 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Deploy via SSH
-      uses: appleboy/ssh-action@v1.0.3
+    - name: Deploy to Server
+      uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.DO_HOST }}
         username: ${{ secrets.DO_USERNAME }}
-        password: ${{ secrets.DO_PASSWORD }}
+        key: ${{ secrets.DO_SSH_KEY }}
         script: |
           set -e
           
