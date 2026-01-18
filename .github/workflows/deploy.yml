@@ -10,9 +10,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
     - name: Deploy to Server
       uses: appleboy/ssh-action@v1.0.0
       with:
@@ -20,28 +17,8 @@ jobs:
         username: ${{ secrets.DO_USERNAME }}
         key: ${{ secrets.DO_SSH_KEY }}
         script: |
-          set -e
-          
-          echo "📦 Starting frontend deployment..."
-          
           cd /home/ubuntu/truckmaster_frontend
-          
-          echo "🔄 Pulling latest code..."
           git pull origin main
-          
-          echo "📚 Installing dependencies..."
           npm install
-          
-          echo "🏗️ Building frontend..."
           npm run build
-          
-          echo "🔄 Reloading nginx..."
           sudo systemctl reload nginx
-          
-          echo "✅ Frontend deployment completed successfully!"
-
-    - name: Verify Deployment
-      run: |
-        sleep 5
-        echo "🔍 Verifying deployment..."
-        curl -f https://dk2itrfnh33kx.cloudfront.net/ || echo "⚠️ Warning: Frontend not responding"
