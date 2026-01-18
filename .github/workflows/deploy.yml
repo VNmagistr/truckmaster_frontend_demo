@@ -1,10 +1,9 @@
-name: Deploy Backend to DigitalOcean
+name: Deploy Frontend to DigitalOcean
 
 on:
   push:
     branches:
       - main
-      - dev
 
 jobs:
   deploy:
@@ -23,42 +22,26 @@ jobs:
         script: |
           set -e
           
-          echo "📦 Starting deployment..."
+          echo "📦 Starting frontend deployment..."
           
-          cd /home/ubuntu/truckmaster/my_iveco_crm
-
+          cd /home/ubuntu/truckmaster_frontend
+          
           echo "🔄 Pulling latest code..."
-          git fetch origin
-          git reset --hard origin/main
-
-          echo "🐍 Activating virtual environment..."
-          source venv/bin/activate
-
-          echo "📚 Installing dependencies..."
-          pip install -r requirements.txt
-
-          echo "🗄️  Running migrations..."
-          python manage.py migrate --noinput
-
-          echo "🎨 Collecting static files..."
-          python manage.py collectstatic --noinput
-
-          echo "✅ Running system check..."
-          python manage.py check --deploy
-
-          echo "🔄 Restarting services..."
-          sudo systemctl restart gunicorn
-          sudo systemctl restart telegram_bot
-          sudo systemctl reload nginx
-
-          echo "📊 Checking service status..."
-          sudo systemctl is-active gunicorn
-          sudo systemctl is-active telegram_bot
+          git pull origin main
           
-          echo "✅ Deployment completed successfully!"
+          echo "📚 Installing dependencies..."
+          npm install
+          
+          echo "🏗️ Building frontend..."
+          npm run build
+          
+          echo "🔄 Reloading nginx..."
+          sudo systemctl reload nginx
+          
+          echo "✅ Frontend deployment completed successfully!"
 
     - name: Verify Deployment
       run: |
         sleep 5
         echo "🔍 Verifying deployment..."
-        curl -f http://${{ secrets.DO_HOST }}/admin/ || echo "⚠️ Warning: Admin page not responding"
+        curl -f https://dk2itrfnh33kx.cloudfront.net/ || echo "⚠️ Warning: Frontend not responding"
