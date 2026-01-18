@@ -1,50 +1,81 @@
-name: Deploy Frontend to DigitalOcean
+name: Deploy Backend to DigitalOcean
 
 on:
   push:
     branches:
       - main
+      - dev
 
 jobs:
-  build-and-deploy:
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
+    - name: Setup SSH
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.DO_SSH_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
 
-      - name: Install dependencies
-        run: npm ci
+    - name: Deploy to Server
+      run: |
+        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
+          set -e  # Зупинити при помилці
+          
+          echo "📦 Starting deployment..."
+          
+          cd /home/ubuntu/truckmaster/my_iveco_crm
 
-      - name: Build project
-        run: npm run build
-        env:
-          VITE_API_URL: http://157.230.114.19/api
-          VITE_APP_TITLE: TruckMaster CRM
+          # 1. Оновлюємо код
+          echo "🔄 Pulling latest code..."
+          git fetch origin
+          git reset --hard origin/main
 
-      - name: Copy files via SCP
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          source: "dist/*"
-          target: "/var/www/truckmaster-frontend"
-          strip_components: 1
-          rm: true
+          # 2. Активуємо venv
+          echo "🐍 Activating virtual environment..."
+          source venv/bin/activate
 
-      - name: Reload nginx
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.DO_HOST }}
-          username: ${{ secrets.DO_USERNAME }}
-          key: ${{ secrets.DO_SSH_KEY }}
-          script: |
-            sudo systemctl reload nginx
-            echo "✅ Deployment completed!"
+          # 3. Оновлюємо залежності
+          echo "📚 Installing dependencies..."
+          pip install -r requirements.txt
+
+          # 4. Запускаємо міграції
+          echo "🗄️  Running migrations..."
+          python manage.py migrate --noinput
+
+          # 5. Збираємо статику
+          echo "🎨 Collecting static files..."
+          python manage.py collectstatic --noinput
+
+          # 6. Перевірка системи
+          echo "✅ Running system check..."
+          python manage.py check --deploy
+
+          # 7. Перезапускаємо сервіси
+          echo "🔄 Restarting services..."
+          sudo systemctl restart gunicorn
+          sudo systemctl restart telegram_bot
+          sudo systemctl reload nginx
+
+          # 8. Перевірка статусу
+          echo "📊 Checking service status..."
+          sudo systemctl is-active gunicorn
+          sudo systemctl is-active telegram_bot
+          
+          echo "✅ Deployment completed successfully!"
+        EOF
+
+    - name: Verify Deployment
+      run: |
+        sleep 5
+        echo "🔍 Verifying deployment..."
+        curl -f http://${{ secrets.DO_HOST }}/admin/ || echo "⚠️ Warning: Admin page not responding"
+
+    - name: Cleanup SSH
+      if: always()
+      run: |
+        rm -f ~/.ssh/id_rsa
