@@ -28,23 +28,25 @@ jobs:
           VITE_API_URL: http://REMOVED/api
           VITE_APP_TITLE: TruckMaster CRM
 
-      - name: Install sshpass
-        run: sudo apt-get install -y sshpass
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.DO_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
 
       - name: Deploy to Server
-        env:
-          SSHPASS: ${{ secrets.DO_PASSWORD }}
         run: |
-          sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
+          ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
             set -e
             echo "🧹 Cleaning old files..."
             rm -rf /var/www/truckmaster-frontend/*
           EOF
 
           echo "📦 Uploading new build..."
-          sshpass -e scp -o StrictHostKeyChecking=no -r dist/* ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }}:/var/www/truckmaster-frontend/
+          scp -r dist/* ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }}:/var/www/truckmaster-frontend/
 
-          sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
+          ssh ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
             set -e
             echo "🔄 Reloading nginx..."
             sudo systemctl reload nginx
