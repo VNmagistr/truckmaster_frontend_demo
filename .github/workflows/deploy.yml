@@ -14,63 +14,48 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install sshpass
-      run: sudo apt-get update && sudo apt-get install -y sshpass
-
-    - name: Add server to known_hosts
-      run: |
-        mkdir -p ~/.ssh
-        ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
-
-    - name: Deploy to Server
-      env:
-        SSHPASS: ${{ secrets.DO_PASSWORD }}
-      run: |
-        sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} bash << 'ENDSSH'
+    - name: Deploy via SSH
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.DO_HOST }}
+        username: ${{ secrets.DO_USERNAME }}
+        password: ${{ secrets.DO_PASSWORD }}
+        script: |
           set -e
           
           echo "📦 Starting deployment..."
           
           cd /home/ubuntu/truckmaster/my_iveco_crm
 
-          # 1. Оновлюємо код
           echo "🔄 Pulling latest code..."
           git fetch origin
           git reset --hard origin/main
 
-          # 2. Активуємо venv
           echo "🐍 Activating virtual environment..."
           source venv/bin/activate
 
-          # 3. Оновлюємо залежності
           echo "📚 Installing dependencies..."
           pip install -r requirements.txt
 
-          # 4. Запускаємо міграції
           echo "🗄️  Running migrations..."
           python manage.py migrate --noinput
 
-          # 5. Збираємо статику
           echo "🎨 Collecting static files..."
           python manage.py collectstatic --noinput
 
-          # 6. Перевірка системи
           echo "✅ Running system check..."
           python manage.py check --deploy
 
-          # 7. Перезапускаємо сервіси
           echo "🔄 Restarting services..."
           sudo systemctl restart gunicorn
           sudo systemctl restart telegram_bot
           sudo systemctl reload nginx
 
-          # 8. Перевірка статусу
           echo "📊 Checking service status..."
           sudo systemctl is-active gunicorn
           sudo systemctl is-active telegram_bot
           
           echo "✅ Deployment completed successfully!"
-ENDSSH
 
     - name: Verify Deployment
       run: |
