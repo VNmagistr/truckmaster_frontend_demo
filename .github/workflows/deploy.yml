@@ -28,15 +28,16 @@ jobs:
           VITE_API_URL: http://REMOVED/api
           VITE_APP_TITLE: TruckMaster CRM
 
-      - name: Deploy via rsync
-        uses: burnett01/rsync-deployments@6.0.0
+      - name: Copy files via SCP
+        uses: appleboy/scp-action@v0.1.7
         with:
-          switches: -avzr --delete
-          path: dist/
-          remote_path: /var/www/truckmaster-frontend/
-          remote_host: ${{ secrets.DO_HOST }}
-          remote_user: ${{ secrets.DO_USERNAME }}
-          remote_key: ${{ secrets.DO_SSH_KEY }}
+          host: ${{ secrets.DO_HOST }}
+          username: ${{ secrets.DO_USERNAME }}
+          key: ${{ secrets.DO_SSH_KEY }}
+          source: "dist/*"
+          target: "/var/www/truckmaster-frontend"
+          strip_components: 1
+          rm: true
 
       - name: Reload nginx
         uses: appleboy/ssh-action@v1.0.3
@@ -47,8 +48,3 @@ jobs:
           script: |
             sudo systemctl reload nginx
             echo "✅ Deployment completed!"
-
-      - name: Verify Deployment
-        run: |
-          sleep 5
-          curl -f http://${{ secrets.DO_HOST }}/ || echo "⚠️ Warning: Frontend not responding"
