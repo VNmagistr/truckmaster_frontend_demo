@@ -14,17 +14,20 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Setup SSH
+    - name: Install sshpass
+      run: sudo apt-get update && sudo apt-get install -y sshpass
+
+    - name: Add server to known_hosts
       run: |
         mkdir -p ~/.ssh
-        echo "${{ secrets.DO_SSH_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
         ssh-keyscan -H ${{ secrets.DO_HOST }} >> ~/.ssh/known_hosts
 
     - name: Deploy to Server
+      env:
+        SSHPASS: ${{ secrets.DO_PASSWORD }}
       run: |
-        ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} << 'EOF'
-          set -e  # Зупинити при помилці
+        sshpass -e ssh -o StrictHostKeyChecking=no ${{ secrets.DO_USERNAME }}@${{ secrets.DO_HOST }} bash << 'ENDSSH'
+          set -e
           
           echo "📦 Starting deployment..."
           
@@ -67,15 +70,10 @@ jobs:
           sudo systemctl is-active telegram_bot
           
           echo "✅ Deployment completed successfully!"
-        EOF
+ENDSSH
 
     - name: Verify Deployment
       run: |
         sleep 5
         echo "🔍 Verifying deployment..."
         curl -f http://${{ secrets.DO_HOST }}/admin/ || echo "⚠️ Warning: Admin page not responding"
-
-    - name: Cleanup SSH
-      if: always()
-      run: |
-        rm -f ~/.ssh/id_rsa
