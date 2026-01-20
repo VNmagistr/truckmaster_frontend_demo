@@ -12,7 +12,7 @@ const api = axios.create({
 // Request interceptor - додає токен до кожного запиту
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('accessToken');
+    const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -33,7 +33,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      const refreshToken = localStorage.getItem('refreshToken');
+      const refreshToken = localStorage.getItem('refresh_token');
       
       if (refreshToken) {
         try {
@@ -42,15 +42,15 @@ api.interceptors.response.use(
           });
 
           const { access } = response.data;
-          localStorage.setItem('accessToken', access);
+          localStorage.setItem('access_token', access);
 
           // Повторюємо оригінальний запит з новим токеном
           originalRequest.headers.Authorization = `Bearer ${access}`;
           return api(originalRequest);
         } catch (refreshError) {
           // Refresh token недійсний - очищаємо та перенаправляємо
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
           localStorage.removeItem('auth-storage');
           window.location.href = '/login';
           return Promise.reject(refreshError);
