@@ -1,4 +1,5 @@
 import axios from 'axios';
+import useAuthStore from '../store/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -12,9 +13,9 @@ const api = axios.create({
 // Request interceptor - додає токен до кожного запиту
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const { accessToken } = useAuthStore.getState();
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
   },
@@ -33,7 +34,7 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
-      const refreshToken = localStorage.getItem('refresh_token');
+      const { refreshToken, updateAccessToken, logout } = useAuthStore.getState();
       
       if (refreshToken) {
         try {
@@ -42,21 +43,20 @@ api.interceptors.response.use(
           });
 
           const { access } = response.data;
-          localStorage.setItem('access_token', access);
+          updateAccessToken(access);
 
           // Повторюємо оригінальний запит з новим токеном
           originalRequest.headers.Authorization = `Bearer ${access}`;
           return api(originalRequest);
         } catch (refreshError) {
           // Refresh token недійсний - очищаємо та перенаправляємо
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('auth-storage');
+          logout();
           window.location.href = '/login';
           return Promise.reject(refreshError);
         }
       } else {
         // Немає refresh token - перенаправляємо на login
+        logout();
         window.location.href = '/login';
       }
     }

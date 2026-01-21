@@ -10,8 +10,6 @@ const useAuthStore = create(
       refreshToken: null,
 
       setAuth: (userData, accessToken, refreshToken) => {
-        localStorage.setItem('access_token', accessToken);
-        localStorage.setItem('refresh_token', refreshToken);
         set({
           user: userData,
           isAuthenticated: true,
@@ -21,13 +19,10 @@ const useAuthStore = create(
       },
 
       updateAccessToken: (accessToken) => {
-        localStorage.setItem('access_token', accessToken);
         set({ accessToken });
       },
 
       logout: () => {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
         set({
           user: null,
           isAuthenticated: false,
@@ -37,25 +32,13 @@ const useAuthStore = create(
       },
 
       checkAuth: () => {
-        const accessToken = localStorage.getItem('access_token');
-        const refreshToken = localStorage.getItem('refresh_token');
-        if (accessToken && refreshToken) {
-          set({
-            isAuthenticated: true,
-            accessToken,
-            refreshToken,
-          });
-          return true;
-        }
-        return false;
+        const state = get();
+        return state.isAuthenticated && state.accessToken && state.refreshToken;
       },
     }),
     {
       name: 'auth-storage',
-      partialize: (state) => ({
-        user: state.user,
-        isAuthenticated: state.isAuthenticated,
-      }),
+      // ВИДАЛЕНО partialize - зберігаємо ВСЕ
     }
   )
 );
