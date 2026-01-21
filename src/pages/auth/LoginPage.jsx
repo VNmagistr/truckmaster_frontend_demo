@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Card, message, Checkbox } from 'antd';
+import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../api';
 import useAuthStore from '../../store/authStore';
 
@@ -12,38 +12,20 @@ function LoginPage() {
 
   const onFinish = async (values) => {
     setLoading(true);
-    
-    // ОЧИЩАЄМО СТАРІ ТОКЕНИ
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    console.log('🧹 Cleared old tokens');
-    
     try {
       const response = await authAPI.login(values.username, values.password);
-      console.log('🔑 Login response:', { 
-        hasAccess: !!response.access, 
-        hasRefresh: !!response.refresh 
-      });
       
       const userData = {
         username: values.username,
       };
       
       setAuth(userData, response.access, response.refresh);
-      message.success('Успішний вхід!');
       
-      // Даємо час Zustand зберегти state
-      setTimeout(() => {
-        console.log('🚀 Navigating to dashboard');
-        navigate('/dashboard');
-      }, 100);
+      message.success('Успішний вхід!');
+      navigate('/dashboard');
     } catch (error) {
-      console.error('❌ Login error:', error);
-      if (error.response?.status === 401) {
-        message.error('Невірний логін або пароль');
-      } else {
-        message.error('Помилка входу. Спробуйте пізніше.');
-      }
+      console.error('Login error:', error);
+      message.error('Невірний логін або пароль');
     } finally {
       setLoading(false);
     }
@@ -62,7 +44,6 @@ function LoginPage() {
       </div>
       <Form
         name="login"
-        initialValues={{ remember: true }}
         onFinish={onFinish}
         layout="vertical"
         size="large"
@@ -87,14 +68,6 @@ function LoginPage() {
             placeholder="Пароль"
             autoComplete="current-password"
           />
-        </Form.Item>
-
-        <Form.Item>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Form.Item name="remember" valuePropName="checked" noStyle>
-              <Checkbox>Запам'ятати мене</Checkbox>
-            </Form.Item>
-          </div>
         </Form.Item>
 
         <Form.Item style={{ marginBottom: 0 }}>

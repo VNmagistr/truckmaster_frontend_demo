@@ -1,22 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 
 function ProtectedRoute({ children }) {
-  const { checkAuth } = useAuthStore();
+  const { isAuthenticated, initialize } = useAuthStore();
   const location = useLocation();
 
-  // Перевіряємо авторизацію
-  const isAuthenticated = checkAuth();
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
-  console.log('🛡️ ProtectedRoute check:', { isAuthenticated, path: location.pathname });
+  const accessToken = localStorage.getItem('access_token');
+  const refreshToken = localStorage.getItem('refresh_token');
 
-  if (!isAuthenticated) {
-    console.log('❌ Not authenticated, redirecting to /login');
+  if (!accessToken || !refreshToken) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
-  console.log('✅ Authenticated, rendering children');
   return children;
 }
 
