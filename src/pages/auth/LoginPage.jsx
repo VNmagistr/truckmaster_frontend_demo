@@ -12,8 +12,18 @@ function LoginPage() {
 
   const onFinish = async (values) => {
     setLoading(true);
+    
+    // ОЧИЩАЄМО СТАРІ ТОКЕНИ
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    console.log('🧹 Cleared old tokens');
+    
     try {
       const response = await authAPI.login(values.username, values.password);
+      console.log('🔑 Login response:', { 
+        hasAccess: !!response.access, 
+        hasRefresh: !!response.refresh 
+      });
       
       const userData = {
         username: values.username,
@@ -21,9 +31,14 @@ function LoginPage() {
       
       setAuth(userData, response.access, response.refresh);
       message.success('Успішний вхід!');
-      navigate('/dashboard');
+      
+      // Даємо час Zustand зберегти state
+      setTimeout(() => {
+        console.log('🚀 Navigating to dashboard');
+        navigate('/dashboard');
+      }, 100);
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       if (error.response?.status === 401) {
         message.error('Невірний логін або пароль');
       } else {
