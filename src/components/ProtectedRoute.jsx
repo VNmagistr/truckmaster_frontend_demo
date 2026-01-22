@@ -1,14 +1,17 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import useAuthStore from '../store/authStore';
 
 function ProtectedRoute({ children }) {
   const location = useLocation();
+  const { isAuthenticated, initialize } = useAuthStore();
 
-  // ПРОСТО перевіряємо наявність токенів
-  const accessToken = localStorage.getItem('access_token');
-  const refreshToken = localStorage.getItem('refresh_token');
+  // Ініціалізуємо auth при монтуванні компонента
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
 
-  if (!accessToken || !refreshToken) {
+  if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
