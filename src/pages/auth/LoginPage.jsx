@@ -3,23 +3,22 @@ import { Form, Input, Button, Card, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../../api';
+import useAuthStore from '../../store/authStore';
 
 function LoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { setAuth } = useAuthStore();
 
   const onFinish = async (values) => {
     setLoading(true);
     try {
       const response = await authAPI.login(values.username, values.password);
       
-      // Зберігаємо токени
-      localStorage.setItem('access_token', response.access);
-      localStorage.setItem('refresh_token', response.refresh);
-      
-      // Зберігаємо user
       const userData = { username: values.username };
-      localStorage.setItem('user', JSON.stringify(userData));
+      
+      // ✅ ВИКОРИСТОВУЄМО authStore.setAuth()
+      setAuth(userData, response.access, response.refresh);
       
       message.success('Успішний вхід!');
       navigate('/dashboard', { replace: true });
