@@ -28,8 +28,10 @@ const processQueue = (error, token = null) => {
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
+    console.log('🔑 Request interceptor - token:', token ? 'EXISTS' : 'MISSING');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      console.log('✅ Authorization header set');
     }
     return config;
   },
@@ -73,7 +75,6 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
 
       if (!refreshToken) {
-        // Немає refresh token - logout через store
         const { logout } = useAuthStore.getState();
         logout();
         window.location.href = '/login';
@@ -87,7 +88,6 @@ api.interceptors.response.use(
 
         const { access } = response.data;
         
-        // Оновлюємо токен через store
         const { updateAccessToken } = useAuthStore.getState();
         updateAccessToken(access);
 
@@ -98,7 +98,6 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         
-        // Refresh token недійсний - logout через store
         const { logout } = useAuthStore.getState();
         logout();
         window.location.href = '/login';
@@ -113,4 +112,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
