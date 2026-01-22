@@ -1,4 +1,5 @@
 import axios from 'axios';
+import useAuthStore from '../store/authStore';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
@@ -54,7 +55,6 @@ api.interceptors.response.use(
     // Якщо помилка 401 і це не повторний запит
     if (error.response?.status === 401 && !originalRequest._retry) {
       if (isRefreshing) {
-        // Якщо вже йде refresh, додаємо запит в чергу
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
@@ -73,8 +73,9 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
 
       if (!refreshToken) {
-        // Немає refresh token - очищаємо і перенаправляємо
-        localStorage.clear();
+        // Немає refresh token - logout через store
+        const { logout } = useAuthStore.getState();
+        logout();
         window.location.href = '/login';
         return Promise.reject(error);
       }
@@ -85,7 +86,10 @@ api.interceptors.response.use(
         });
 
         const { access } = response.data;
-        localStorage.setItem('access_token', access);
+        
+        // Оновлюємо токен через store
+        const { updateAccessToken } = useAuthStore.getState();
+        updateAccessToken(access);
 
         processQueue(null, access);
 
@@ -94,8 +98,9 @@ api.interceptors.response.use(
       } catch (refreshError) {
         processQueue(refreshError, null);
         
-        // Refresh token недійсний - очищаємо і перенаправляємо
-        localStorage.clear();
+        // Refresh token недійсний - logout через store
+        const { logout } = useAuthStore.getState();
+        logout();
         window.location.href = '/login';
         return Promise.reject(refreshError);
       } finally {
@@ -108,3 +113,4 @@ api.interceptors.response.use(
 );
 
 export default api;
+
