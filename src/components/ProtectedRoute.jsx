@@ -1,25 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
-import { LoadingSpinner } from './index';
 
 function ProtectedRoute({ children }) {
   const location = useLocation();
-  const { isAuthenticated, initialize } = useAuthStore();
-  const [isInitialized, setIsInitialized] = useState(false);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 
-  useEffect(() => {
-    // Ініціалізуємо auth при монтуванні
-    initialize();
-    setIsInitialized(true);
-  }, [initialize]);
-
-  // Показуємо loading поки не ініціалізовано
-  if (!isInitialized) {
-    return <LoadingSpinner />;
-  }
-
-  // Після ініціалізації перевіряємо авторизацію
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
