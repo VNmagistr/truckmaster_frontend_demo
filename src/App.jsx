@@ -9,21 +9,21 @@ import { MainLayout, AuthLayout } from './layouts';
 import { ProtectedRoute, LoadingSpinner } from './components';
 
 // Lazy loading для всіх сторінок
-const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
-const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
-const ClientsPage = lazy(() => import('./pages/clients/ClientsPage'));
-const ClientFormPage = lazy(() => import('./pages/clients/ClientFormPage'));
-const ClientDetailPage = lazy(() => import('./pages/clients/ClientDetailPage'));
-const TrucksPage = lazy(() => import('./pages/trucks/TrucksPage'));
-const TruckFormPage = lazy(() => import('./pages/trucks/TruckFormPage'));
-const TruckDetailPage = lazy(() => import('./pages/trucks/TruckDetailPage'));
-const OrdersPage = lazy(() => import('./pages/orders/OrdersPage'));
-const OrderFormPage = lazy(() => import('./pages/orders/OrderFormPage'));
-const OrderDetailPage = lazy(() => import('./pages/orders/OrderDetailPage'));
-const InventoryPage = lazy(() => import('./pages/inventory/InventoryPage'));
-const ProductFormPage = lazy(() => import('./pages/inventory/ProductFormPage'));
-const ProductDetailPage = lazy(() => import('./pages/inventory/ProductDetailPage'));
-const BotPage = lazy(() => import('./pages/bot/BotPage'));
+const LoginPage = lazy(() => import('./pages/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const ClientsPage = lazy(() => import('./pages/ClientsPage'));
+const ClientFormPage = lazy(() => import('./pages/ClientFormPage'));
+const ClientDetailPage = lazy(() => import('./pages/ClientDetailPage'));
+const TrucksPage = lazy(() => import('./pages/TrucksPage'));
+const TruckFormPage = lazy(() => import('./pages/TruckFormPage'));
+const TruckDetailPage = lazy(() => import('./pages/TruckDetailPage'));
+const OrdersPage = lazy(() => import('./pages/OrdersPage'));
+const OrderFormPage = lazy(() => import('./pages/OrderFormPage'));
+const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
+const InventoryPage = lazy(() => import('./pages/InventoryPage'));
+const ProductFormPage = lazy(() => import('./pages/ProductFormPage'));
+const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
+const BotPage = lazy(() => import('./pages/BotPage'));
 
 // Встановлюємо українську локаль для dayjs
 dayjs.locale('uk');
