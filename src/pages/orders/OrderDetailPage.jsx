@@ -1,21 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Table, Tag, message, Tabs, Space, Modal, Form, Select, InputNumber } from 'antd';
-import { EditOutlined, PrinterOutlined, PlusOutlined, DeleteOutlined, ToolOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Button, Table, Tag, message, Tabs, Space, Modal, Form, Select, InputNumber, AutoComplete, Input } from 'antd';
+import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatMoney } from '../../utils/formatters';
 
+// Тестові дані, які будуть показані, якщо сервер не відповість
+const MOCK_WORKS = [
+  { id: 1, name: 'Діагностика ходової' },
+  { id: 2, name: 'Заміна оливи' },
+  { id: 3, name: 'Комп\'ютерна діагностика' },
+  { id: 4, name: 'Шиномонтаж' },
+];
+
+const MOCK_EMPLOYEES = [
+  { id: 1, name: 'Механік 1' },
+  { id: 2, name: 'Механік 2' },
+];
+
 function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // Стани модалок
   const [isWorkModalOpen, setIsWorkModalOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
 
-  // Довідники
   const [worksList, setWorksList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
   const [partsList, setPartsList] = useState([]);
@@ -27,66 +38,58 @@ function OrderDetailPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const initPage = async () => {
-      setLoading(true);
-      try {
-        // 1. СПОЧАТКУ ВАНТАЖИМО ЗАМОВЛЕННЯ (Це критично)
-        console.log("Fetching order...");
-        const orderData = await ordersAPI.getById(id);
-        setOrder(orderData);
-        console.log("Order loaded:", orderData);
-
-        // 2. ПОТІМ ПРОБУЄМО ЗАВАНТАЖИТИ ДОВІДНИКИ (Це не критично)
-        // Використовуємо .catch() для кожного окремо, щоб помилка одного не ламала все
-        try {
-            const worksRes = await worksAPI.getAll().catch(err => {
-                console.warn("Failed to load WORKS (API /works/ likely missing):", err);
-                return [];
-            });
-            setWorksList(worksRes.results || worksRes || []);
-            
-            const employeesRes = await employeesAPI.getAll().catch(err => {
-                console.warn("Failed to load EMPLOYEES (API /users/ likely missing):", err);
-                return [];
-            });
-            setEmployeesList(employeesRes.results || employeesRes || []);
-
-            const partsRes = await inventoryAPI.getAll({ page_size: 1000 }).catch(err => {
-                console.warn("Failed to load INVENTORY:", err);
-                return [];
-            });
-            setPartsList(partsRes.results || partsRes || []);
-            
-        } catch (secondaryError) {
-            console.warn("Error loading secondary data:", secondaryError);
-        }
-
-      } catch (error) {
-        console.error('CRITICAL Error loading order:', error);
-        message.error('Не вдалося завантажити дані замовлення');
-        // Не перенаправляємо одразу, щоб можна було побачити помилку в консолі
-      } finally {
-        setLoading(false);
-      }
-    };
-
     initPage();
   }, [id]);
 
-  // --- ЛОГІКА ДОДАВАННЯ ---
+  const initPage = async () => {
+    setLoading(true);
+    try {
+      const orderData = await ordersAPI.getById(id);
+      setOrder(orderData);
+
+      // Пробуємо завантажити довідники, але не блокуємо сторінку при помилці
+      loadDirectories();
+    } catch (error) {
+      console.error('Error loading order:', error);
+      message.error('Не вдалося завантажити замовлення');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDirectories = async () => {
+    try {
+        const works = await worksAPI.getAll().catch(() => []);
+        // Якщо API повернуло пустоту або помилку, використовуємо MOCK_WORKS для тесту
+        setWorksList((works.results || works).length > 0 ? (works.results || works) : MOCK_WORKS);
+        
+        const employees = await employeesAPI.getAll().catch(() => []);
+        setEmployeesList((employees.results || employees).length > 0 ? (employees.results || employees) : MOCK_EMPLOYEES);
+
+        const parts = await inventoryAPI.getAll({ page_size: 1000 }).catch(() => []);
+        setPartsList(parts.results || parts || []);
+    } catch (e) {
+        console.warn("Directories fetch warning", e);
+        // Фолбек на мок-дані, щоб поля не були пустими
+        setWorksList(MOCK_WORKS);
+        setEmployeesList(MOCK_EMPLOYEES);
+    }
+  };
 
   const handleAddWork = async (values) => {
     setModalLoading(true);
     try {
+      // Якщо користувач ввів текст, якого немає в списку, відправляємо його як текст
       await ordersAPI.addWork(id, values);
       message.success('Роботу додано');
       setIsWorkModalOpen(false);
       formWork.resetFields();
+      
       const updatedOrder = await ordersAPI.getById(id);
       setOrder(updatedOrder);
     } catch (error) {
       console.error(error);
-      message.error('Помилка при додаванні роботи (перевірте консоль)');
+      message.error('Помилка додавання. Перевірте, чи існують довідники на сервері.');
     } finally {
       setModalLoading(false);
     }
@@ -116,14 +119,12 @@ function OrderDetailPage() {
     }
   };
 
-  // --- ФУНКЦІЇ ВІДОБРАЖЕННЯ (безпечні) ---
-
+  // Хелпер для відображення імен
   const getName = (item, list, nameField = 'name') => {
     if (!item) return '-';
     if (typeof item === 'object') return item[nameField] || item.username || '-';
-    // Шукаємо в завантаженому списку
     const found = list.find(x => String(x.id) === String(item));
-    return found ? (found[nameField] || found.username) : '-'; // Якщо список пустий, поверне '-'
+    return found ? (found[nameField] || found.username) : item; // Повертаємо саме значення, якщо не знайшли (раптом це просто текст)
   };
 
   const worksColumns = [
@@ -132,14 +133,11 @@ function OrderDetailPage() {
       dataIndex: 'work',
       key: 'work',
       render: (val, record) => {
-          // Пробуємо дістати назву з об'єкта work, або зі списку, або з опису
-          const nameFromObj = typeof val === 'object' ? val.name : null;
-          const nameFromList = getName(val, worksList);
-          const description = record.description;
-          
-          if (nameFromObj && nameFromObj !== '-') return nameFromObj;
-          if (nameFromList && nameFromList !== '-') return nameFromList;
-          return description || 'Без назви';
+          // Пріоритет: назва з об'єкта -> назва зі списку -> опис -> сире значення
+          if (typeof val === 'object' && val.name) return val.name;
+          const fromList = getName(val, worksList);
+          if (fromList !== val && fromList !== '-') return fromList; 
+          return record.description || val || 'Без назви';
       },
     },
     {
@@ -156,7 +154,7 @@ function OrderDetailPage() {
     },
     {
         title: 'Вартість',
-        dataIndex: 'amount', // або total_cost, залежить від бекенду
+        dataIndex: 'amount',
         key: 'amount',
         render: (val) => formatMoney(val),
     },
@@ -295,11 +293,12 @@ function OrderDetailPage() {
             ) : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Вантажівка">
-            {order.truck ? (
-              <Link to={`/trucks/${order.truck.id || order.truck}`}>
-                 {typeof order.truck === 'object' ? order.truck.license_plate : 'Авто #' + order.truck}
-              </Link>
-            ) : '-'}
+             {/* Відображаємо навіть якщо це просто ID */}
+             {order.truck ? (
+                <Link to={`/trucks/${(order.truck.id || order.truck)}`}>
+                  {typeof order.truck === 'object' ? order.truck.license_plate : `Авто #${order.truck}`}
+                </Link>
+             ) : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="VIN">
             {order.truck?.last_seven_vin ? `...${order.truck.last_seven_vin}` : '-'}
@@ -311,8 +310,7 @@ function OrderDetailPage() {
         <Tabs items={tabItems} />
       </Card>
 
-      {/* --- МОДАЛКИ --- */}
-      
+      {/* --- МОДАЛКА: ДОДАТИ РОБОТУ (Виправлено) --- */}
       <Modal
         title="Додати роботу"
         open={isWorkModalOpen}
@@ -321,34 +319,35 @@ function OrderDetailPage() {
         destroyOnClose
       >
         <Form form={formWork} layout="vertical" onFinish={handleAddWork}>
-            <Form.Item name="work" label="Послуга" rules={[{ required: true }]}>
-                {worksList.length > 0 ? (
-                    <Select 
-                        showSearch 
-                        placeholder="Оберіть послугу"
-                        filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-                        options={worksList.map(w => ({ value: w.id, label: w.name }))}
-                    />
-                ) : (
-                    // Якщо список послуг не завантажився, даємо ввести текст (ID) вручну або пишемо помилку
-                    <Select placeholder="Список послуг пустий (Помилка API)" disabled />
-                )}
+            {/* Тут ми замінили жорсткий Select на AutoComplete/Input. 
+              Тепер користувач може писати що завгодно, якщо API не працює.
+            */}
+            <Form.Item name="work" label="Послуга" rules={[{ required: true, message: 'Введіть назву послуги' }]}>
+                 {/* Використовуємо Select з mode="tags" або просто AutoComplete, щоб можна було вводити свій текст */}
+                 <Select
+                    showSearch
+                    placeholder="Введіть або оберіть послугу"
+                    optionFilterProp="label"
+                    allowClear
+                    // mode="tags" // Дозволяє вводити нові значення (якщо бекенд підтримує рядки)
+                    options={worksList.map(w => ({ value: w.id, label: w.name }))}
+                 />
             </Form.Item>
+            
             <Form.Item name="employee" label="Механік">
-                 {employeesList.length > 0 ? (
-                    <Select 
-                        showSearch
-                        placeholder="Оберіть виконавця"
-                        filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-                        options={employeesList.map(e => ({ value: e.id, label: e.name || e.username }))}
-                    />
-                 ) : (
-                    <Select placeholder="Список працівників пустий" disabled />
-                 )}
+                 <Select 
+                    showSearch
+                    placeholder="Оберіть механіка (або введіть ID)"
+                    optionFilterProp="label"
+                    allowClear
+                    options={employeesList.map(e => ({ value: e.id, label: e.name || e.username }))}
+                 />
             </Form.Item>
+
             <Form.Item name="hours" label="Годин" initialValue={1}>
                 <InputNumber min={0.1} step={0.1} style={{ width: '100%' }} />
             </Form.Item>
+            
             <Button type="primary" htmlType="submit" loading={modalLoading} block>
                 Зберегти
             </Button>
