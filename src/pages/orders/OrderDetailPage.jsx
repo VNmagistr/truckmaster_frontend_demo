@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Table, Tag, message, Tabs, Space, Modal, Form, Select, InputNumber, Divider } from 'antd';
+import { Card, Descriptions, Button, Table, Tag, message, Tabs, Space, Modal, Form, Select, InputNumber } from 'antd';
 import { EditOutlined, PrinterOutlined, PlusOutlined, DeleteOutlined, ToolOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
-import { formatDate, formatDateTime, formatMoney } from '../../utils/formatters';
+import { formatMoney } from '../../utils/formatters';
 
 function OrderDetailPage() {
   const [order, setOrder] = useState(null);
@@ -15,7 +15,7 @@ function OrderDetailPage() {
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
 
-  // Довідники для розшифровки ID в таблицях
+  // Довідники
   const [worksList, setWorksList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
   const [partsList, setPartsList] = useState([]);
@@ -26,26 +26,45 @@ function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // Завантажуємо замовлення + всі довідники одразу
   useEffect(() => {
     const initPage = async () => {
       setLoading(true);
       try {
-        const [orderData, worksRes, employeesRes, partsRes] = await Promise.all([
-          ordersAPI.getById(id),
-          worksAPI.getAll().catch(() => []),
-          employeesAPI.getAll().catch(() => []),
-          inventoryAPI.getAll({ page_size: 1000 }).catch(() => [])
-        ]);
-
+        // 1. СПОЧАТКУ ВАНТАЖИМО ЗАМОВЛЕННЯ (Це критично)
+        console.log("Fetching order...");
+        const orderData = await ordersAPI.getById(id);
         setOrder(orderData);
-        setWorksList(worksRes.results || worksRes || []);
-        setEmployeesList(employeesRes.results || employeesRes || []);
-        setPartsList(partsRes.results || partsRes || []);
+        console.log("Order loaded:", orderData);
+
+        // 2. ПОТІМ ПРОБУЄМО ЗАВАНТАЖИТИ ДОВІДНИКИ (Це не критично)
+        // Використовуємо .catch() для кожного окремо, щоб помилка одного не ламала все
+        try {
+            const worksRes = await worksAPI.getAll().catch(err => {
+                console.warn("Failed to load WORKS (API /works/ likely missing):", err);
+                return [];
+            });
+            setWorksList(worksRes.results || worksRes || []);
+            
+            const employeesRes = await employeesAPI.getAll().catch(err => {
+                console.warn("Failed to load EMPLOYEES (API /users/ likely missing):", err);
+                return [];
+            });
+            setEmployeesList(employeesRes.results || employeesRes || []);
+
+            const partsRes = await inventoryAPI.getAll({ page_size: 1000 }).catch(err => {
+                console.warn("Failed to load INVENTORY:", err);
+                return [];
+            });
+            setPartsList(partsRes.results || partsRes || []);
+            
+        } catch (secondaryError) {
+            console.warn("Error loading secondary data:", secondaryError);
+        }
 
       } catch (error) {
-        console.error('Error loading page data:', error);
-        message.error('Не вдалося завантажити дані');
+        console.error('CRITICAL Error loading order:', error);
+        message.error('Не вдалося завантажити дані замовлення');
+        // Не перенаправляємо одразу, щоб можна було побачити помилку в консолі
       } finally {
         setLoading(false);
       }
@@ -63,12 +82,11 @@ function OrderDetailPage() {
       message.success('Роботу додано');
       setIsWorkModalOpen(false);
       formWork.resetFields();
-      // Оновлюємо тільки замовлення, довідники вже є
       const updatedOrder = await ordersAPI.getById(id);
       setOrder(updatedOrder);
     } catch (error) {
       console.error(error);
-      message.error('Помилка при додаванні роботи');
+      message.error('Помилка при додаванні роботи (перевірте консоль)');
     } finally {
       setModalLoading(false);
     }
@@ -98,16 +116,14 @@ function OrderDetailPage() {
     }
   };
 
-  // --- РОЗУМНІ КОЛОНКИ (Fix для пустих полів) ---
+  // --- ФУНКЦІЇ ВІДОБРАЖЕННЯ (безпечні) ---
 
-  // Функція-хелпер для отримання імені по ID
   const getName = (item, list, nameField = 'name') => {
     if (!item) return '-';
-    // Якщо це об'єкт і має ім'я - повертаємо його
     if (typeof item === 'object') return item[nameField] || item.username || '-';
-    // Якщо це ID (число/рядок) - шукаємо в списку
+    // Шукаємо в завантаженому списку
     const found = list.find(x => String(x.id) === String(item));
-    return found ? (found[nameField] || found.username) : '-';
+    return found ? (found[nameField] || found.username) : '-'; // Якщо список пустий, поверне '-'
   };
 
   const worksColumns = [
@@ -116,9 +132,14 @@ function OrderDetailPage() {
       dataIndex: 'work',
       key: 'work',
       render: (val, record) => {
-          // Для роботи поле може бути в record.work або record.description
-          const name = getName(val, worksList);
-          return name !== '-' ? name : record.description || '-';
+          // Пробуємо дістати назву з об'єкта work, або зі списку, або з опису
+          const nameFromObj = typeof val === 'object' ? val.name : null;
+          const nameFromList = getName(val, worksList);
+          const description = record.description;
+          
+          if (nameFromObj && nameFromObj !== '-') return nameFromObj;
+          if (nameFromList && nameFromList !== '-') return nameFromList;
+          return description || 'Без назви';
       },
     },
     {
@@ -135,7 +156,7 @@ function OrderDetailPage() {
     },
     {
         title: 'Вартість',
-        dataIndex: 'amount',
+        dataIndex: 'amount', // або total_cost, залежить від бекенду
         key: 'amount',
         render: (val) => formatMoney(val),
     },
@@ -178,7 +199,6 @@ function OrderDetailPage() {
   if (loading) return <LoadingSpinner />;
   if (!order) return null;
 
-  // Отримуємо запчастини (залежно від структури бекенду)
   const orderParts = order.parts || order.used_parts || [];
 
   const tabItems = [
@@ -187,7 +207,6 @@ function OrderDetailPage() {
       label: `Виконані роботи (${order.works?.length || 0})`,
       children: (
         <div>
-            {/* Кнопка завжди тут */}
             <Button 
                 type="dashed" 
                 icon={<PlusOutlined />} 
@@ -200,7 +219,7 @@ function OrderDetailPage() {
             <Table
                 columns={worksColumns}
                 dataSource={order.works || []}
-                rowKey={(r) => r.id || Math.random()} // Фолбек для ключа
+                rowKey={(r) => r.id || Math.random()}
                 pagination={false}
                 locale={{ emptyText: 'Роботи ще не додано' }}
                 size="small"
@@ -271,15 +290,14 @@ function OrderDetailPage() {
           <Descriptions.Item label="Клієнт">
             {order.client ? (
               <Link to={`/clients/${order.client.id || order.client}`}>
-                {getName(order.client, [], 'name')} {/* Тут ім'я має бути в об'єкті */}
+                {getName(order.client, [], 'name')}
               </Link>
             ) : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Вантажівка">
             {order.truck ? (
               <Link to={`/trucks/${order.truck.id || order.truck}`}>
-                {/* Спробуємо дістати номер, навіть якщо це ID, але краще об'єкт */}
-                {typeof order.truck === 'object' ? order.truck.license_plate : 'Авто #' + order.truck}
+                 {typeof order.truck === 'object' ? order.truck.license_plate : 'Авто #' + order.truck}
               </Link>
             ) : '-'}
           </Descriptions.Item>
@@ -304,20 +322,29 @@ function OrderDetailPage() {
       >
         <Form form={formWork} layout="vertical" onFinish={handleAddWork}>
             <Form.Item name="work" label="Послуга" rules={[{ required: true }]}>
-                <Select 
-                    showSearch 
-                    placeholder="Оберіть послугу"
-                    filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-                    options={worksList.map(w => ({ value: w.id, label: w.name }))}
-                />
+                {worksList.length > 0 ? (
+                    <Select 
+                        showSearch 
+                        placeholder="Оберіть послугу"
+                        filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+                        options={worksList.map(w => ({ value: w.id, label: w.name }))}
+                    />
+                ) : (
+                    // Якщо список послуг не завантажився, даємо ввести текст (ID) вручну або пишемо помилку
+                    <Select placeholder="Список послуг пустий (Помилка API)" disabled />
+                )}
             </Form.Item>
             <Form.Item name="employee" label="Механік">
-                <Select 
-                    showSearch
-                    placeholder="Оберіть виконавця"
-                    filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
-                    options={employeesList.map(e => ({ value: e.id, label: e.name || e.username }))}
-                />
+                 {employeesList.length > 0 ? (
+                    <Select 
+                        showSearch
+                        placeholder="Оберіть виконавця"
+                        filterOption={(input, option) => (option?.label ?? '').toLowerCase().includes(input.toLowerCase())}
+                        options={employeesList.map(e => ({ value: e.id, label: e.name || e.username }))}
+                    />
+                 ) : (
+                    <Select placeholder="Список працівників пустий" disabled />
+                 )}
             </Form.Item>
             <Form.Item name="hours" label="Годин" initialValue={1}>
                 <InputNumber min={0.1} step={0.1} style={{ width: '100%' }} />
@@ -361,7 +388,6 @@ function OrderDetailPage() {
             </Button>
         </Form>
       </Modal>
-
     </div>
   );
 }
