@@ -19,22 +19,14 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       sourcemap: false,
       minify: 'esbuild',
-      chunkSizeWarningLimit: 1000,
+      chunkSizeWarningLimit: 1500, // Підняли ліміт, щоб не сварився на великий vendor файл
       rollupOptions: {
         output: {
           manualChunks: (id) => {
+            // ПРОСТА І НАДІЙНА СТРАТЕГІЯ:
+            // Всі бібліотеки (node_modules) збираємо в один файл 'vendor'.
+            // Це гарантує, що React, Antd та інші залежності будуть "бачити" одне одного.
             if (id.includes('node_modules')) {
-              // 1. Всі UI-бібліотеки (Ant Design та його внутрішні `rc-` залежності)
-              // Це найважча частина, її відокремлюємо для кешування
-              if (id.includes('antd') || 
-                  id.includes('@ant-design') || 
-                  id.includes('rc-') || 
-                  id.includes('ant-design')) {
-                return 'ui-libs';
-              }
-              
-              // 2. Все інше (React, React Router, Axios, Dayjs...)
-              // Залишаємо разом у 'vendor', щоб уникнути помилок ініціалізації React
               return 'vendor';
             }
           },
