@@ -2,7 +2,11 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
+import useAuthStore from './store/authStore';
 import './index.css';
+
+// Ініціалізуємо auth store ДО рендеру додатку
+useAuthStore.getState().initialize();
 
 // Створюємо QueryClient для React Query
 const queryClient = new QueryClient({
