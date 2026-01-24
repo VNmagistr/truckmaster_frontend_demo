@@ -21,6 +21,7 @@ function ClientDetailPage() {
   const fetchClientData = async () => {
     setLoading(true);
     try {
+      // Запитуємо дані. Навіть якщо ordersAPI поверне всі замовлення, ми їх відфільтруємо нижче.
       const [clientData, trucksData, ordersData] = await Promise.all([
         clientsAPI.getById(id),
         trucksAPI.getByClient(id).catch(() => ({ results: [] })),
@@ -29,7 +30,19 @@ function ClientDetailPage() {
 
       setClient(clientData);
       setTrucks(trucksData.results || trucksData || []);
-      setOrders(ordersData.results || ordersData || []);
+
+      // --- ВИПРАВЛЕННЯ ТУТ ---
+      // Фільтруємо замовлення на стороні клієнта, щоб прибрати чужі
+      const allOrders = ordersData.results || ordersData || [];
+      const filteredOrders = allOrders.filter(order => {
+        // Перевіряємо, в якому форматі прийшов клієнт (як об'єкт з ID або просто число)
+        const orderClientId = order.client?.id || order.client;
+        return String(orderClientId) === String(id);
+      });
+      
+      setOrders(filteredOrders);
+      // ----------------------
+
     } catch (error) {
       console.error('Error fetching client:', error);
       message.error('Не вдалося завантажити дані клієнта');
