@@ -8,80 +8,80 @@ import { ORDER_STATUSES } from '../../utils/constants';
 
 function OrderFormPage() {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Загальний лоадер
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState([]);
-  const [trucks, setTrucks] = useState([]);
-  const [allTrucks, setAllTrucks] = useState([]);
+  const [trucks, setTrucks] = useState([]); // Відфільтровані вантажівки
+  const [allTrucks, setAllTrucks] = useState([]); // Всі вантажівки
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
+  // Завантажуємо все одразу, щоб уникнути проблем з порядком
   useEffect(() => {
-    fetchClients();
-    fetchAllTrucks();
-    if (isEdit) {
-      fetchOrder();
-    }
-  }, [id]);
+    const initData = async () => {
+      setLoading(true);
+      try {
+        // 1. Паралельно вантажимо довідники та (якщо треба) замовлення
+        const [clientsData, trucksData, orderData] = await Promise.all([
+          clientsAPI.getAll({ page_size: 1000 }).catch(() => []),
+          trucksAPI.getAll({ page_size: 1000 }).catch(() => []),
+          isEdit ? ordersAPI.getById(id) : Promise.resolve(null)
+        ]);
 
-  const fetchClients = async () => {
-    try {
-      const response = await clientsAPI.getAll({ page_size: 1000 });
-      const data = response.results || response;
-      setClients(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-    }
-  };
+        // 2. Зберігаємо довідники
+        const loadedClients = clientsData.results || clientsData || [];
+        const loadedTrucks = trucksData.results || trucksData || [];
+        
+        setClients(loadedClients);
+        setAllTrucks(loadedTrucks);
 
-  const fetchAllTrucks = async () => {
-    try {
-      const response = await trucksAPI.getAll({ page_size: 1000 });
-      const data = response.results || response;
-      setAllTrucks(Array.isArray(data) ? data : []);
-      setTrucks(Array.isArray(data) ? data : []);
-    } catch (error) {
-      console.error('Error fetching trucks:', error);
-    }
-  };
+        // 3. Якщо це редагування - заповнюємо форму
+        if (orderData) {
+          // ВАЖЛИВО: Витягуємо ID з об'єктів, щоб Select їх зрозумів
+          const formData = {
+            ...orderData,
+            client: orderData.client?.id || orderData.client,
+            truck: orderData.truck?.id || orderData.truck,
+          };
 
-  const fetchOrder = async () => {
-    setLoading(true);
-    try {
-      const data = await ordersAPI.getById(id);
-      form.setFieldsValue({
-        ...data,
-        client: data.client?.id || data.client,
-        truck: data.truck?.id || data.truck,
-      });
-      
-      if (data.client?.id || data.client) {
-        handleClientChange(data.client?.id || data.client);
+          // Фільтруємо список машин під цього клієнта
+          if (formData.client) {
+            const clientTrucks = loadedTrucks.filter(t => 
+              (t.client?.id || t.client) === formData.client
+            );
+            setTrucks(clientTrucks);
+          } else {
+            setTrucks(loadedTrucks);
+          }
+
+          form.setFieldsValue(formData);
+        } else {
+          // Якщо створення нового - показуємо всі машини або пустий список
+          setTrucks(loadedTrucks); 
+        }
+
+      } catch (error) {
+        console.error('Initialization error:', error);
+        message.error('Не вдалося завантажити дані');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error fetching order:', error);
-      message.error('Не вдалося завантажити дані замовлення');
-      navigate('/orders');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
 
-  const handleClientChange = async (clientId) => {
-    if (clientId) {
-      const filteredTrucks = allTrucks.filter(
-        truck => truck.client === clientId || truck.client?.id === clientId
-      );
-      setTrucks(filteredTrucks);
-      
-      const currentTruck = form.getFieldValue('truck');
-      if (currentTruck && !filteredTrucks.find(t => t.id === currentTruck)) {
-        form.setFieldValue('truck', undefined);
-      }
-    } else {
-      setTrucks(allTrucks);
-    }
+    initData();
+  }, [id, isEdit, form]);
+
+  const handleClientChange = (clientId) => {
+    // При зміні клієнта фільтруємо список машин
+    const filtered = allTrucks.filter(truck => {
+      const truckClientId = truck.client?.id || truck.client;
+      return String(truckClientId) === String(clientId);
+    });
+    setTrucks(filtered);
+    
+    // Очищаємо поле машини, бо стара машина може не належати новому клієнту
+    form.setFieldsValue({ truck: null });
   };
 
   const onFinish = async (values) => {
@@ -89,25 +89,30 @@ function OrderFormPage() {
     try {
       if (isEdit) {
         await ordersAPI.update(id, values);
-        message.success('Замовлення успішно оновлено');
+        message.success('Замовлення оновлено');
       } else {
         await ordersAPI.create(values);
-        message.success('Замовлення успішно створено');
+        message.success('Замовлення створено');
       }
       navigate('/orders');
     } catch (error) {
       console.error('Error saving order:', error);
-      if (error.response?.data) {
-        const errors = error.response.data;
-        Object.keys(errors).forEach(key => {
-          message.error(`${key}: ${errors[key]}`);
-        });
-      } else {
-        message.error('Не вдалося зберегти замовлення');
-      }
+      message.error('Помилка при збереженні');
     } finally {
       setSaving(false);
     }
+  };
+
+  // Безпечна функція пошуку для Select
+  const safeFilterOption = (input, option) => {
+    if (!option || !option.children) return false;
+    
+    // Якщо children - це масив (наприклад "AA1234AA" + " - " + "Model"), з'єднуємо його
+    const label = Array.isArray(option.children) 
+      ? option.children.join('') 
+      : String(option.children);
+      
+    return label.toLowerCase().includes(input.toLowerCase());
   };
 
   if (loading) {
@@ -117,42 +122,32 @@ function OrderFormPage() {
   return (
     <div>
       <PageHeader
-        title={isEdit ? 'Редагувати замовлення' : 'Нове замовлення'}
+        title={isEdit ? `Редагування замовлення #${id}` : 'Нове замовлення'}
         showBack
       />
 
-      <Card style={{ maxWidth: 600 }}>
+      <Card>
         <Form
           form={form}
           layout="vertical"
           onFinish={onFinish}
-          initialValues={{
-            status: 'OPEN',
-          }}
+          initialValues={{ status: 'pending' }}
         >
-          <Form.Item
-            name="order_number"
-            label="Номер замовлення"
-          >
-            <Input placeholder="Автоматично або введіть вручну" />
-          </Form.Item>
-
           <Form.Item
             name="client"
             label="Клієнт"
             rules={[{ required: true, message: 'Оберіть клієнта' }]}
           >
             <Select
-              placeholder="Оберіть клієнта"
               showSearch
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
+              placeholder="Введіть ім'я клієнта"
+              optionFilterProp="children"
+              filterOption={safeFilterOption} // ВИПРАВЛЕНО: безпечний пошук
               onChange={handleClientChange}
             >
               {clients.map(client => (
                 <Select.Option key={client.id} value={client.id}>
-                  {client.name}
+                  {client.name} {client.phone ? `(${client.phone})` : ''}
                 </Select.Option>
               ))}
             </Select>
@@ -164,11 +159,11 @@ function OrderFormPage() {
             rules={[{ required: true, message: 'Оберіть вантажівку' }]}
           >
             <Select
-              placeholder="Оберіть вантажівку"
               showSearch
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
+              placeholder={trucks.length === 0 ? "Спочатку оберіть клієнта" : "Введіть номер авто"}
+              optionFilterProp="children"
+              filterOption={safeFilterOption} // ВИПРАВЛЕНО: безпечний пошук
+              notFoundContent={trucks.length === 0 ? "Немає авто у цього клієнта" : null}
             >
               {trucks.map(truck => (
                 <Select.Option key={truck.id} value={truck.id}>
