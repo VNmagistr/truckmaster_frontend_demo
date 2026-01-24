@@ -4,7 +4,8 @@ import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutl
 import { useNavigate } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, EmptyState } from '../../components';
-import { formatCurrency } from '../../utils/formatters';
+// ВИПРАВЛЕННЯ ТУТ: змінила formatCurrency на formatMoney
+import { formatMoney } from '../../utils/formatters';
 
 function InventoryPage() {
   const [products, setProducts] = useState([]);
@@ -114,7 +115,8 @@ function InventoryPage() {
       title: 'Ціна закуп.',
       dataIndex: 'price',
       key: 'price',
-      render: (price) => formatCurrency(price),
+      // ВИПРАВЛЕННЯ ТУТ: використовуємо правильну назву функції
+      render: (price) => formatMoney(price),
     },
     {
       title: 'Дії',
