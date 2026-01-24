@@ -27,7 +27,19 @@ function TruckDetailPage() {
       ]);
 
       setTruck(truckData);
-      setOrders(ordersData.results || ordersData || []);
+
+      // --- ВИПРАВЛЕННЯ ТУТ ---
+      // Фільтруємо замовлення, щоб залишити тільки ті, що стосуються цієї вантажівки
+      const allOrders = ordersData.results || ordersData || [];
+      const filteredOrders = allOrders.filter(order => {
+        // Враховуємо, що truck може бути об'єктом або ID
+        const orderTruckId = order.truck?.id || order.truck;
+        return String(orderTruckId) === String(id);
+      });
+
+      setOrders(filteredOrders);
+      // ----------------------
+
     } catch (error) {
       console.error('Error fetching truck:', error);
       message.error('Не вдалося завантажити дані вантажівки');
