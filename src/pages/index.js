@@ -5,3 +5,4 @@ export { TrucksPage, TruckFormPage, TruckDetailPage } from './trucks';
 export { OrdersPage, OrderFormPage, OrderDetailPage } from './orders';
 export { InventoryPage, ProductFormPage, ProductDetailPage } from './inventory';
 export { BotPage } from './bot';
+export { default as Welcome } from './welcome/Welcome';
