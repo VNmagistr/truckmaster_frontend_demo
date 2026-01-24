@@ -1,42 +1,55 @@
-import axiosInstance from './axios';
-import authAPI from './auth';
-import clientsAPI from './clients';
-import trucksAPI from './trucks';
-import baseOrdersAPI from './orders'; // Імпортуємо старі методи замовлень
-import inventoryAPI from './inventory';
+import axios from 'axios';
 
-// --- Розширюємо ordersAPI новими методами ---
-const ordersAPI = {
-  ...baseOrdersAPI, // Зберігаємо всі старі методи (getAll, create, тощо)
+// Твій базовий конфіг (залиш як є)
+const baseURL = 'http://127.0.0.1:8000/api';
+const instance = axios.create({
+  baseURL,
+  headers: { 'Content-Type': 'application/json' },
+});
+
+// Додаємо інтерцептори (залиш свої, якщо вони є)
+instance.interceptors.request.use((config) => {
+    const token = localStorage.getItem('access_token');
+    if (token) config.headers.Authorization = `Bearer ${token}`;
+    return config;
+});
+
+export const ordersAPI = {
+  getAll: (params) => instance.get('/orders/', { params }),
+  getById: (id) => instance.get(`/orders/${id}/`),
   
-  // Додавання/Видалення робіт
-  addWork: (id, data) => axiosInstance.post(`/orders/${id}/add_work/`, data),
-  removeWork: (orderId, workId) => axiosInstance.delete(`/orders/${orderId}/remove_work/${workId}/`),
+  // ОНОВЛЕНО: Тепер вміє працювати з фото
+  create: (data) => {
+    // Якщо data це FormData (є фото), браузер сам поставить правильний заголовок
+    if (data instanceof FormData) {
+        return instance.post('/orders/', data, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+    }
+    return instance.post('/orders/', data);
+  },
   
-  // Додавання/Видалення запчастин
-  addPart: (id, data) => axiosInstance.post(`/orders/${id}/add_part/`, data),
-  removePart: (orderId, partId) => axiosInstance.delete(`/orders/${orderId}/remove_part/${partId}/`),
+  update: (id, data) => instance.patch(`/orders/${id}/`, data),
+  
+  // Методи для робіт
+  addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
+  deleteWork: (workId) => instance.delete(`/works/${workId}/`), // Перевір шлях на бекенді
+  
+  // Методи для запчастин
+  addPart: (orderId, data) => instance.post(`/orders/${orderId}/add_part/`, data),
 };
 
-// --- API для Послуг (Робіт) ---
-const worksAPI = {
-  getAll: (params) => axiosInstance.get('/works/', { params }),
+export const maintenanceAPI = {
+    // НОВЕ: Перевірка регламенту
+    checkRegulations: (truckId, mileage) => 
+        instance.get(`/maintenance/check-regulations/`, { params: { truck_id: truckId, mileage } }),
 };
 
-// --- API для Працівників (Механіків) ---
-const employeesAPI = {
-  // Фільтруємо тільки механіків, якщо потрібно, або беремо всіх
-  getAll: (params) => axiosInstance.get('/users/', { params: { ...params, role: 'mechanic' } }),
-};
+// ... інші API (clientsAPI, trucksAPI, etc.) залиш без змін ...
+export const clientsAPI = { getAll: (p) => instance.get('/clients/', { params: p }) };
+export const trucksAPI = { getAll: (p) => instance.get('/trucks/', { params: p }) };
+export const worksAPI = { getAll: () => instance.get('/service-works/') }; // Або як у тебе називається прайс
+export const employeesAPI = { getAll: () => instance.get('/users/', { params: { role: 'mechanic' } }) };
+export const inventoryAPI = { getAll: (p) => instance.get('/inventory/', { params: p }) };
 
-// Експортуємо все разом
-export {
-  axiosInstance,
-  authAPI,
-  clientsAPI,
-  trucksAPI,
-  ordersAPI,
-  inventoryAPI,
-  worksAPI,
-  employeesAPI
-};
+export default instance;
