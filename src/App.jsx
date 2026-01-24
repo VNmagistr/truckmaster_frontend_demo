@@ -7,24 +7,34 @@ import 'dayjs/locale/uk';
 
 import { MainLayout, AuthLayout } from './layouts';
 import { ProtectedRoute, LoadingSpinner } from './components';
-import { Welcome } from './pages';
+import { Welcome } from './pages'; // Тут import працює через index.js, це ОК
 
-// Lazy loading для всіх сторінок
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const DashboardPage = lazy(() => import('./pages/DashboardPage'));
-const ClientsPage = lazy(() => import('./pages/ClientsPage'));
-const ClientFormPage = lazy(() => import('./pages/ClientFormPage'));
-const ClientDetailPage = lazy(() => import('./pages/ClientDetailPage'));
-const TrucksPage = lazy(() => import('./pages/TrucksPage'));
-const TruckFormPage = lazy(() => import('./pages/TruckFormPage'));
-const TruckDetailPage = lazy(() => import('./pages/TruckDetailPage'));
-const OrdersPage = lazy(() => import('./pages/OrdersPage'));
-const OrderFormPage = lazy(() => import('./pages/OrderFormPage'));
-const OrderDetailPage = lazy(() => import('./pages/OrderDetailPage'));
-const InventoryPage = lazy(() => import('./pages/InventoryPage'));
-const ProductFormPage = lazy(() => import('./pages/ProductFormPage'));
-const ProductDetailPage = lazy(() => import('./pages/ProductDetailPage'));
-const BotPage = lazy(() => import('./pages/BotPage'));
+// Lazy loading: Виправляємо шляхи до файлів у підпапках
+const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
+const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
+
+// Clients
+const ClientsPage = lazy(() => import('./pages/clients/ClientsPage'));
+const ClientFormPage = lazy(() => import('./pages/clients/ClientFormPage'));
+const ClientDetailPage = lazy(() => import('./pages/clients/ClientDetailPage'));
+
+// Trucks
+const TrucksPage = lazy(() => import('./pages/trucks/TrucksPage'));
+const TruckFormPage = lazy(() => import('./pages/trucks/TruckFormPage'));
+const TruckDetailPage = lazy(() => import('./pages/trucks/TruckDetailPage'));
+
+// Orders
+const OrdersPage = lazy(() => import('./pages/orders/OrdersPage'));
+const OrderFormPage = lazy(() => import('./pages/orders/OrderFormPage'));
+const OrderDetailPage = lazy(() => import('./pages/orders/OrderDetailPage'));
+
+// Inventory
+const InventoryPage = lazy(() => import('./pages/inventory/InventoryPage'));
+const ProductFormPage = lazy(() => import('./pages/inventory/ProductFormPage'));
+const ProductDetailPage = lazy(() => import('./pages/inventory/ProductDetailPage'));
+
+// Bot
+const BotPage = lazy(() => import('./pages/bot/BotPage'));
 
 // Встановлюємо українську локаль для dayjs
 dayjs.locale('uk');
