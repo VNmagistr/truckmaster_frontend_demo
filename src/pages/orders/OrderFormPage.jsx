@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Card, message, Space, Select } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, message, Space, Select, Tooltip } from 'antd';
+import { SaveOutlined, CarOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ordersAPI, clientsAPI, trucksAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
@@ -10,24 +10,30 @@ function OrderFormPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  
   const [clients, setClients] = useState([]);
-  const [trucks, setTrucks] = useState([]); // Відфільтровані під клієнта
-  const [allTrucks, setAllTrucks] = useState([]); // Повна база вантажівок
+  const [trucks, setTrucks] = useState([]); // Те, що показуємо в списку
+  const [allTrucks, setAllTrucks] = useState([]); // Повна база
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
-  // Допоміжна функція для безпечного отримання ID (число або рядок)
-  const getId = (item) => {
-    if (!item) return null;
-    return item.id || item;
+  // Функція для отримання "чистого" ID клієнта з об'єкта вантажівки
+  const getClientIdFromTruck = (truck) => {
+    if (!truck || !truck.client) return null;
+    // Якщо client - це об'єкт {id: 1, name: ...}
+    if (typeof truck.client === 'object' && truck.client.id) {
+      return truck.client.id;
+    }
+    // Якщо client - це просто число (ID)
+    return truck.client;
   };
 
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
       try {
-        // 1. Вантажимо всі довідники паралельно
         const [clientsData, trucksData, orderData] = await Promise.all([
           clientsAPI.getAll({ page_size: 1000 }).catch(() => []),
           trucksAPI.getAll({ page_size: 1000 }).catch(() => []),
@@ -37,53 +43,47 @@ function OrderFormPage() {
         const loadedClients = clientsData.results || clientsData || [];
         const loadedTrucks = trucksData.results || trucksData || [];
         
+        console.log('Loaded Trucks Total:', loadedTrucks.length); // ДІАГНОСТИКА
+
         setClients(loadedClients);
         setAllTrucks(loadedTrucks);
 
         if (orderData) {
-          // --- ЛОГІКА РЕДАГУВАННЯ ---
-          
-          // Нормалізуємо дані (дістаємо ID з об'єктів)
+          // --- РЕДАГУВАННЯ ---
           const initialValues = {
             ...orderData,
-            client: getId(orderData.client),
-            truck: getId(orderData.truck),
+            client: orderData.client?.id || orderData.client,
+            truck: orderData.truck?.id || orderData.truck,
           };
-
-          const selectedClientId = initialValues.client;
-
-          // Фільтруємо вантажівки для цього клієнта
-          // Використовуємо String(), щоб не було проблем "5" !== 5
-          let filteredTrucks = loadedTrucks;
-          if (selectedClientId) {
-             filteredTrucks = loadedTrucks.filter(t => 
-              String(getId(t.client)) === String(selectedClientId)
-            );
-          }
           
-          // ХАК: Якщо у замовленні є вантажівка, але фільтр її чомусь відсіяв 
-          // (наприклад, глюк бази даних, і машина приписана іншому клієнту),
-          // ми все одно додаємо її в список, щоб Select міг відобразити її назву, а не ID.
-          const currentTruckId = initialValues.truck;
-          const isTruckInList = filteredTrucks.find(t => getId(t) === currentTruckId);
+          // При редагуванні відразу фільтруємо список під клієнта
+          const currentClientId = initialValues.client;
+          let filtered = loadedTrucks;
           
-          if (currentTruckId && !isTruckInList) {
-             const missingTruck = loadedTrucks.find(t => getId(t) === currentTruckId);
-             if (missingTruck) {
-               filteredTrucks = [...filteredTrucks, missingTruck];
+          if (currentClientId) {
+             filtered = loadedTrucks.filter(t => 
+                String(getClientIdFromTruck(t)) === String(currentClientId)
+             );
+             // Якщо машина з наряду не попала в фільтр (глюк бази), додаємо її вручну
+             const currentTruckId = initialValues.truck;
+             if (currentTruckId && !filtered.find(t => t.id === currentTruckId)) {
+                const missing = loadedTrucks.find(t => t.id === currentTruckId);
+                if (missing) filtered.push(missing);
              }
           }
-
-          setTrucks(filteredTrucks);
+          
+          setTrucks(filtered);
           form.setFieldsValue(initialValues);
         } else {
-          // --- ЛОГІКА СТВОРЕННЯ ---
-          setTrucks(loadedTrucks); // Спочатку показуємо всі, або можна []
+          // --- СТВОРЕННЯ ---
+          // При старті показуємо або пустий список, або всі (залежно від логіки). 
+          // Зараз покажемо пустий, щоб змусити вибрати клієнта.
+          setTrucks([]); 
         }
 
       } catch (error) {
-        console.error('Initialization error:', error);
-        message.error('Не вдалося завантажити дані');
+        console.error('Init error:', error);
+        message.error('Помилка завантаження даних');
       } finally {
         setLoading(false);
       }
@@ -93,19 +93,37 @@ function OrderFormPage() {
   }, [id, isEdit, form]);
 
   const handleClientChange = (clientId) => {
-    // Скидаємо поле авто, бо воно від іншого клієнта
+    console.log('Selected Client ID:', clientId); // ДІАГНОСТИКА
+    
+    // Скидаємо вибір авто
     form.setFieldsValue({ truck: null });
 
     if (!clientId) {
-      setTrucks(allTrucks);
+      setTrucks([]); // Якщо клієнт не обраний - ховаємо авто
       return;
     }
 
-    // Безпечна фільтрація
-    const filtered = allTrucks.filter(truck => 
-      String(getId(truck.client)) === String(clientId)
-    );
+    // Фільтруємо
+    const filtered = allTrucks.filter(truck => {
+      const truckOwnerId = getClientIdFromTruck(truck);
+      // Порівнюємо як рядки, щоб уникнути проблем "5" != 5
+      return String(truckOwnerId) === String(clientId);
+    });
+
+    console.log('Filtered Trucks Count:', filtered.length); // ДІАГНОСТИКА
+    
+    if (filtered.length === 0) {
+        // Якщо нічого не знайшли, можна вивести попередження в консоль
+        console.warn('No trucks found for this client. Check truck.client data structure.');
+    }
+
     setTrucks(filtered);
+  };
+
+  // Кнопка "Показати всі" (якщо фільтр працює некоректно або треба вибрати іншу)
+  const showAllTrucks = () => {
+      setTrucks(allTrucks);
+      message.info('Відображено всі автомобілі бази');
   };
 
   const onFinish = async (values) => {
@@ -113,44 +131,35 @@ function OrderFormPage() {
     try {
       if (isEdit) {
         await ordersAPI.update(id, values);
-        message.success('Замовлення оновлено');
+        message.success('Оновлено!');
       } else {
         await ordersAPI.create(values);
-        message.success('Замовлення створено');
+        message.success('Створено!');
       }
       navigate('/orders');
     } catch (error) {
-      console.error('Error saving order:', error);
-      message.error('Помилка при збереженні');
+      console.error('Save error:', error);
+      message.error('Помилка збереження');
     } finally {
       setSaving(false);
     }
   };
 
-  // Фільтр пошуку всередині Select (щоб не ламався від undefined)
-  const filterOption = (input, option) => {
-    if (!option || !option.children) return false;
-    const label = Array.isArray(option.children) ? option.children.join('') : String(option.children);
-    return label.toLowerCase().includes(input.toLowerCase());
-  };
-
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div>
       <PageHeader
-        title={isEdit ? `Редагування замовлення #${id}` : 'Нове замовлення'}
+        title={isEdit ? `Замовлення #${id}` : 'Нове замовлення'}
         showBack
       />
 
-      <Card>
+      <Card style={{ maxWidth: 800 }}>
         <Form
           form={form}
           layout="vertical"
           onFinish={onFinish}
-          initialValues={{ status: 'pending' }}
+          initialValues={{ status: 'OPEN' }}
         >
           <Form.Item
             name="client"
@@ -159,69 +168,70 @@ function OrderFormPage() {
           >
             <Select
               showSearch
-              placeholder="Введіть ім'я клієнта"
+              placeholder="Пошук клієнта..."
               optionFilterProp="children"
-              filterOption={filterOption}
+              filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
               onChange={handleClientChange}
-            >
-              {clients.map(client => (
-                <Select.Option key={client.id} value={client.id}>
-                  {client.name} {client.phone ? `(${client.phone})` : ''}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="truck"
-            label="Вантажівка"
-            rules={[{ required: true, message: 'Оберіть вантажівку' }]}
-          >
-            <Select
-              showSearch
-              placeholder={trucks.length === 0 ? "Немає авто у цього клієнта (або клієнт не обраний)" : "Оберіть авто"}
-              optionFilterProp="children"
-              filterOption={filterOption}
-              // Дозволяємо очистити вибір
               allowClear
             >
-              {trucks.map(truck => (
-                <Select.Option key={truck.id} value={truck.id}>
-                  {truck.license_plate} - {truck.specific_model_name}
+              {clients.map(c => (
+                <Select.Option key={c.id} value={c.id}>
+                  {c.name} {c.phone ? `(${c.phone})` : ''}
                 </Select.Option>
               ))}
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="status"
-            label="Статус"
-          >
+          <Form.Item label="Вантажівка" required style={{ marginBottom: 0 }}>
+             <Space.Compact style={{ width: '100%' }}>
+                <Form.Item
+                    name="truck"
+                    rules={[{ required: true, message: 'Оберіть авто' }]}
+                    noStyle
+                >
+                    <Select
+                    showSearch
+                    placeholder={
+                        trucks.length === 0 
+                        ? "Немає авто у цього клієнта (або клієнт не обраний)" 
+                        : "Оберіть авто зі списку"
+                    }
+                    optionFilterProp="children"
+                    filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
+                    allowClear
+                    >
+                    {trucks.map(t => (
+                        <Select.Option key={t.id} value={t.id}>
+                        {t.license_plate} - {t.specific_model_name}
+                        </Select.Option>
+                    ))}
+                    </Select>
+                </Form.Item>
+                <Tooltip title="Показати всі авто (ігнорувати фільтр по клієнту)">
+                    <Button icon={<ReloadOutlined />} onClick={showAllTrucks} />
+                </Tooltip>
+             </Space.Compact>
+             <div style={{ marginTop: 4, fontSize: '12px', color: '#888' }}>
+                Знайдено авто: {trucks.length}
+             </div>
+          </Form.Item>
+
+          <Form.Item name="status" label="Статус" style={{ marginTop: 24 }}>
             <Select>
-              {Object.values(ORDER_STATUSES).map(status => (
-                <Select.Option key={status.value} value={status.value}>
-                  {status.label}
-                </Select.Option>
+              {Object.values(ORDER_STATUSES).map(s => (
+                <Select.Option key={s.value} value={s.value}>{s.label}</Select.Option>
               ))}
             </Select>
           </Form.Item>
 
-          <Form.Item
-            name="problem_description"
-            label="Опис проблеми"
-          >
-            <Input.TextArea rows={4} placeholder="Опишіть проблему зі слів клієнта" />
+          <Form.Item name="problem_description" label="Опис проблеми">
+            <Input.TextArea rows={4} placeholder="Скарги клієнта..." />
           </Form.Item>
 
-          <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
+          <Form.Item>
             <Space>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={saving}
-                icon={<SaveOutlined />}
-              >
-                {isEdit ? 'Зберегти зміни' : 'Створити замовлення'}
+              <Button type="primary" htmlType="submit" loading={saving} icon={<SaveOutlined />}>
+                {isEdit ? 'Зберегти' : 'Створити'}
               </Button>
               <Button onClick={() => navigate('/orders')}>Скасувати</Button>
             </Space>
