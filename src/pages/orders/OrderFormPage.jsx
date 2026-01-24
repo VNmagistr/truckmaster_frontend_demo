@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message, Space, Select, Tooltip } from 'antd';
-import { SaveOutlined, CarOutlined, ReloadOutlined } from '@ant-design/icons';
+import { SaveOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ordersAPI, clientsAPI, trucksAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
@@ -12,23 +12,43 @@ function OrderFormPage() {
   const [saving, setSaving] = useState(false);
   
   const [clients, setClients] = useState([]);
-  const [trucks, setTrucks] = useState([]); // Те, що показуємо в списку
-  const [allTrucks, setAllTrucks] = useState([]); // Повна база
+  const [trucks, setTrucks] = useState([]); // Відфільтровані авто
+  const [allTrucks, setAllTrucks] = useState([]); // Всі авто
   
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
-  // Функція для отримання "чистого" ID клієнта з об'єкта вантажівки
+  // --- ДОПОМІЖНІ ФУНКЦІЇ ---
+
+  // Безпечний пошук (виправляє білий екран)
+  const filterOption = (input, option) => {
+    if (!option || !option.children) return false;
+    
+    let text = '';
+    // Якщо children - це масив (наприклад "Ім'я" + " " + "Телефон"), склеюємо його
+    if (Array.isArray(option.children)) {
+      text = option.children.join('');
+    } else {
+      // Інакше просто перетворюємо на рядок
+      text = String(option.children);
+    }
+    
+    return text.toLowerCase().includes(input.toLowerCase());
+  };
+
+  // Отримання ID клієнта з вантажівки (для фільтрації)
   const getClientIdFromTruck = (truck) => {
     if (!truck || !truck.client) return null;
-    // Якщо client - це об'єкт {id: 1, name: ...}
-    if (typeof truck.client === 'object' && truck.client.id) {
+    // Якщо це об'єкт {id: 1, name: ...}
+    if (typeof truck.client === 'object') {
       return truck.client.id;
     }
-    // Якщо client - це просто число (ID)
+    // Якщо це просто число або рядок
     return truck.client;
   };
+
+  // --- ЗАВАНТАЖЕННЯ ДАНИХ ---
 
   useEffect(() => {
     const initData = async () => {
@@ -43,7 +63,7 @@ function OrderFormPage() {
         const loadedClients = clientsData.results || clientsData || [];
         const loadedTrucks = trucksData.results || trucksData || [];
         
-        console.log('Loaded Trucks Total:', loadedTrucks.length); // ДІАГНОСТИКА
+        console.log('Total Trucks Loaded:', loadedTrucks.length);
 
         setClients(loadedClients);
         setAllTrucks(loadedTrucks);
@@ -55,30 +75,32 @@ function OrderFormPage() {
             client: orderData.client?.id || orderData.client,
             truck: orderData.truck?.id || orderData.truck,
           };
-          
-          // При редагуванні відразу фільтруємо список під клієнта
+
+          // Фільтруємо авто під клієнта при старті
           const currentClientId = initialValues.client;
-          let filtered = loadedTrucks;
-          
           if (currentClientId) {
-             filtered = loadedTrucks.filter(t => 
+             const filtered = loadedTrucks.filter(t => 
                 String(getClientIdFromTruck(t)) === String(currentClientId)
              );
-             // Якщо машина з наряду не попала в фільтр (глюк бази), додаємо її вручну
+             
+             // Перестраховка: якщо авто з ордера не потрапило у фільтр - додаємо його вручну
              const currentTruckId = initialValues.truck;
-             if (currentTruckId && !filtered.find(t => t.id === currentTruckId)) {
-                const missing = loadedTrucks.find(t => t.id === currentTruckId);
-                if (missing) filtered.push(missing);
+             const isFound = filtered.find(t => t.id === currentTruckId);
+             
+             if (currentTruckId && !isFound) {
+                 const missing = loadedTrucks.find(t => t.id === currentTruckId);
+                 if (missing) filtered.push(missing);
              }
+             
+             setTrucks(filtered);
+          } else {
+             setTrucks(loadedTrucks);
           }
           
-          setTrucks(filtered);
           form.setFieldsValue(initialValues);
         } else {
           // --- СТВОРЕННЯ ---
-          // При старті показуємо або пустий список, або всі (залежно від логіки). 
-          // Зараз покажемо пустий, щоб змусити вибрати клієнта.
-          setTrucks([]); 
+          setTrucks([]); // Спочатку список пустий
         }
 
       } catch (error) {
@@ -92,38 +114,30 @@ function OrderFormPage() {
     initData();
   }, [id, isEdit, form]);
 
+  // --- ОБРОБНИКИ ПОДІЙ ---
+
   const handleClientChange = (clientId) => {
-    console.log('Selected Client ID:', clientId); // ДІАГНОСТИКА
-    
-    // Скидаємо вибір авто
-    form.setFieldsValue({ truck: null });
+    console.log('Selected Client ID:', clientId);
+    form.setFieldsValue({ truck: null }); // Очистити вибір авто
 
     if (!clientId) {
-      setTrucks([]); // Якщо клієнт не обраний - ховаємо авто
+      setTrucks([]);
       return;
     }
 
-    // Фільтруємо
+    // Фільтруємо список
     const filtered = allTrucks.filter(truck => {
-      const truckOwnerId = getClientIdFromTruck(truck);
-      // Порівнюємо як рядки, щоб уникнути проблем "5" != 5
-      return String(truckOwnerId) === String(clientId);
+      const ownerId = getClientIdFromTruck(truck);
+      return String(ownerId) === String(clientId);
     });
-
-    console.log('Filtered Trucks Count:', filtered.length); // ДІАГНОСТИКА
     
-    if (filtered.length === 0) {
-        // Якщо нічого не знайшли, можна вивести попередження в консоль
-        console.warn('No trucks found for this client. Check truck.client data structure.');
-    }
-
+    console.log('Filtered Trucks:', filtered.length);
     setTrucks(filtered);
   };
 
-  // Кнопка "Показати всі" (якщо фільтр працює некоректно або треба вибрати іншу)
   const showAllTrucks = () => {
-      setTrucks(allTrucks);
-      message.info('Відображено всі автомобілі бази');
+    setTrucks(allTrucks);
+    message.info('Показано всі автомобілі');
   };
 
   const onFinish = async (values) => {
@@ -170,7 +184,7 @@ function OrderFormPage() {
               showSearch
               placeholder="Пошук клієнта..."
               optionFilterProp="children"
-              filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
+              filterOption={filterOption} // ВИКОРИСТОВУЄМО БЕЗПЕЧНИЙ ФІЛЬТР
               onChange={handleClientChange}
               allowClear
             >
@@ -190,15 +204,15 @@ function OrderFormPage() {
                     noStyle
                 >
                     <Select
-                    showSearch
-                    placeholder={
-                        trucks.length === 0 
-                        ? "Немає авто у цього клієнта (або клієнт не обраний)" 
-                        : "Оберіть авто зі списку"
-                    }
-                    optionFilterProp="children"
-                    filterOption={(input, option) => (option?.children ?? '').toLowerCase().includes(input.toLowerCase())}
-                    allowClear
+                        showSearch
+                        placeholder={
+                            trucks.length > 0 
+                            ? "Оберіть авто зі списку" 
+                            : "Немає авто (натисніть кнопку праворуч, щоб показати всі)"
+                        }
+                        optionFilterProp="children"
+                        filterOption={filterOption} // ВИКОРИСТОВУЄМО БЕЗПЕЧНИЙ ФІЛЬТР
+                        allowClear
                     >
                     {trucks.map(t => (
                         <Select.Option key={t.id} value={t.id}>
@@ -207,12 +221,12 @@ function OrderFormPage() {
                     ))}
                     </Select>
                 </Form.Item>
-                <Tooltip title="Показати всі авто (ігнорувати фільтр по клієнту)">
+                <Tooltip title="Показати всі авто (ігнорувати фільтр)">
                     <Button icon={<ReloadOutlined />} onClick={showAllTrucks} />
                 </Tooltip>
              </Space.Compact>
              <div style={{ marginTop: 4, fontSize: '12px', color: '#888' }}>
-                Знайдено авто: {trucks.length}
+                Доступно для вибору: {trucks.length}
              </div>
           </Form.Item>
 
