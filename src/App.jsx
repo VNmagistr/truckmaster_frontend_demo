@@ -7,6 +7,7 @@ import 'dayjs/locale/uk';
 
 import { MainLayout, AuthLayout } from './layouts';
 import { ProtectedRoute, LoadingSpinner } from './components';
+import { Welcome } from './pages';
 
 // Lazy loading для всіх сторінок
 const LoginPage = lazy(() => import('./pages/LoginPage'));
@@ -42,6 +43,9 @@ function AppRoutes() {
     <BrowserRouter>
       <Suspense fallback={<LoadingSpinner />}>
         <Routes>
+          {/* Головна публічна сторінка (Welcome) */}
+          <Route path="/" element={<Welcome />} />
+
           {/* Публічні маршрути (авторизація) */}
           <Route element={<AuthLayout />}>
             <Route path="/login" element={<LoginPage />} />
@@ -57,8 +61,7 @@ function AppRoutes() {
           >
             {/* Dashboard */}
             <Route path="/dashboard" element={<DashboardPage />} />
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-
+            
             {/* Clients */}
             <Route path="/clients" element={<ClientsPage />} />
             <Route path="/clients/new" element={<ClientFormPage />} />
@@ -87,7 +90,7 @@ function AppRoutes() {
             <Route path="/bot" element={<BotPage />} />
           </Route>
 
-          {/* 404 - редірект на dashboard */}
+          {/* 404 - редірект на dashboard, якщо сторінку не знайдено */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Suspense>

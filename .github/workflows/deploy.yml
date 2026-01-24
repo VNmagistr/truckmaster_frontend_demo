@@ -10,15 +10,45 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Deploy to Server
+    # 1. Завантажуємо код з репозиторію (на сервер GitHub)
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # 2. Встановлюємо Node.js (на сервері GitHub)
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    # 3. Встановлюємо залежності та збираємо проект (на сервері GitHub)
+    - name: Install Dependencies and Build
+      run: |
+        npm install
+        npm run build
+
+    # 4. Копіюємо готову папку 'dist' на ваш сервер через SCP
+    - name: Copy files to Server
+      uses: appleboy/scp-action@v0.1.7
+      with:
+        host: ${{ secrets.DO_HOST }}
+        username: ${{ secrets.DO_USERNAME }}
+        key: ${{ secrets.DO_SSH_KEY }}
+        # Копіюємо вміст папки dist у папку на сервері
+        source: "dist/*"
+        target: "/var/www/truckmaster_frontend"
+        # Ця опція прибирає зайву вкладеність шляхів при копіюванні
+        strip_components: 1
+
+    # 5. Фінальні штрихи на сервері (права доступу та перезапуск)
+    - name: Fix Permissions and Reload Nginx
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.DO_HOST }}
         username: ${{ secrets.DO_USERNAME }}
         key: ${{ secrets.DO_SSH_KEY }}
         script: |
-          cd /var/www/truckmaster-frontend
-          sudo -u www-data git pull origin main
-          sudo -u www-data npm install
-          sudo -u www-data npm run build
+          # Відновлюємо права для www-data (щоб Nginx міг читати файли)
+          sudo chown -R www-data:www-data /var/www/truckmaster_frontend
+          sudo chmod -R 755 /var/www/truckmaster_frontend
+          # Перезавантажуємо Nginx (не обов'язково для статики, але корисно для скидання кешу)
           sudo systemctl reload nginx
