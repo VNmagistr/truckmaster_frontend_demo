@@ -22,13 +22,6 @@ const Welcome = () => {
           >
             Увійти
           </button>
-          
-          <button 
-            style={styles.secondaryButton} 
-            onClick={() => window.open('https://github.com/VNmagistr', '_blank')}
-          >
-            GitHub
-          </button>
         </div>
       </div>
       
