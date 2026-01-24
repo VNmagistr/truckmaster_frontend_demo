@@ -8,57 +8,77 @@ import { ORDER_STATUSES } from '../../utils/constants';
 
 function OrderFormPage() {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(true); // Загальний лоадер
+  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [clients, setClients] = useState([]);
-  const [trucks, setTrucks] = useState([]); // Відфільтровані вантажівки
-  const [allTrucks, setAllTrucks] = useState([]); // Всі вантажівки
+  const [trucks, setTrucks] = useState([]); // Відфільтровані під клієнта
+  const [allTrucks, setAllTrucks] = useState([]); // Повна база вантажівок
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
-  // Завантажуємо все одразу, щоб уникнути проблем з порядком
+  // Допоміжна функція для безпечного отримання ID (число або рядок)
+  const getId = (item) => {
+    if (!item) return null;
+    return item.id || item;
+  };
+
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
       try {
-        // 1. Паралельно вантажимо довідники та (якщо треба) замовлення
+        // 1. Вантажимо всі довідники паралельно
         const [clientsData, trucksData, orderData] = await Promise.all([
           clientsAPI.getAll({ page_size: 1000 }).catch(() => []),
           trucksAPI.getAll({ page_size: 1000 }).catch(() => []),
           isEdit ? ordersAPI.getById(id) : Promise.resolve(null)
         ]);
 
-        // 2. Зберігаємо довідники
         const loadedClients = clientsData.results || clientsData || [];
         const loadedTrucks = trucksData.results || trucksData || [];
         
         setClients(loadedClients);
         setAllTrucks(loadedTrucks);
 
-        // 3. Якщо це редагування - заповнюємо форму
         if (orderData) {
-          // ВАЖЛИВО: Витягуємо ID з об'єктів, щоб Select їх зрозумів
-          const formData = {
+          // --- ЛОГІКА РЕДАГУВАННЯ ---
+          
+          // Нормалізуємо дані (дістаємо ID з об'єктів)
+          const initialValues = {
             ...orderData,
-            client: orderData.client?.id || orderData.client,
-            truck: orderData.truck?.id || orderData.truck,
+            client: getId(orderData.client),
+            truck: getId(orderData.truck),
           };
 
-          // Фільтруємо список машин під цього клієнта
-          if (formData.client) {
-            const clientTrucks = loadedTrucks.filter(t => 
-              (t.client?.id || t.client) === formData.client
+          const selectedClientId = initialValues.client;
+
+          // Фільтруємо вантажівки для цього клієнта
+          // Використовуємо String(), щоб не було проблем "5" !== 5
+          let filteredTrucks = loadedTrucks;
+          if (selectedClientId) {
+             filteredTrucks = loadedTrucks.filter(t => 
+              String(getId(t.client)) === String(selectedClientId)
             );
-            setTrucks(clientTrucks);
-          } else {
-            setTrucks(loadedTrucks);
+          }
+          
+          // ХАК: Якщо у замовленні є вантажівка, але фільтр її чомусь відсіяв 
+          // (наприклад, глюк бази даних, і машина приписана іншому клієнту),
+          // ми все одно додаємо її в список, щоб Select міг відобразити її назву, а не ID.
+          const currentTruckId = initialValues.truck;
+          const isTruckInList = filteredTrucks.find(t => getId(t) === currentTruckId);
+          
+          if (currentTruckId && !isTruckInList) {
+             const missingTruck = loadedTrucks.find(t => getId(t) === currentTruckId);
+             if (missingTruck) {
+               filteredTrucks = [...filteredTrucks, missingTruck];
+             }
           }
 
-          form.setFieldsValue(formData);
+          setTrucks(filteredTrucks);
+          form.setFieldsValue(initialValues);
         } else {
-          // Якщо створення нового - показуємо всі машини або пустий список
-          setTrucks(loadedTrucks); 
+          // --- ЛОГІКА СТВОРЕННЯ ---
+          setTrucks(loadedTrucks); // Спочатку показуємо всі, або можна []
         }
 
       } catch (error) {
@@ -73,15 +93,19 @@ function OrderFormPage() {
   }, [id, isEdit, form]);
 
   const handleClientChange = (clientId) => {
-    // При зміні клієнта фільтруємо список машин
-    const filtered = allTrucks.filter(truck => {
-      const truckClientId = truck.client?.id || truck.client;
-      return String(truckClientId) === String(clientId);
-    });
-    setTrucks(filtered);
-    
-    // Очищаємо поле машини, бо стара машина може не належати новому клієнту
+    // Скидаємо поле авто, бо воно від іншого клієнта
     form.setFieldsValue({ truck: null });
+
+    if (!clientId) {
+      setTrucks(allTrucks);
+      return;
+    }
+
+    // Безпечна фільтрація
+    const filtered = allTrucks.filter(truck => 
+      String(getId(truck.client)) === String(clientId)
+    );
+    setTrucks(filtered);
   };
 
   const onFinish = async (values) => {
@@ -103,15 +127,10 @@ function OrderFormPage() {
     }
   };
 
-  // Безпечна функція пошуку для Select
-  const safeFilterOption = (input, option) => {
+  // Фільтр пошуку всередині Select (щоб не ламався від undefined)
+  const filterOption = (input, option) => {
     if (!option || !option.children) return false;
-    
-    // Якщо children - це масив (наприклад "AA1234AA" + " - " + "Model"), з'єднуємо його
-    const label = Array.isArray(option.children) 
-      ? option.children.join('') 
-      : String(option.children);
-      
+    const label = Array.isArray(option.children) ? option.children.join('') : String(option.children);
     return label.toLowerCase().includes(input.toLowerCase());
   };
 
@@ -142,7 +161,7 @@ function OrderFormPage() {
               showSearch
               placeholder="Введіть ім'я клієнта"
               optionFilterProp="children"
-              filterOption={safeFilterOption} // ВИПРАВЛЕНО: безпечний пошук
+              filterOption={filterOption}
               onChange={handleClientChange}
             >
               {clients.map(client => (
@@ -160,10 +179,11 @@ function OrderFormPage() {
           >
             <Select
               showSearch
-              placeholder={trucks.length === 0 ? "Спочатку оберіть клієнта" : "Введіть номер авто"}
+              placeholder={trucks.length === 0 ? "Немає авто у цього клієнта (або клієнт не обраний)" : "Оберіть авто"}
               optionFilterProp="children"
-              filterOption={safeFilterOption} // ВИПРАВЛЕНО: безпечний пошук
-              notFoundContent={trucks.length === 0 ? "Немає авто у цього клієнта" : null}
+              filterOption={filterOption}
+              // Дозволяємо очистити вибір
+              allowClear
             >
               {trucks.map(truck => (
                 <Select.Option key={truck.id} value={truck.id}>
