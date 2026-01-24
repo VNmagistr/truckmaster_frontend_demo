@@ -1,24 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, message, Card, Tag, Tabs, Select } from 'antd';
-import { SearchOutlined, PlusOutlined, WarningOutlined } from '@ant-design/icons';
-import { Link, useNavigate } from 'react-router-dom';
+import { Table, Button, Space, Input, message, Card, Tag, Tabs, Select, Popconfirm } from 'antd';
+import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, EmptyState } from '../../components';
-import { formatMoney } from '../../utils/formatters';
-import { CATEGORY_TYPES } from '../../utils/constants';
+import { formatCurrency } from '../../utils/formatters';
 
 function InventoryPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState(''); // Пошук
   const [activeTab, setActiveTab] = useState('all');
   const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 20,
-    total: 0,
-  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -27,16 +21,12 @@ function InventoryPage() {
 
   useEffect(() => {
     fetchProducts();
-  }, [pagination.current, pagination.pageSize, activeTab, selectedCategory]);
+  }, [activeTab, selectedCategory]);
 
   const fetchCategories = async () => {
     try {
-      const [categoriesRes, subcategoriesRes] = await Promise.all([
-        inventoryAPI.getCategories().catch(() => []),
-        inventoryAPI.getSubcategories().catch(() => []),
-      ]);
+      const categoriesRes = await inventoryAPI.getCategories().catch(() => []);
       setCategories(categoriesRes.results || categoriesRes || []);
-      setSubcategories(subcategoriesRes.results || subcategoriesRes || []);
     } catch (error) {
       console.error('Error fetching categories:', error);
     }
@@ -45,187 +35,137 @@ function InventoryPage() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const params = {
-        page: pagination.current,
-        page_size: pagination.pageSize,
-      };
-
+      const params = {}; // Завантажуємо все без серверної пагінації
+      
       if (activeTab === 'low_stock') {
-        const response = await inventoryAPI.getLowStock();
-        const data = response.results || response || [];
-        setProducts(Array.isArray(data) ? data : []);
-        setPagination(prev => ({ ...prev, total: data.length }));
-        setLoading(false);
-        return;
+        params.low_stock = true;
       }
-
+      
       if (selectedCategory) {
-        params.subcategory__category = selectedCategory;
+        params.category = selectedCategory;
       }
 
-      const response = await inventoryAPI.getProducts(params);
-      const data = response.results || response;
-      setProducts(Array.isArray(data) ? data : []);
-      setPagination(prev => ({
-        ...prev,
-        total: response.count || data.length || 0,
-      }));
+      const response = await inventoryAPI.getAll(params);
+      setProducts(response.results || response || []);
     } catch (error) {
-      console.error('Error fetching products:', error);
-      message.error('Не вдалося завантажити список товарів');
+      console.error('Error fetching inventory:', error);
+      message.error('Не вдалося завантажити склад');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTableChange = (paginationConfig) => {
-    setPagination({
-      ...pagination,
-      current: paginationConfig.current,
-      pageSize: paginationConfig.pageSize,
-    });
+  const handleDelete = async (id) => {
+    try {
+      await inventoryAPI.delete(id);
+      message.success('Товар видалено');
+      fetchProducts();
+    } catch (error) {
+      message.error('Не вдалося видалити товар');
+    }
   };
 
-  const getColumnSearchProps = (dataIndex, placeholder) => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={placeholder}
-          value={selectedKeys[0]}
-          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Пошук
-          </Button>
-          <Button onClick={() => clearFilters && clearFilters()} size="small" style={{ width: 90 }}>
-            Скинути
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) =>
-      record[dataIndex]?.toString().toLowerCase().includes(value.toLowerCase()),
+  // --- ЛОГІКА ПОШУКУ ---
+  const filteredProducts = products.filter(product => {
+    const value = searchText.toLowerCase();
+    return (
+      product.name?.toLowerCase().includes(value) ||
+      product.article_number?.toLowerCase().includes(value) ||
+      product.brand?.toLowerCase().includes(value)
+    );
   });
 
   const columns = [
     {
       title: 'Артикул',
-      dataIndex: 'sku_code',
-      key: 'sku_code',
-      width: 120,
-      ...getColumnSearchProps('sku_code', 'Пошук по артикулу'),
-      render: (text) => <code>{text}</code>,
+      dataIndex: 'article_number',
+      key: 'article_number',
     },
     {
       title: 'Назва',
       dataIndex: 'name',
       key: 'name',
-      ...getColumnSearchProps('name', 'Пошук по назві'),
-      render: (text, record) => (
-        <Link to={`/inventory/${record.id}`} style={{ fontWeight: 500 }}>
-          {text}
-          {record.viscosity && <span style={{ color: '#666' }}> {record.viscosity}</span>}
-        </Link>
-      ),
+      render: (text, record) => <span style={{ fontWeight: 500 }}>{text}</span>,
+      sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
       title: 'Бренд',
       dataIndex: 'brand',
       key: 'brand',
-      width: 100,
-      render: (brand) => brand || '-',
     },
     {
       title: 'Категорія',
-      dataIndex: 'subcategory_name',
+      dataIndex: ['category', 'name'],
       key: 'category',
-      render: (subcat, record) => subcat || record.subcategory?.name || '-',
+      render: (text) => <Tag>{text || 'Інше'}</Tag>,
     },
     {
-      title: 'Ціна',
-      dataIndex: 'selling_price',
-      key: 'price',
-      width: 120,
-      sorter: (a, b) => (a.selling_price || 0) - (b.selling_price || 0),
-      render: (price) => formatMoney(price),
-    },
-    {
-      title: 'Залишок',
-      dataIndex: 'current_stock',
-      key: 'stock',
-      width: 100,
-      sorter: (a, b) => (a.current_stock || 0) - (b.current_stock || 0),
-      render: (stock, record) => {
-        const isLow = stock <= (record.min_stock_level || 0);
-        return (
-          <span style={{ color: isLow ? '#ff4d4f' : undefined }}>
-            {stock || 0} {record.unit === 'l' ? 'л' : 'шт'}
-            {isLow && <WarningOutlined style={{ marginLeft: 4, color: '#ff4d4f' }} />}
-          </span>
-        );
-      },
-    },
-    {
-      title: 'Статус',
-      dataIndex: 'is_active',
-      key: 'status',
-      width: 100,
-      render: (isActive) => (
-        <Tag color={isActive ? 'green' : 'default'}>
-          {isActive ? 'Активний' : 'Неактивний'}
+      title: 'Кількість',
+      dataIndex: 'quantity',
+      key: 'quantity',
+      render: (qty, record) => (
+        <Tag color={qty <= (record.min_quantity || 0) ? 'red' : 'green'}>
+          {qty > 0 ? `${qty} шт.` : 'Немає'}
         </Tag>
+      ),
+      sorter: (a, b) => a.quantity - b.quantity,
+    },
+    {
+      title: 'Ціна закуп.',
+      dataIndex: 'price',
+      key: 'price',
+      render: (price) => formatCurrency(price),
+    },
+    {
+      title: 'Дії',
+      key: 'actions',
+      render: (_, record) => (
+        <Space size="middle">
+          <Button icon={<EyeOutlined />} onClick={() => navigate(`/inventory/${record.id}`)} />
+          <Button icon={<EditOutlined />} onClick={() => navigate(`/inventory/${record.id}/edit`)} />
+          <Popconfirm title="Видалити товар?" onConfirm={() => handleDelete(record.id)}>
+            <Button icon={<DeleteOutlined />} danger />
+          </Popconfirm>
+        </Space>
       ),
     },
   ];
 
   const tabItems = [
-    {
-      key: 'all',
-      label: 'Всі товари',
-    },
-    {
-      key: 'low_stock',
+    { key: 'all', label: 'Всі товари' },
+    { 
+      key: 'low_stock', 
       label: (
         <span>
-          <WarningOutlined style={{ color: '#ff4d4f' }} />
-          Низький залишок
+          <WarningOutlined /> Закінчуються
         </span>
-      ),
+      )
     },
   ];
 
-  if (loading && products.length === 0) {
-    return <LoadingSpinner />;
-  }
+  if (loading && products.length === 0) return <LoadingSpinner />;
 
   return (
     <div>
       <PageHeader
-        title="Склад"
-        subtitle={`Всього товарів: ${pagination.total}`}
+        title="Склад запчастин"
         extra={
           <Space>
-            <Select
-              placeholder="Фільтр по категорії"
+            {/* ПОЛЕ ПОШУКУ */}
+            <Input
+              placeholder="Пошук (Назва, Артикул)..."
+              prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+              onChange={e => setSearchText(e.target.value)}
+              style={{ width: 220 }}
               allowClear
-              style={{ width: 200 }}
+            />
+            
+            <Select
+              placeholder="Категорія"
+              allowClear
+              style={{ width: 150 }}
               value={selectedCategory}
-              onChange={(value) => {
-                setSelectedCategory(value);
-                setPagination(prev => ({ ...prev, current: 1 }));
-              }}
+              onChange={setSelectedCategory}
             >
               {categories.map(cat => (
                 <Select.Option key={cat.id} value={cat.id}>
@@ -233,6 +173,7 @@ function InventoryPage() {
                 </Select.Option>
               ))}
             </Select>
+
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -247,10 +188,7 @@ function InventoryPage() {
       <Card>
         <Tabs
           activeKey={activeTab}
-          onChange={(key) => {
-            setActiveTab(key);
-            setPagination(prev => ({ ...prev, current: 1 }));
-          }}
+          onChange={setActiveTab}
           items={tabItems}
           style={{ marginBottom: 16 }}
         />
@@ -258,22 +196,20 @@ function InventoryPage() {
         {products.length > 0 ? (
           <Table
             columns={columns}
-            dataSource={products}
+            dataSource={filteredProducts} // Фільтровані дані
             rowKey="id"
-            loading={loading}
-            pagination={{
-              ...pagination,
+            pagination={{ 
+              pageSize: 20, 
               showSizeChanger: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`,
+              showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`
             }}
-            onChange={handleTableChange}
             size="middle"
           />
         ) : (
           <EmptyState
             description={activeTab === 'low_stock' ? 'Товарів з низьким залишком немає' : 'Товарів поки немає'}
             buttonText={activeTab !== 'low_stock' ? 'Додати товар' : null}
-            onButtonClick={activeTab !== 'low_stock' ? () => navigate('/inventory/new') : null}
+            onButtonClick={activeTab !== 'low_stock' ? () => navigate('/inventory/new') : undefined}
           />
         )}
       </Card>

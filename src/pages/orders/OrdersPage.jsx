@@ -4,30 +4,25 @@ import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined
 import { Link, useNavigate } from 'react-router-dom';
 import { ordersAPI } from '../../api';
 import { PageHeader, LoadingSpinner, EmptyState, StatusTag } from '../../components';
-import { formatDate, formatMoney } from '../../utils/formatters';
+import { formatDate } from '../../utils/formatters';
 import { ORDER_STATUSES } from '../../utils/constants';
 
 function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState(''); // Пошук
   const [statusFilter, setStatusFilter] = useState(null);
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 20,
-    total: 0,
-  });
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchOrders();
-  }, [pagination.current, pagination.pageSize, statusFilter]);
+  }, [statusFilter]);
 
   const fetchOrders = async () => {
     setLoading(true);
     try {
+      // Завантажуємо ВСІ замовлення для швидкого пошуку на клієнті
       const params = {
-        page: pagination.current,
-        page_size: pagination.pageSize,
         ordering: '-created_at',
       };
       
@@ -36,13 +31,7 @@ function OrdersPage() {
       }
 
       const response = await ordersAPI.getAll(params);
-
-      const data = response.results || response;
-      setOrders(Array.isArray(data) ? data : []);
-      setPagination(prev => ({
-        ...prev,
-        total: response.count || data.length || 0,
-      }));
+      setOrders(response.results || response || []);
     } catch (error) {
       console.error('Error fetching orders:', error);
       message.error('Не вдалося завантажити список замовлень');
@@ -54,90 +43,46 @@ function OrdersPage() {
   const handleDelete = async (id) => {
     try {
       await ordersAPI.delete(id);
-      message.success('Замовлення успішно видалено');
+      message.success('Замовлення видалено');
       fetchOrders();
     } catch (error) {
-      console.error('Error deleting order:', error);
       message.error('Не вдалося видалити замовлення');
     }
   };
 
-  const handleTableChange = (paginationConfig) => {
-    setPagination({
-      ...pagination,
-      current: paginationConfig.current,
-      pageSize: paginationConfig.pageSize,
-    });
-  };
+  // --- ЛОГІКА ПОШУКУ ---
+  const filteredOrders = orders.filter(order => {
+    const value = searchText.toLowerCase();
+    const orderNum = order.order_number ? String(order.order_number).toLowerCase() : String(order.id);
+    const truckPlate = order.truck?.license_plate?.toLowerCase() || '';
+    const clientName = order.client?.name?.toLowerCase() || '';
 
-  const getColumnSearchProps = (dataIndex, placeholder) => ({
-    filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => (
-      <div style={{ padding: 8 }} onKeyDown={(e) => e.stopPropagation()}>
-        <Input
-          placeholder={placeholder}
-          value={selectedKeys[0]}
-          onChange={(e) => setSelectedKeys(e.target.value ? [e.target.value] : [])}
-          onPressEnter={() => confirm()}
-          style={{ marginBottom: 8, display: 'block' }}
-        />
-        <Space>
-          <Button
-            type="primary"
-            onClick={() => confirm()}
-            icon={<SearchOutlined />}
-            size="small"
-            style={{ width: 90 }}
-          >
-            Пошук
-          </Button>
-          <Button onClick={() => clearFilters && clearFilters()} size="small" style={{ width: 90 }}>
-            Скинути
-          </Button>
-        </Space>
-      </div>
-    ),
-    filterIcon: (filtered) => (
-      <SearchOutlined style={{ color: filtered ? '#1677ff' : undefined }} />
-    ),
-    onFilter: (value, record) => {
-      const fieldValue = dataIndex.includes('.')
-        ? dataIndex.split('.').reduce((obj, key) => obj?.[key], record)
-        : record[dataIndex];
-      return fieldValue?.toString().toLowerCase().includes(value.toLowerCase());
-    },
+    return (
+      orderNum.includes(value) ||
+      truckPlate.includes(value) ||
+      clientName.includes(value)
+    );
   });
 
   const columns = [
     {
-      title: '№ Замовлення',
+      title: '№',
       dataIndex: 'order_number',
       key: 'order_number',
-      ...getColumnSearchProps('order_number', 'Пошук по номеру'),
-      render: (text, record) => (
-        <Link to={`/orders/${record.id}`} style={{ fontWeight: 500 }}>
-          {text || `#${record.id}`}
-        </Link>
-      ),
+      render: (text, record) => <Link to={`/orders/${record.id}`}>{text || `#${record.id}`}</Link>,
+      sorter: (a, b) => (a.order_number || a.id) - (b.order_number || b.id),
     },
     {
       title: 'Клієнт',
       dataIndex: ['client', 'name'],
       key: 'client',
-      render: (_, record) => record.client ? (
-        <Link to={`/clients/${record.client.id}`}>
-          {record.client.name}
-        </Link>
-      ) : '-',
+      render: (text, record) => record.client ? <Link to={`/clients/${record.client.id}`}>{text}</Link> : '-',
     },
     {
       title: 'Вантажівка',
       dataIndex: ['truck', 'license_plate'],
       key: 'truck',
-      render: (_, record) => record.truck ? (
-        <Link to={`/trucks/${record.truck.id}`}>
-          {record.truck.license_plate}
-        </Link>
-      ) : '-',
+      render: (text, record) => record.truck ? <Link to={`/trucks/${record.truck.id}`}>{text}</Link> : '-',
     },
     {
       title: 'Статус',
@@ -146,68 +91,50 @@ function OrdersPage() {
       render: (status) => <StatusTag status={status} type="order" />,
     },
     {
-      title: 'Сума',
-      dataIndex: 'total_cost',
-      key: 'total_cost',
-      render: (cost) => cost ? formatMoney(cost) : '-',
-    },
-    {
       title: 'Дата',
       dataIndex: 'created_at',
       key: 'created_at',
-      sorter: true,
       render: (date) => formatDate(date),
+      sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
     },
     {
       title: 'Дії',
       key: 'actions',
-      width: 150,
       render: (_, record) => (
-        <Space size="small">
-          <Button
-            type="text"
-            icon={<EyeOutlined />}
-            onClick={() => navigate(`/orders/${record.id}`)}
-          />
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/orders/${record.id}/edit`)}
-          />
-          <Popconfirm
-            title="Видалити замовлення?"
-            description="Ця дія незворотна."
-            onConfirm={() => handleDelete(record.id)}
-            okText="Так"
-            cancelText="Ні"
-          >
-            <Button type="text" danger icon={<DeleteOutlined />} />
+        <Space size="middle">
+          <Button icon={<EyeOutlined />} onClick={() => navigate(`/orders/${record.id}`)} />
+          <Button icon={<EditOutlined />} onClick={() => navigate(`/orders/${record.id}/edit`)} />
+          <Popconfirm title="Видалити замовлення?" onConfirm={() => handleDelete(record.id)}>
+            <Button icon={<DeleteOutlined />} danger />
           </Popconfirm>
         </Space>
       ),
     },
   ];
 
-  if (loading && orders.length === 0) {
-    return <LoadingSpinner />;
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div>
       <PageHeader
-        title="Замовлення-наряди"
-        subtitle={`Всього: ${pagination.total}`}
+        title="Наряди-замовлення"
         extra={
           <Space>
-            <Select
-              placeholder="Фільтр по статусу"
+            {/* ПОЛЕ ПОШУКУ */}
+            <Input
+              placeholder="Пошук (№, авто, клієнт)..."
+              prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+              onChange={e => setSearchText(e.target.value)}
+              style={{ width: 220 }}
               allowClear
-              style={{ width: 180 }}
+            />
+            
+            <Select
+              placeholder="Статус"
+              allowClear
+              style={{ width: 150 }}
               value={statusFilter}
-              onChange={(value) => {
-                setStatusFilter(value);
-                setPagination(prev => ({ ...prev, current: 1 }));
-              }}
+              onChange={(value) => setStatusFilter(value)}
             >
               {Object.values(ORDER_STATUSES).map(status => (
                 <Select.Option key={status.value} value={status.value}>
@@ -230,15 +157,14 @@ function OrdersPage() {
         {orders.length > 0 ? (
           <Table
             columns={columns}
-            dataSource={orders}
+            dataSource={filteredOrders} // Відфільтровані дані
             rowKey="id"
-            loading={loading}
-            pagination={{
-              ...pagination,
-              showSizeChanger: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`,
+            // Пагінація тепер на клієнті
+            pagination={{ 
+              pageSize: 20,
+              showSizeChanger: true, 
+              showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`
             }}
-            onChange={handleTableChange}
           />
         ) : (
           <EmptyState
