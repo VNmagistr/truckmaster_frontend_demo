@@ -10,45 +10,53 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    # 1. Завантажуємо код з репозиторію (на сервер GitHub)
+    # 1. Завантажуємо код
     - name: Checkout code
       uses: actions/checkout@v4
 
-    # 2. Встановлюємо Node.js (на сервері GitHub)
+    # 2. Налаштовуємо Node.js
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '20'
 
-    # 3. Встановлюємо залежності та збираємо проект (на сервері GitHub)
+    # 3. Збираємо проект
     - name: Install Dependencies and Build
       run: |
         npm install
         npm run build
 
-    # 4. Копіюємо готову папку 'dist' на ваш сервер через SCP
-    - name: Copy files to Server
+    # 4. Завантажуємо файли в ТИМЧАСОВУ папку (куди у користувача точно є доступ)
+    - name: Copy files to Temp Directory
       uses: appleboy/scp-action@v0.1.7
       with:
         host: ${{ secrets.DO_HOST }}
         username: ${{ secrets.DO_USERNAME }}
         key: ${{ secrets.DO_SSH_KEY }}
-        # Копіюємо вміст папки dist у папку на сервері
         source: "dist/*"
-        target: "/var/www/truckmaster_frontend"
-        # Ця опція прибирає зайву вкладеність шляхів при копіюванні
+        target: "/home/${{ secrets.DO_USERNAME }}/temp_build"
         strip_components: 1
 
-    # 5. Фінальні штрихи на сервері (права доступу та перезапуск)
-    - name: Fix Permissions and Reload Nginx
+    # 5. Переміщуємо файли з тимчасової папки у робочу (з використанням SUDO)
+    - name: Move files and Restart Nginx
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.DO_HOST }}
         username: ${{ secrets.DO_USERNAME }}
         key: ${{ secrets.DO_SSH_KEY }}
         script: |
-          # Відновлюємо права для www-data (щоб Nginx міг читати файли)
+          # 1. Видаляємо старі файли (sudo дозволяє це зробити)
+          sudo rm -rf /var/www/truckmaster_frontend/*
+          
+          # 2. Переміщуємо нові файли з тимчасової папки
+          sudo cp -r /home/${{ secrets.DO_USERNAME }}/temp_build/* /var/www/truckmaster_frontend/
+          
+          # 3. Видаляємо тимчасову папку
+          rm -rf /home/${{ secrets.DO_USERNAME }}/temp_build
+          
+          # 4. Виставляємо правильні права (для Nginx)
           sudo chown -R www-data:www-data /var/www/truckmaster_frontend
           sudo chmod -R 755 /var/www/truckmaster_frontend
-          # Перезавантажуємо Nginx (не обов'язково для статики, але корисно для скидання кешу)
+          
+          # 5. Перезавантажуємо Nginx
           sudo systemctl reload nginx
