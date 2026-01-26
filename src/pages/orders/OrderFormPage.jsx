@@ -1,91 +1,70 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Form, Input, Button, Card, message, Space, Select, Tooltip, Upload, Alert, Row, Col, Typography } from 'antd';
-import { SaveOutlined, ReloadOutlined, UploadOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Form, Input, Button, Card, message, Space, Select, Upload, Alert, Row, Col, Typography, Spin } from 'antd';
+import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, SearchOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ordersAPI, clientsAPI, trucksAPI, maintenanceAPI } from '../../api'; // Перевір, що maintenanceAPI додано в api/index.js
+import { ordersAPI, clientsAPI } from '../../api'; // trucksAPI та maintenanceAPI прибрали, все в ordersAPI
 import { PageHeader, LoadingSpinner } from '../../components';
-import { ORDER_STATUSES } from '../../utils/constants';
+import debounce from 'lodash/debounce'; // npm install lodash якщо немає, або напиши свій debounce
 
 const { Text } = Typography;
 
 function OrderFormPage() {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   
+  // Стани даних
   const [clients, setClients] = useState([]);
-  const [trucks, setTrucks] = useState([]);
-  const [allTrucks, setAllTrucks] = useState([]);
   
-  // Нові стани
-  const [recommendations, setRecommendations] = useState([]);
+  // Для пошуку авто
+  const [truckOptions, setTruckOptions] = useState([]); 
+  const [searchingTrucks, setSearchingTrucks] = useState(false);
+  
+  // Алерти та файли
+  const [alerts, setAlerts] = useState([]);
   const [fileList, setFileList] = useState([]);
-  const [checkingRegulations, setCheckingRegulations] = useState(false);
   
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
-  // --- БЕЗПЕЧНИЙ ПОШУК (Щоб не було білого екрану) ---
-  const safeFilterOption = (input, option) => {
-    if (!option) return false;
-    let label = '';
-    if (typeof option.children === 'string') label = option.children;
-    else if (Array.isArray(option.children)) label = option.children.join('');
-    else if (option.label) label = String(option.label);
-    else label = String(option.children || '');
-    return label.toLowerCase().includes(input.toLowerCase());
-  };
-
-  const getClientIdFromTruck = (truck) => {
-    if (!truck || !truck.client) return null;
-    return typeof truck.client === 'object' ? truck.client.id : truck.client;
-  };
-
+  // --- 1. ІНІЦІАЛІЗАЦІЯ ---
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
       try {
-        const [clientsData, trucksData, orderData] = await Promise.all([
+        // Вантажимо тільки клієнтів (для списку)
+        const [clientsData, orderData] = await Promise.all([
           clientsAPI.getAll({ page_size: 1000 }).catch(() => []),
-          trucksAPI.getAll({ page_size: 1000 }).catch(() => []),
           isEdit ? ordersAPI.getById(id) : Promise.resolve(null)
         ]);
 
-        const loadedClients = clientsData.results || clientsData || [];
-        const loadedTrucks = trucksData.results || trucksData || [];
-        
-        setClients(loadedClients);
-        setAllTrucks(loadedTrucks);
+        setClients(clientsData.results || clientsData || []);
 
         if (orderData) {
-          const initialValues = {
+          // Якщо це редагування - треба показати поточне авто в селекті
+          if (orderData.truck) {
+              const initialTruck = {
+                  id: orderData.truck.id,
+                  license_plate: orderData.truck.license_plate,
+                  specific_model_name: orderData.truck.specific_model_name,
+                  client_name: orderData.client?.name // Для красивого відображення
+              };
+              setTruckOptions([initialTruck]);
+          }
+
+          form.setFieldsValue({
             ...orderData,
             client: orderData.client?.id || orderData.client,
             truck: orderData.truck?.id || orderData.truck,
-            current_mileage: orderData.current_mileage // Переконайся, що бекенд віддає це поле
-          };
-
-          // Логіка фільтрації вантажівок при завантаженні
-          const currentClientId = initialValues.client;
-          if (currentClientId) {
-             const filtered = loadedTrucks.filter(t => String(getClientIdFromTruck(t)) === String(currentClientId));
-             // Якщо авто не знайдено в фільтрі, додаємо вручну
-             const currentTruckId = initialValues.truck;
-             if (currentTruckId && !filtered.find(t => t.id === currentTruckId)) {
-                 const missing = loadedTrucks.find(t => t.id === currentTruckId);
-                 if (missing) filtered.push(missing);
-             }
-             setTrucks(filtered);
-          } else {
-             setTrucks(loadedTrucks);
-          }
+            current_mileage: orderData.current_mileage
+          });
           
-          form.setFieldsValue(initialValues);
-        } else {
-          setTrucks([]); 
+          // Якщо вже є дані, перевіряємо регламент
+          if (orderData.truck && orderData.current_mileage) {
+             checkMaintenance(orderData.truck.id || orderData.truck, orderData.current_mileage);
+          }
         }
-
       } catch (error) {
         console.error('Init error:', error);
         message.error('Помилка завантаження даних');
@@ -97,79 +76,94 @@ function OrderFormPage() {
     initData();
   }, [id, isEdit, form]);
 
-  const handleClientChange = (clientId) => {
-    form.setFieldsValue({ truck: null }); 
-    if (!clientId) {
-      setTrucks([]);
-      return;
-    }
-    const filtered = allTrucks.filter(truck => String(getClientIdFromTruck(truck)) === String(clientId));
-    setTrucks(filtered);
+  // --- 2. ЖИВИЙ ПОШУК (Server-side) ---
+  const handleSearchTruck = async (value) => {
+      if (!value || value.length < 2) return; 
+      
+      setSearchingTrucks(true);
+      try {
+          const res = await ordersAPI.searchTruck(value);
+          // Бекенд повертає { results: [...] }
+          setTruckOptions(res.data.results || []);
+      } catch (error) {
+          console.error("Пошук авто:", error);
+      } finally {
+          setSearchingTrucks(false);
+      }
   };
 
-  const showAllTrucks = () => {
-    setTrucks(allTrucks);
-    message.info('Показано всі автомобілі');
+  // Debounce щоб не спамити сервер (затримка 600мс)
+  const debouncedSearch = useMemo(() => debounce(handleSearchTruck, 600), []);
+
+  // --- 3. ВИБІР АВТО ---
+  const handleTruckSelect = (truckId, option) => {
+      // option.item містить весь об'єкт, який ми передали в Select.Option
+      const truckData = option.item;
+
+      // АВТОЗАПОВНЕННЯ КЛІЄНТА
+      if (truckData && truckData.client_id) {
+          form.setFieldsValue({ client: truckData.client_id });
+          message.success(`Клієнт ${truckData.client_name} підтягнувся автоматично`);
+      } else {
+          // Якщо клієнта немає у авто - очищаємо поле або залишаємо як є
+          // message.info("У цього авто немає власника");
+      }
+
+      // Скидаємо старі алерти
+      setAlerts([]);
+      
+      // Перевірка регламенту, якщо вже введено пробіг
+      const mileage = form.getFieldValue('current_mileage');
+      if (mileage) {
+          checkMaintenance(truckId, mileage);
+      }
   };
 
-  // --- ПЕРЕВІРКА РЕГЛАМЕНТІВ ---
-  const checkRegulations = useCallback(async (truckId, mileage) => {
-    if (!truckId || !mileage) return;
-    
-    setCheckingRegulations(true);
-    try {
-        const res = await maintenanceAPI.checkRegulations(truckId, mileage);
-        if (res.data && res.data.recommendations) {
-            setRecommendations(res.data.recommendations);
-            if (res.data.recommendations.length > 0) {
-                message.warning(`Знайдено ${res.data.recommendations.length} рекомендацій по ТО!`);
-            }
-        }
-    } catch (error) {
-        console.error("Помилка перевірки регламенту:", error);
-    } finally {
-        setCheckingRegulations(false);
-    }
-  }, []);
+  // --- 4. ПЕРЕВІРКА РЕГЛАМЕНТУ ---
+  const checkMaintenance = async (truckId, mileage) => {
+      if (!truckId || !mileage) return;
 
-  // Спрацьовує при зміні пробігу або авто
-  const handleValuesChange = (changedValues, allValues) => {
-    if (changedValues.truck || changedValues.current_mileage) {
-        // Чекаємо поки введуть і пробіг, і виберуть авто
-        if (allValues.truck && allValues.current_mileage) {
-            // Робимо затримку (debounce), щоб не смикати API на кожну цифру
-            const timer = setTimeout(() => {
-                checkRegulations(allValues.truck, allValues.current_mileage);
-            }, 800);
-            return () => clearTimeout(timer);
-        }
-    }
+      try {
+          // Використовуємо новий метод з ordersAPI
+          const res = await ordersAPI.checkMaintenance(truckId, mileage);
+          
+          // Бекенд повертає { alerts: [...] }
+          if (res.data && res.data.alerts) {
+              setAlerts(res.data.alerts);
+          }
+      } catch (error) {
+          console.error("Reglament check failed", error);
+      }
   };
 
-  // --- ЗАВАНТАЖЕННЯ ФОТО ---
+  // Обробник зміни пробігу
+  const handleMileageChange = (e) => {
+      const mileage = e.target.value;
+      const truckId = form.getFieldValue('truck');
+      
+      if (truckId && mileage) {
+          // Також debounce, щоб не на кожну цифру
+          const timer = setTimeout(() => checkMaintenance(truckId, mileage), 800);
+          return () => clearTimeout(timer); // cleanup
+      }
+  };
+
+  // --- 5. ЗБЕРЕЖЕННЯ ---
   const handleFileChange = ({ fileList: newFileList }) => setFileList(newFileList);
-  
-  // --- ЗБЕРЕЖЕННЯ ---
+
   const onFinish = async (values) => {
     setSaving(true);
     try {
-      // Використовуємо FormData для відправки файлів
       const formData = new FormData();
-      
-      // Додаємо звичайні поля
       Object.keys(values).forEach(key => {
         if (values[key] !== undefined && values[key] !== null) {
             formData.append(key, values[key]);
         }
       });
 
-      // Додаємо фото (розподіляємо по типах або всі в car_photo, залежно від бекенду)
-      // Тут логіка для 3-х окремих полів, як ми зробили в моделі
+      // Фото
       fileList.forEach((file, index) => {
           if (file.originFileObj) {
-              // Проста логіка: 1-ше фото -> car_photo, 2-ге -> odometer, 3-тє -> dashboard
-              // Або можна зробити 3 окремі компоненти Upload. 
-              // Для спрощення зараз: 1-ше фото в car_photo
               if (index === 0) formData.append('car_photo', file.originFileObj);
               if (index === 1) formData.append('odometer_photo', file.originFileObj);
               if (index === 2) formData.append('dashboard_photo', file.originFileObj);
@@ -177,17 +171,16 @@ function OrderFormPage() {
       });
 
       if (isEdit) {
-        // При редагуванні FormData теж працює, але зазвичай PUT/PATCH
-        await ordersAPI.update(id, formData); // Перевір чи API підтримує PATCH з FormData
-        message.success('Оновлено!');
+        await ordersAPI.update(id, formData);
+        message.success('Замовлення оновлено!');
       } else {
         await ordersAPI.create(formData);
-        message.success('Створено!');
+        message.success('Замовлення створено!');
       }
       navigate('/orders');
     } catch (error) {
       console.error('Save error:', error);
-      message.error('Помилка збереження. Перевірте консоль.');
+      message.error('Помилка збереження');
     } finally {
       setSaving(false);
     }
@@ -209,9 +202,43 @@ function OrderFormPage() {
               form={form}
               layout="vertical"
               onFinish={onFinish}
-              onValuesChange={handleValuesChange}
               initialValues={{ status: 'OPEN' }}
             >
+              {/* --- ПОЛЕ ПОШУКУ АВТО --- */}
+              <Form.Item
+                name="truck"
+                label="Автомобіль (Введіть номер)"
+                rules={[{ required: true, message: 'Оберіть авто' }]}
+                help="Введіть хоча б 2 символи держномера для пошуку"
+              >
+                <Select
+                    showSearch
+                    placeholder="Введіть номер (напр. 1234)..."
+                    filterOption={false} // ВИМИКАЄМО локальний фільтр, шукаємо на сервері
+                    onSearch={debouncedSearch}
+                    onSelect={handleTruckSelect}
+                    notFoundContent={searchingTrucks ? <Spin size="small" /> : null}
+                    allowClear
+                    suffixIcon={<SearchOutlined />}
+                >
+                    {truckOptions.map(t => (
+                        <Select.Option key={t.id} value={t.id} item={t}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                <span>
+                                    <strong>{t.license_plate}</strong> 
+                                    <span style={{ color: '#888', marginLeft: 8 }}>
+                                        {t.specific_model_name || t.model}
+                                    </span>
+                                </span>
+                                <span style={{ color: '#1890ff', fontSize: '12px' }}>
+                                    {t.client_name}
+                                </span>
+                            </div>
+                        </Select.Option>
+                    ))}
+                </Select>
+              </Form.Item>
+
               <Form.Item
                 name="client"
                 label="Клієнт"
@@ -219,11 +246,11 @@ function OrderFormPage() {
               >
                 <Select
                   showSearch
-                  placeholder="Пошук клієнта..."
+                  placeholder="Оберіть клієнта"
                   optionFilterProp="children"
-                  filterOption={safeFilterOption}
-                  onChange={handleClientChange}
-                  allowClear
+                  filterOption={(input, option) =>
+                    (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                  }
                 >
                   {clients.map(c => (
                     <Select.Option key={c.id} value={c.id}>
@@ -233,57 +260,34 @@ function OrderFormPage() {
                 </Select>
               </Form.Item>
 
-              <Form.Item label="Вантажівка" required style={{ marginBottom: 0 }}>
-                 <Space.Compact style={{ width: '100%' }}>
-                    <Form.Item name="truck" rules={[{ required: true, message: 'Оберіть авто' }]} noStyle>
-                        <Select
-                            showSearch
-                            placeholder={trucks.length > 0 ? "Оберіть авто" : "Немає авто"}
-                            optionFilterProp="children"
-                            filterOption={safeFilterOption}
-                            allowClear
-                        >
-                        {trucks.map(t => (
-                            <Select.Option key={t.id} value={t.id}>
-                            {t.license_plate} - {t.specific_model_name}
-                            </Select.Option>
-                        ))}
-                        </Select>
-                    </Form.Item>
-                    <Tooltip title="Показати всі авто">
-                        <Button icon={<ReloadOutlined />} onClick={showAllTrucks} />
-                    </Tooltip>
-                 </Space.Compact>
-              </Form.Item>
-
               <Form.Item 
                 name="current_mileage" 
                 label="Поточний пробіг (км)" 
                 style={{ marginTop: 24 }}
                 rules={[{ required: true, message: 'Введіть пробіг' }]}
               >
-                <Input type="number" placeholder="Наприклад: 250000" suffix="км" />
+                <Input 
+                    type="number" 
+                    placeholder="Наприклад: 250000" 
+                    suffix="км" 
+                    onChange={handleMileageChange} // Додали обробник
+                />
               </Form.Item>
 
-              {/* Блок рекомендацій */}
-              {recommendations.length > 0 && (
-                  <Alert
-                    message="Рекомендовані роботи (Регламент)"
-                    type="warning"
-                    showIcon
-                    icon={<ExclamationCircleOutlined />}
-                    style={{ marginBottom: 24 }}
-                    description={
-                        <ul style={{ paddingLeft: 20, marginTop: 10 }}>
-                            {recommendations.map(rec => (
-                                <li key={rec.id}>
-                                    <strong>{rec.title}</strong> — {rec.description} 
-                                    {rec.priority === 'high' && <Text type="danger" strong> (Терміново)</Text>}
-                                </li>
-                            ))}
-                        </ul>
-                    }
-                  />
+              {/* --- БЛОК АЛЕРТІВ (Регламент) --- */}
+              {alerts.length > 0 && (
+                  <div style={{ marginBottom: 24 }}>
+                      {alerts.map((alert, index) => (
+                          <Alert
+                            key={index}
+                            message={alert.message} // Текст з бекенду "⚠️ ... Прострочено ..."
+                            type="error"
+                            showIcon
+                            icon={<ExclamationCircleOutlined />}
+                            style={{ marginBottom: 8 }}
+                          />
+                      ))}
+                  </div>
               )}
 
               <Form.Item label="Фотофіксація (Номер, Одометр, Панель)">
@@ -291,7 +295,7 @@ function OrderFormPage() {
                     listType="picture-card"
                     fileList={fileList}
                     onChange={handleFileChange}
-                    beforeUpload={() => false} // Не вантажимо автоматично, чекаємо Submit
+                    beforeUpload={() => false}
                     maxCount={3}
                 >
                     {fileList.length < 3 && (
@@ -301,9 +305,6 @@ function OrderFormPage() {
                         </div>
                     )}
                 </Upload>
-                <div style={{ color: '#888', fontSize: '12px' }}>
-                    Завантажте до 3-х фото (Номер, Одометр, Панель)
-                </div>
               </Form.Item>
 
               <Form.Item name="problem_description" label="Опис проблеми">
