@@ -1,18 +1,30 @@
 import axios from 'axios';
 
-// Твій базовий конфіг
 const baseURL = 'http://127.0.0.1:8000/api';
+
 const instance = axios.create({
   baseURL,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 instance.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
+// --- ПОВЕРНУЛИ AUTH API ---
+export const authAPI = {
+  login: (data) => instance.post('/token/', data), // Перевір URL (може бути /accounts/login/)
+  refreshToken: (refresh) => instance.post('/token/refresh/', { refresh }),
+  me: () => instance.get('/accounts/me/'),
+};
+
+// --- ORDERS API (З нашими новими методами) ---
 export const ordersAPI = {
   getAll: (params) => instance.get('/orders/', { params }),
   getById: (id) => instance.get(`/orders/${id}/`),
@@ -30,35 +42,50 @@ export const ordersAPI = {
   
   delete: (id) => instance.delete(`/orders/${id}/`),
 
-  // --- НОВІ МЕТОДИ (підлаштовані під наш backend) ---
-  
-  // Живий пошук авто: GET /api/orders/search-truck/?plate=...
+  // Живий пошук авто
   searchTruck: (plate) => instance.get('/orders/search-truck/', { params: { plate } }),
 
-  // Перевірка регламенту: POST /api/orders/check-maintenance/
+  // Перевірка регламенту
   checkMaintenance: (truckId, mileage) => 
     instance.post('/orders/check-maintenance/', { 
       truck_id: truckId, 
       current_mileage: mileage 
     }),
 
-  // Методи для робіт та запчастин
+  // Додаткові методи
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
   deleteWork: (workId) => instance.delete(`/works/${workId}/`), 
   addPart: (orderId, data) => instance.post(`/orders/${orderId}/add_part/`, data),
 };
 
-export const clientsAPI = { getAll: (p) => instance.get('/clients/', { params: p }) };
-// trucksAPI залишаємо, але в формі створення ми його використовуватимемо менше
-export const trucksAPI = { getAll: (p) => instance.get('/trucks/', { params: p }) };
-export const worksAPI = { getAll: () => instance.get('/service-works/') };
-export const employeesAPI = { getAll: () => instance.get('/users/', { params: { role: 'mechanic' } }) };
-export const inventoryAPI = { getAll: (p) => instance.get('/inventory/', { params: p }) };
+export const clientsAPI = {
+  getAll: (params) => instance.get('/clients/', { params }),
+  getById: (id) => instance.get(`/clients/${id}/`),
+  create: (data) => instance.post('/clients/', data),
+  update: (id, data) => instance.patch(`/clients/${id}/`, data),
+};
 
-// maintenanceAPI більше не потрібен тут, бо ми перенесли логіку в ordersAPI, 
-// але можеш залишити, якщо він використовується в інших місцях.
+export const trucksAPI = {
+  getAll: (params) => instance.get('/trucks/', { params }),
+  getById: (id) => instance.get(`/trucks/${id}/`),
+  create: (data) => instance.post('/trucks/', data),
+  update: (id, data) => instance.patch(`/trucks/${id}/`, data),
+};
+
+export const worksAPI = {
+  getAll: (params) => instance.get('/service-works/', { params }),
+};
+
+export const employeesAPI = {
+  getAll: () => instance.get('/users/', { params: { role: 'mechanic' } }),
+};
+
+export const inventoryAPI = {
+  getAll: (params) => instance.get('/inventory/', { params }),
+};
+
+// maintenanceAPI залишаємо для сумісності, хоча логіку перенесли в orders
 export const maintenanceAPI = {
-    // Старий метод, якщо десь ще висить
     checkRegulations: (truckId, mileage) => 
         instance.get(`/maintenance/check-regulations/`, { params: { truck_id: truckId, mileage } }),
 };
