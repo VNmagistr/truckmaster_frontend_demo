@@ -4,13 +4,16 @@ import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutl
 import { useNavigate } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, EmptyState } from '../../components';
-// ВИПРАВЛЕННЯ ТУТ: змінила formatCurrency на formatMoney
 import { formatMoney } from '../../utils/formatters';
 
 function InventoryPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchText, setSearchText] = useState(''); // Пошук
+  
+  // Пагінація та Пошук
+  const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
+  const [searchText, setSearchText] = useState('');
+  
   const [activeTab, setActiveTab] = useState('all');
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -20,23 +23,41 @@ function InventoryPage() {
     fetchCategories();
   }, []);
 
+  // Перезавантажуємо при зміні фільтрів або сторінки
   useEffect(() => {
-    fetchProducts();
-  }, [activeTab, selectedCategory]);
+    fetchProducts(pagination.current, searchText);
+  }, [pagination.current, activeTab, selectedCategory]);
+
+  // Debounce для пошуку
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        setPagination(prev => ({ ...prev, current: 1 })); // Скидаємо на 1 сторінку
+        fetchProducts(1, searchText);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [searchText]);
 
   const fetchCategories = async () => {
     try {
-      const categoriesRes = await inventoryAPI.getCategories().catch(() => []);
-      setCategories(categoriesRes.results || categoriesRes || []);
+      const response = await inventoryAPI.getCategories();
+      // Безпечна розпаковка
+      const data = response.data || response;
+      setCategories(data.results || data || []);
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      console.warn('Categories fetch warning:', error);
+      // Не показуємо помилку користувачу, бо це не критично
     }
   };
 
-  const fetchProducts = async () => {
+  const fetchProducts = async (page, search) => {
     setLoading(true);
     try {
-      const params = {}; // Завантажуємо все без серверної пагінації
+      const params = {
+        page: page,
+        page_size: 20,
+        search: search, // Серверний пошук
+        ordering: 'name',
+      };
       
       if (activeTab === 'low_stock') {
         params.low_stock = true;
@@ -47,7 +68,17 @@ function InventoryPage() {
       }
 
       const response = await inventoryAPI.getAll(params);
-      setProducts(response.results || response || []);
+      
+      // 🔥 ВИПРАВЛЕННЯ: Правильна розпаковка даних
+      const data = response.data || response;
+      
+      setProducts(data.results || data || []);
+      setPagination(prev => ({
+        ...prev,
+        current: page,
+        total: data.count || 0,
+      }));
+
     } catch (error) {
       console.error('Error fetching inventory:', error);
       message.error('Не вдалося завантажити склад');
@@ -60,34 +91,24 @@ function InventoryPage() {
     try {
       await inventoryAPI.delete(id);
       message.success('Товар видалено');
-      fetchProducts();
+      fetchProducts(pagination.current, searchText);
     } catch (error) {
       message.error('Не вдалося видалити товар');
     }
   };
 
-  // --- ЛОГІКА ПОШУКУ ---
-  const filteredProducts = products.filter(product => {
-    const value = searchText.toLowerCase();
-    return (
-      product.name?.toLowerCase().includes(value) ||
-      product.article_number?.toLowerCase().includes(value) ||
-      product.brand?.toLowerCase().includes(value)
-    );
-  });
-
   const columns = [
     {
       title: 'Артикул',
-      dataIndex: 'article_number',
+      dataIndex: 'article_number', // Якщо на бекенді sku_code, поміняй на 'sku_code'
       key: 'article_number',
+      render: (text, record) => record.sku_code || text || '-', // Фолбек
     },
     {
       title: 'Назва',
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => <span style={{ fontWeight: 500 }}>{text}</span>,
-      sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
       title: 'Бренд',
@@ -98,24 +119,30 @@ function InventoryPage() {
       title: 'Категорія',
       dataIndex: ['category', 'name'],
       key: 'category',
-      render: (text) => <Tag>{text || 'Інше'}</Tag>,
+      render: (text, record) => {
+         // Обробка вкладеного об'єкта або ID
+         const catName = record.category?.name || record.subcategory?.name || '-';
+         return <Tag>{catName}</Tag>;
+      },
     },
     {
       title: 'Кількість',
-      dataIndex: 'quantity',
+      dataIndex: 'current_stock', // На бекенді часто current_stock або quantity
       key: 'quantity',
-      render: (qty, record) => (
-        <Tag color={qty <= (record.min_quantity || 0) ? 'red' : 'green'}>
-          {qty > 0 ? `${qty} шт.` : 'Немає'}
-        </Tag>
-      ),
-      sorter: (a, b) => a.quantity - b.quantity,
+      render: (qty, record) => {
+        // Підтримка обох назв полів
+        const quantity = qty !== undefined ? qty : record.quantity;
+        return (
+            <Tag color={(quantity || 0) <= (record.min_stock_level || 0) ? 'red' : 'green'}>
+            {quantity > 0 ? `${quantity} шт.` : 'Немає'}
+            </Tag>
+        );
+      },
     },
     {
       title: 'Ціна закуп.',
-      dataIndex: 'price',
+      dataIndex: 'selling_price', // або cost_price
       key: 'price',
-      // ВИПРАВЛЕННЯ ТУТ: використовуємо правильну назву функції
       render: (price) => formatMoney(price),
     },
     {
@@ -153,7 +180,6 @@ function InventoryPage() {
         title="Склад запчастин"
         extra={
           <Space>
-            {/* ПОЛЕ ПОШУКУ */}
             <Input
               placeholder="Пошук (Назва, Артикул)..."
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
@@ -198,13 +224,16 @@ function InventoryPage() {
         {products.length > 0 ? (
           <Table
             columns={columns}
-            dataSource={filteredProducts} // Фільтровані дані
+            dataSource={products}
             rowKey="id"
-            pagination={{ 
-              pageSize: 20, 
-              showSizeChanger: true,
+            pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              showSizeChanger: false,
               showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`
             }}
+            onChange={(newPag) => setPagination(prev => ({ ...prev, current: newPag.current }))}
             size="middle"
           />
         ) : (

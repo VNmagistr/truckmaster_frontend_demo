@@ -22,30 +22,24 @@ export const authAPI = {
 export const ordersAPI = {
   getAll: (params) => instance.get('/orders/', { params }),
   getById: (id) => instance.get(`/orders/${id}/`),
-  getStats: () => instance.get('/orders/stats/'),
   create: (data) => {
     if (data instanceof FormData) {
-        return instance.post('/orders/', data, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
+        return instance.post('/orders/', data, { headers: { 'Content-Type': 'multipart/form-data' }});
     }
     return instance.post('/orders/', data);
   },
-  update: (id, data) => instance.patch(`/orders/${id}/`, data),
+  update: (id, data) => {
+     if (data instanceof FormData) {
+        return instance.patch(`/orders/${id}/`, data, { headers: { 'Content-Type': 'multipart/form-data' }});
+    }
+    return instance.patch(`/orders/${id}/`, data);
+  },
   delete: (id) => instance.delete(`/orders/${id}/`),
-  
   searchTruck: (plate) => instance.get('/orders/search-truck/', { params: { plate } }),
+  checkMaintenance: (truckId, mileage) => instance.post('/orders/check-maintenance/', { truck_id: truckId, current_mileage: mileage }),
+  
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
-  deleteWork: (workId) => instance.delete(`/works/${workId}/`), 
   addPart: (orderId, data) => instance.post(`/orders/${orderId}/add_part/`, data),
-};
-
-export const maintenanceAPI = {
-    checkRegulations: (truckId, mileage) => 
-        instance.post('/orders/check-maintenance/', { 
-            truck_id: truckId, 
-            current_mileage: mileage 
-        }),
 };
 
 export const clientsAPI = { 
@@ -62,16 +56,30 @@ export const trucksAPI = {
     create: (data) => instance.post('/trucks/', data),
     update: (id, data) => instance.patch(`/trucks/${id}/`, data),
     delete: (id) => instance.delete(`/trucks/${id}/`),
-    getByClient: (clientId) => instance.get('/trucks/', { params: { client: clientId } }),
 };
 
-// 🔥 ДОДАНО: API для базових моделей
-export const baseModelsAPI = {
-    getAll: () => instance.get('/base-models/'),
+// 🔥 ОНОВЛЕНО: Повний набір методів для Складу
+export const inventoryAPI = { 
+    getAll: (params) => instance.get('/inventory/', { params }),
+    getById: (id) => instance.get(`/inventory/${id}/`),
+    create: (data) => instance.post('/inventory/', data),
+    update: (id, data) => instance.patch(`/inventory/${id}/`, data),
+    delete: (id) => instance.delete(`/inventory/${id}/`),
+    
+    // Аліаси (дублюючі назви), щоб не ламати існуючий код у ProductFormPage/DetailPage
+    getProductById: (id) => instance.get(`/inventory/${id}/`),
+    createProduct: (data) => instance.post('/inventory/', data),
+    updateProduct: (id, data) => instance.patch(`/inventory/${id}/`, data),
+    
+    // Методи для категорій та залишків (додано заглушки catch, щоб не падало, якщо бекенд ще не готовий)
+    getCategories: () => instance.get('/inventory/categories/'),
+    getSubcategories: () => instance.get('/inventory/subcategories/'),
+    getStockByProduct: (id) => instance.get(`/inventory/${id}/stock/`),
+    getMovementsByProduct: (id) => instance.get(`/inventory/${id}/movements/`),
 };
 
-export const worksAPI = { getAll: () => instance.get('/service-works/') };
-export const employeesAPI = { getAll: () => instance.get('/users/', { params: { role: 'mechanic' } }) };
-export const inventoryAPI = { getAll: (p) => instance.get('/inventory/', { params: p }) };
+export const worksAPI = { getAll: (params) => instance.get('/service-works/', { params }) };
+export const employeesAPI = { getAll: (params) => instance.get('/users/', { params: { ...params, role: 'mechanic' } }) };
+export const baseModelsAPI = { getAll: () => instance.get('/base-models/') };
 
 export default instance;
