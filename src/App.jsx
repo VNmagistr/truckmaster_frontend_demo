@@ -8,9 +8,8 @@ import 'dayjs/locale/uk';
 import { MainLayout, AuthLayout } from './layouts';
 import { ProtectedRoute, LoadingSpinner } from './components';
 
-// ОПТИМІЗАЦІЯ: Імпортуємо Welcome напряму, а не через index.js, щоб уникнути зайвих завантажень
-// import { Welcome } from './pages'; // <-- Було так
-import Welcome from './pages/Welcome'; // <-- Стало так (перевір шлях, якщо Welcome.jsx лежить прямо в pages)
+// 🟢 ПОВЕРТАЄМО ІМПОРТ ЧЕРЕЗ INDEX (Це безпечно, якщо ви виправили pages/orders/index.js)
+import { Welcome } from './pages'; 
 
 // Lazy loading
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
