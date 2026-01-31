@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message, Space, Select } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { trucksAPI, clientsAPI, baseModelsAPI } from '../../api'; // Переконайся, що baseModelsAPI тут є
+import { trucksAPI, clientsAPI, baseModelsAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import { EURO_STANDARDS } from '../../utils/constants';
 
@@ -10,63 +10,96 @@ function TruckFormPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  
+  // Списки для вибору
   const [clients, setClients] = useState([]);
   const [baseModels, setBaseModels] = useState([]);
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
+  // Завантажуємо дані послідовно
   useEffect(() => {
-    fetchDictionaryData();
-  }, []); // Завантажуємо довідники одразу
+    const init = async () => {
+      setLoading(true);
+      try {
+        // 1. Спочатку вантажимо довідники (клієнти, моделі)
+        const loadedClients = await fetchDictionaries();
+        
+        // 2. Якщо це редагування - вантажимо вантажівку
+        if (isEdit) {
+          await fetchTruck(loadedClients); 
+        }
+      } catch (error) {
+        console.error("Initialization error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  // Об'єднуємо завантаження довідників
-  const fetchDictionaryData = async () => {
+    init();
+  }, [id]);
+
+  const fetchDictionaries = async () => {
     try {
       const [clientsResp, baseModelsResp] = await Promise.all([
-        clientsAPI.getAll({ page_size: 100 }), // Беремо перші 100 клієнтів
+        clientsAPI.getAll({ page_size: 50 }), // Вантажимо перші 50
         baseModelsAPI.getAll()
       ]);
 
-      // Розпаковка клієнтів
       const clientsData = clientsResp.data || clientsResp;
-      setClients(clientsData.results || clientsData || []);
+      const initialClients = clientsData.results || clientsData || [];
+      setClients(initialClients);
 
-      // Розпаковка моделей
       const modelsData = baseModelsResp.data || baseModelsResp;
       setBaseModels(modelsData.results || modelsData || []);
-
-      // Тільки коли довідники завантажені, вантажимо дані вантажівки (якщо це редагування)
-      if (isEdit) {
-        fetchTruck();
-      }
+      
+      return initialClients; // Повертаємо, щоб передати в fetchTruck
     } catch (error) {
       console.error('Error fetching dictionaries:', error);
-      message.error('Не вдалося завантажити списки');
+      return [];
     }
   };
 
-  const fetchTruck = async () => {
-    setLoading(true);
+  const fetchTruck = async (currentClientsList) => {
     try {
       const response = await trucksAPI.getById(id);
       const data = response.data || response;
       
-      console.log("Truck Data:", data); // Для дебагу
+      // Визначаємо ID власника
+      const ownerId = typeof data.client === 'object' ? data.client.id : data.client;
 
-      // Підготовка даних для форми
-      // Важливо: перевіряємо, чи прийшов об'єкт, чи ID
+      // --- ГОЛОВНЕ ВИПРАВЛЕННЯ ---
+      // Перевіряємо, чи є власник у вже завантаженому списку
+      if (ownerId) {
+        const ownerExists = currentClientsList.find(c => c.id === ownerId);
+        
+        if (!ownerExists) {
+          // Якщо власника немає в списку (він не вліз у перші 50) - вантажимо його окремо
+          try {
+            const ownerResp = await clientsAPI.getById(ownerId);
+            const ownerData = ownerResp.data || ownerResp;
+            
+            // Додаємо його в список, щоб Select міг показати ім'я
+            setClients(prev => [...prev, ownerData]);
+          } catch (err) {
+            console.error("Failed to fetch missing owner details", err);
+          }
+        }
+      }
+
+      // Заповнюємо форму
       form.setFieldsValue({
         ...data,
-        client: data.client?.id || data.client, // Якщо об'єкт - беремо ID, якщо ID - лишаємо ID
+        client: ownerId, // Передаємо саме ID
         base_model: data.base_model?.id || data.base_model,
       });
+
     } catch (error) {
       console.error('Error fetching truck:', error);
       message.error('Не вдалося завантажити дані вантажівки');
       navigate('/trucks');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -75,18 +108,19 @@ function TruckFormPage() {
     try {
       if (isEdit) {
         await trucksAPI.update(id, values);
-        message.success('Вантажівку успішно оновлено');
+        message.success('Вантажівку оновлено');
       } else {
         await trucksAPI.create(values);
-        message.success('Вантажівку успішно створено');
+        message.success('Вантажівку створено');
       }
       navigate('/trucks');
     } catch (error) {
-      console.error('Error saving truck:', error);
+      console.error('Save error:', error);
       if (error.response?.data) {
         const errors = error.response.data;
         Object.keys(errors).forEach(key => {
-          message.error(`${key}: ${errors[key]}`);
+          const msg = Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key];
+          message.error(`${key}: ${msg}`);
         });
       } else {
         message.error('Не вдалося зберегти вантажівку');
@@ -98,7 +132,7 @@ function TruckFormPage() {
 
   if (loading) return <LoadingSpinner />;
 
-  // Фільтрація клієнтів для пошуку в Select
+  // Фільтр для пошуку в Select
   const filterOption = (input, option) =>
     (option?.children ?? '').toLowerCase().includes(input.toLowerCase());
 
