@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Space, Table, Tag, message, Tabs } from 'antd';
+import { Card, Descriptions, Button, Table, Tag, message, Tabs } from 'antd';
 import { EditOutlined, CarOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { clientsAPI, trucksAPI, ordersAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
-import { formatPhone, formatDate } from '../../utils/formatters';
+import { formatPhone, formatDate, formatMoney } from '../../utils/formatters';
 
 function ClientDetailPage() {
   const [client, setClient] = useState(null);
@@ -21,22 +21,25 @@ function ClientDetailPage() {
   const fetchClientData = async () => {
     setLoading(true);
     try {
-      // Отримуємо відповіді від сервера
+      // Отримуємо "сирі" відповіді від сервера
       const [clientResponse, trucksResponse, ordersResponse] = await Promise.all([
         clientsAPI.getById(id),
         trucksAPI.getByClient(id).catch(() => ({ data: [] })),
         ordersAPI.getAll({ client: id }).catch(() => ({ data: [] })),
       ]);
 
-      // 🔥 ВИПРАВЛЕННЯ: Розпаковуємо дані з .data
+      // 🔥 ВИПРАВЛЕННЯ: Дістаємо дані з обгорток (.data)
       const clientData = clientResponse.data || clientResponse;
       const trucksData = trucksResponse.data || trucksResponse;
       const ordersData = ordersResponse.data || ordersResponse;
 
       setClient(clientData);
+      
+      // Обробка списків (враховуючи пагінацію Django)
       setTrucks(trucksData.results || trucksData || []);
-
+      
       const allOrders = ordersData.results || ordersData || [];
+      // Фільтруємо замовлення
       const filteredOrders = allOrders.filter(order => {
         const orderClientId = order.client?.id || order.client;
         return String(orderClientId) === String(id);
@@ -45,20 +48,13 @@ function ClientDetailPage() {
       setOrders(filteredOrders);
 
     } catch (error) {
-      console.error('Error fetching client:', error);
+      console.error('Error fetching client details:', error);
       message.error('Не вдалося завантажити дані клієнта');
-      // Ось чому тебе перекидало на список з помилкою:
       navigate('/clients');
     } finally {
       setLoading(false);
     }
   };
-
-  // ... (решта коду колонок і рендеру без змін) ...
-  // Щоб не дублювати весь файл, просто встав цю функцію fetchClientData замість старої.
-  
-  // Або якщо тобі потрібен повний файл, скажи, я надам.
-  // Але нижче код колонок, який треба залишити:
 
   const trucksColumns = [
     {
@@ -109,6 +105,12 @@ function ClientDetailPage() {
       key: 'status',
       render: (status) => <StatusTag status={status} type="order" />,
     },
+    { 
+      title: 'Сума', 
+      dataIndex: 'total_amount', 
+      key: 'total_amount',
+      render: (amount) => formatMoney(amount)
+    },
     {
       title: 'Дата',
       dataIndex: 'created_at',
@@ -123,7 +125,12 @@ function ClientDetailPage() {
   const tabItems = [
     {
       key: 'trucks',
-      label: (<span><CarOutlined /> Вантажівки ({trucks.length})</span>),
+      label: (
+        <span>
+          <CarOutlined />
+          Вантажівки ({trucks.length})
+        </span>
+      ),
       children: (
         <Table
           columns={trucksColumns}
@@ -136,7 +143,12 @@ function ClientDetailPage() {
     },
     {
       key: 'orders',
-      label: (<span><FileTextOutlined /> Замовлення ({orders.length})</span>),
+      label: (
+        <span>
+          <FileTextOutlined />
+          Замовлення ({orders.length})
+        </span>
+      ),
       children: (
         <Table
           columns={ordersColumns}
