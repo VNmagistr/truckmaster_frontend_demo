@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message, Space, Select } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-// 🔥 ДОДАНО імпорт baseModelsAPI
-import { trucksAPI, clientsAPI, baseModelsAPI } from '../../api';
+import { trucksAPI, clientsAPI, baseModelsAPI } from '../../api'; // Переконайся, що baseModelsAPI тут є
 import { PageHeader, LoadingSpinner } from '../../components';
 import { EURO_STANDARDS } from '../../utils/constants';
 
@@ -18,39 +17,32 @@ function TruckFormPage() {
   const isEdit = Boolean(id);
 
   useEffect(() => {
-    fetchClients();
-    fetchBaseModels();
-    if (isEdit) {
-      fetchTruck();
-    }
-  }, [id]);
+    fetchDictionaryData();
+  }, []); // Завантажуємо довідники одразу
 
-  const fetchClients = async () => {
+  // Об'єднуємо завантаження довідників
+  const fetchDictionaryData = async () => {
     try {
-      const response = await clientsAPI.getAll({ page_size: 1000 });
-      const data = response.data || response;
-      setClients(data.results || data || []);
-    } catch (error) {
-      console.error('Error fetching clients:', error);
-    }
-  };
-
-  // 🔥 ВИПРАВЛЕНО: Використовуємо axios через baseModelsAPI замість fetch
-  const fetchBaseModels = async () => {
-    try {
-      const response = await baseModelsAPI.getAll();
-      const data = response.data || response;
-      setBaseModels(data.results || data || []);
-    } catch (error) {
-      console.error('Error fetching base models:', error);
-      // Фоллбек дані залишаємо про всяк випадок
-      setBaseModels([
-        { id: 1, name: 'Daily' },
-        { id: 2, name: 'Eurocargo' },
-        { id: 3, name: 'Stralis' },
-        { id: 4, name: 'Trakker' },
-        { id: 5, name: 'S-Way' },
+      const [clientsResp, baseModelsResp] = await Promise.all([
+        clientsAPI.getAll({ page_size: 100 }), // Беремо перші 100 клієнтів
+        baseModelsAPI.getAll()
       ]);
+
+      // Розпаковка клієнтів
+      const clientsData = clientsResp.data || clientsResp;
+      setClients(clientsData.results || clientsData || []);
+
+      // Розпаковка моделей
+      const modelsData = baseModelsResp.data || baseModelsResp;
+      setBaseModels(modelsData.results || modelsData || []);
+
+      // Тільки коли довідники завантажені, вантажимо дані вантажівки (якщо це редагування)
+      if (isEdit) {
+        fetchTruck();
+      }
+    } catch (error) {
+      console.error('Error fetching dictionaries:', error);
+      message.error('Не вдалося завантажити списки');
     }
   };
 
@@ -60,9 +52,13 @@ function TruckFormPage() {
       const response = await trucksAPI.getById(id);
       const data = response.data || response;
       
+      console.log("Truck Data:", data); // Для дебагу
+
+      // Підготовка даних для форми
+      // Важливо: перевіряємо, чи прийшов об'єкт, чи ID
       form.setFieldsValue({
         ...data,
-        client: data.client?.id || data.client,
+        client: data.client?.id || data.client, // Якщо об'єкт - беремо ID, якщо ID - лишаємо ID
         base_model: data.base_model?.id || data.base_model,
       });
     } catch (error) {
@@ -100,9 +96,11 @@ function TruckFormPage() {
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  if (loading) return <LoadingSpinner />;
+
+  // Фільтрація клієнтів для пошуку в Select
+  const filterOption = (input, option) =>
+    (option?.children ?? '').toLowerCase().includes(input.toLowerCase());
 
   return (
     <div>
@@ -138,7 +136,7 @@ function TruckFormPage() {
 
           <Form.Item
             name="specific_model_name"
-            label="Модель"
+            label="Модель (уточнення)"
             rules={[{ required: true, message: 'Введіть модель' }]}
           >
             <Input placeholder="Наприклад: 35C15, 70C17" />
@@ -178,13 +176,11 @@ function TruckFormPage() {
               placeholder="Оберіть власника"
               allowClear
               showSearch
-              filterOption={(input, option) =>
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
+              filterOption={filterOption}
             >
               {clients.map(client => (
                 <Select.Option key={client.id} value={client.id}>
-                  {client.name}
+                  {client.name} {client.phone ? `(${client.phone})` : ''}
                 </Select.Option>
               ))}
             </Select>

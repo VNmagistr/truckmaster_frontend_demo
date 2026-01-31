@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Descriptions, Button, Table, Tag, message, Tabs } from 'antd';
 import { EditOutlined, FileTextOutlined, ToolOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { trucksAPI, ordersAPI } from '../../api';
+import { trucksAPI, ordersAPI, baseModelsAPI, clientsAPI } from '../../api'; // Додали clientsAPI та baseModelsAPI
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatDate } from '../../utils/formatters';
 import { EURO_STANDARDS } from '../../utils/constants';
@@ -10,8 +10,12 @@ import { EURO_STANDARDS } from '../../utils/constants';
 function TruckDetailPage() {
   const [truck, setTruck] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [ordersTotal, setOrdersTotal] = useState(0); // Лічильник замовлень
   const [loading, setLoading] = useState(true);
+  
+  // Додаткові стани для назв, якщо сервер повертає лише ID
+  const [baseModelName, setBaseModelName] = useState(null);
+  const [clientName, setClientName] = useState(null);
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -22,25 +26,48 @@ function TruckDetailPage() {
   const fetchTruckData = async () => {
     setLoading(true);
     try {
-      // 🔥 ОПТИМІЗАЦІЯ: Вантажимо тільки останні 20 замовлень
       const [truckResponse, ordersResponse] = await Promise.all([
         trucksAPI.getById(id),
-        ordersAPI.getAll({ 
-          truck: id, 
-          page_size: 20,
-          ordering: '-created_at' 
-        }).catch(() => ({ data: [] })),
+        ordersAPI.getAll({ truck: id, page_size: 20, ordering: '-created_at' }).catch(() => ({ data: [] })),
       ]);
 
-      // 🔥 ВИПРАВЛЕННЯ: Розпаковуємо .data
       const truckData = truckResponse.data || truckResponse;
       const ordersData = ordersResponse.data || ordersResponse;
 
       setTruck(truckData);
-
-      // Зберігаємо замовлення та їх кількість
       setOrders(ordersData.results || ordersData || []);
-      setOrdersTotal(ordersData.count || (ordersData.results ? ordersData.results.length : ordersData.length) || 0);
+
+      // --- ЛОГІКА ДОВАНТАЖЕННЯ НАЗВ (якщо прийшли тільки ID) ---
+      
+      // 1. Базова модель
+      if (truckData.base_model) {
+        if (typeof truckData.base_model === 'object') {
+          setBaseModelName(truckData.base_model.name);
+        } else {
+            // Якщо прийшло ID, пробуємо знайти його (або зробити запит, але це довго)
+            // Краще зробити окремий запит на отримання всіх моделей і знайти потрібну, 
+            // або запит конкретної моделі, якщо є такий ендпоінт.
+            // Спробуємо отримати всі моделі (їх мало) і знайти.
+             baseModelsAPI.getAll().then(res => {
+                 const models = res.data?.results || res.data || [];
+                 const found = models.find(m => m.id === truckData.base_model);
+                 if (found) setBaseModelName(found.name);
+             }).catch(err => console.error("Failed to load base model name", err));
+        }
+      }
+
+      // 2. Клієнт
+      if (truckData.client) {
+        if (typeof truckData.client === 'object') {
+          setClientName(truckData.client.name);
+        } else {
+          // Якщо прийшло ID клієнта, робимо запит за цим клієнтом
+          clientsAPI.getById(truckData.client).then(res => {
+              const cData = res.data || res;
+              setClientName(cData.name);
+          }).catch(err => console.error("Failed to load client name", err));
+        }
+      }
 
     } catch (error) {
       console.error('Error fetching truck:', error);
@@ -90,7 +117,7 @@ function TruckDetailPage() {
       label: (
         <span>
           <FileTextOutlined />
-          Історія замовлень ({ordersTotal})
+          Історія замовлень ({orders.length})
         </span>
       ),
       children: (
@@ -100,7 +127,7 @@ function TruckDetailPage() {
           rowKey="id"
           pagination={false}
           locale={{ emptyText: 'Немає замовлень' }}
-          footer={() => ordersTotal > 20 ? <div style={{textAlign: 'center', color: '#999'}}>Показано останні 20 записів</div> : null}
+          footer={() => orders.length >= 20 ? <div style={{textAlign: 'center', color: '#999'}}>Показано останні 20</div> : null}
         />
       ),
     },
@@ -146,7 +173,7 @@ function TruckDetailPage() {
             {truck.specific_model_name}
           </Descriptions.Item>
           <Descriptions.Item label="Базова модель">
-            {truck.base_model?.name || '-'}
+            {baseModelName || '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Повний VIN">
             <code>{truck.full_vin}</code>
@@ -162,11 +189,14 @@ function TruckDetailPage() {
             ) : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Власник">
-            {truck.client ? (
-              <Link to={`/clients/${truck.client.id || truck.client}`}>
-                {truck.client.name || truck.client}
-              </Link>
-            ) : '-'}
+             {/* Використовуємо clientName, який ми довантажили */}
+             {clientName ? (
+                <Link to={`/clients/${typeof truck.client === 'object' ? truck.client.id : truck.client}`}>
+                    {clientName}
+                </Link>
+             ) : (
+                 truck.client ? truck.client : '-'
+             )}
           </Descriptions.Item>
         </Descriptions>
       </Card>
