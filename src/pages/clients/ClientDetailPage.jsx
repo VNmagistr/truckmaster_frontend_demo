@@ -10,6 +10,7 @@ function ClientDetailPage() {
   const [client, setClient] = useState(null);
   const [trucks, setTrucks] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [ordersTotal, setOrdersTotal] = useState(0); // Новий стан для лічильника
   const [loading, setLoading] = useState(true);
   const { id } = useParams();
   const navigate = useNavigate();
@@ -21,32 +22,33 @@ function ClientDetailPage() {
   const fetchClientData = async () => {
     setLoading(true);
     try {
-      // 🔥 ВИПРАВЛЕННЯ ТУТ:
-      // Замість неіснуючого .getByClient(id) використовуємо .getAll({ client: id })
+      // 🔥 ОПТИМІЗАЦІЯ:
+      // 1. Вантажівки зазвичай їх небагато, беремо всі.
+      // 2. Замовлення: беремо ТІЛЬКИ перші 20 штук + сортуємо нові зверху.
       const [clientResponse, trucksResponse, ordersResponse] = await Promise.all([
         clientsAPI.getById(id),
         trucksAPI.getAll({ client: id }).catch(() => ({ data: [] })),
-        ordersAPI.getAll({ client: id }).catch(() => ({ data: [] })),
+        ordersAPI.getAll({ 
+            client: id, 
+            page: 1, 
+            page_size: 20, 
+            ordering: '-created_at' 
+        }).catch(() => ({ data: [] })),
       ]);
 
-      // Розпаковка даних (.data)
       const clientData = clientResponse.data || clientResponse;
       const trucksData = trucksResponse.data || trucksResponse;
       const ordersData = ordersResponse.data || ordersResponse;
 
       setClient(clientData);
-      
-      // Враховуємо пагінацію (results)
       setTrucks(trucksData.results || trucksData || []);
       
-      // Фільтруємо замовлення (про всяк випадок, якщо API повернуло всі)
-      const allOrders = ordersData.results || ordersData || [];
-      const filteredOrders = allOrders.filter(order => {
-        const orderClientId = order.client?.id || order.client;
-        return String(orderClientId) === String(id);
-      });
+      // Зберігаємо завантажені 20 замовлень
+      setOrders(ordersData.results || ordersData || []);
       
-      setOrders(filteredOrders);
+      // Зберігаємо загальну кількість (сервер повертає count)
+      // Якщо API не повернуло count, використовуємо довжину масиву
+      setOrdersTotal(ordersData.count || (ordersData.results ? ordersData.results.length : ordersData.length) || 0);
 
     } catch (error) {
       console.error('Error fetching client details:', error);
@@ -147,7 +149,8 @@ function ClientDetailPage() {
       label: (
         <span>
           <FileTextOutlined />
-          Замовлення ({orders.length})
+          {/* Використовуємо загальну кількість, а не довжину масиву */}
+          Замовлення ({ordersTotal})
         </span>
       ),
       children: (
@@ -155,7 +158,9 @@ function ClientDetailPage() {
           columns={ordersColumns}
           dataSource={orders}
           rowKey="id"
-          pagination={{ pageSize: 10 }}
+          // Показуємо, що це не всі дані (можна додати повноцінну пагінацію пізніше)
+          footer={() => ordersTotal > 20 ? <div style={{textAlign: 'center', color: '#999'}}>Показано останні 20 замовлень</div> : null}
+          pagination={false} 
           locale={{ emptyText: 'Немає замовлень' }}
         />
       ),
