@@ -13,7 +13,6 @@ instance.interceptors.request.use((config) => {
     return config;
 });
 
-// Додаємо authAPI (ти його пропустив у минулому файлі)
 export const authAPI = {
   login: (data) => instance.post('/token/', data),
   refreshToken: (refresh) => instance.post('/token/refresh/', { refresh }),
@@ -23,6 +22,7 @@ export const authAPI = {
 export const ordersAPI = {
   getAll: (params) => instance.get('/orders/', { params }),
   getById: (id) => instance.get(`/orders/${id}/`),
+  getStats: () => instance.get('/orders/stats/'), // Додав, щоб працював дашборд
   create: (data) => {
     if (data instanceof FormData) {
         return instance.post('/orders/', data, {
@@ -34,7 +34,6 @@ export const ordersAPI = {
   update: (id, data) => instance.patch(`/orders/${id}/`, data),
   delete: (id) => instance.delete(`/orders/${id}/`),
   
-  // Додаткові методи
   searchTruck: (plate) => instance.get('/orders/search-truck/', { params: { plate } }),
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
   deleteWork: (workId) => instance.delete(`/works/${workId}/`), 
@@ -49,14 +48,24 @@ export const maintenanceAPI = {
         }),
 };
 
+// 🔥 ВИПРАВЛЕНО: Додані методи create, update, delete
 export const clientsAPI = { 
     getAll: (params) => instance.get('/clients/', { params }),
     getById: (id) => instance.get(`/clients/${id}/`),
+    create: (data) => instance.post('/clients/', data),
+    update: (id, data) => instance.patch(`/clients/${id}/`, data),
+    delete: (id) => instance.delete(`/clients/${id}/`),
 };
 
+// 🔥 ВИПРАВЛЕНО: Додані методи create, update, delete для вантажівок теж
 export const trucksAPI = { 
     getAll: (params) => instance.get('/trucks/', { params }),
     getById: (id) => instance.get(`/trucks/${id}/`),
+    create: (data) => instance.post('/trucks/', data),
+    update: (id, data) => instance.patch(`/trucks/${id}/`, data),
+    delete: (id) => instance.delete(`/trucks/${id}/`),
+    // Допоміжний метод для зручності, хоча ми вже використали getAll({ client: id })
+    getByClient: (clientId) => instance.get('/trucks/', { params: { client: clientId } }),
 };
 
 export const worksAPI = { getAll: () => instance.get('/service-works/') };
