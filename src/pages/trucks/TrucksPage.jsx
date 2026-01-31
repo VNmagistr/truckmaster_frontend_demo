@@ -84,7 +84,7 @@ function TrucksPage() {
       title: 'VIN (останні 7)',
       dataIndex: 'last_seven_vin',
       key: 'vin',
-      render: (vin) => `...${vin}`,
+      render: (vin) => `${vin}`,
     },
     {
       title: 'Клієнт',
