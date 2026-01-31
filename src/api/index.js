@@ -1,9 +1,6 @@
 import axios from 'axios';
 
-// 🔴 УВАГА: Тут має бути ЗОВНІШНІЙ IP твого сервера.
-// Не 127.0.0.1 і не localhost.
-// Наприклад: 'http://164.92.155.12:8000/api'
-const baseURL = 'http://http://157.230.114.19:8000/api'; 
+const baseURL = 'http://157.230.114.19/:8000/api';
 
 const instance = axios.create({
   baseURL,
@@ -20,15 +17,18 @@ instance.interceptors.request.use((config) => {
   return config;
 });
 
+// --- ПОВЕРНУЛИ AUTH API ---
 export const authAPI = {
-  login: (data) => instance.post('/token/', data),
+  login: (data) => instance.post('/token/', data), // Перевір URL (може бути /accounts/login/)
   refreshToken: (refresh) => instance.post('/token/refresh/', { refresh }),
   me: () => instance.get('/accounts/me/'),
 };
 
+// --- ORDERS API (З нашими новими методами) ---
 export const ordersAPI = {
   getAll: (params) => instance.get('/orders/', { params }),
   getById: (id) => instance.get(`/orders/${id}/`),
+  
   create: (data) => {
     if (data instanceof FormData) {
         return instance.post('/orders/', data, {
@@ -40,13 +40,19 @@ export const ordersAPI = {
   update: (id, data) => instance.patch(`/orders/${id}/`, data),
   delete: (id) => instance.delete(`/orders/${id}/`),
   
-  // Нові методи
+  delete: (id) => instance.delete(`/orders/${id}/`),
+
+  // Живий пошук авто
   searchTruck: (plate) => instance.get('/orders/search-truck/', { params: { plate } }),
+
+  // Перевірка регламенту
   checkMaintenance: (truckId, mileage) => 
     instance.post('/orders/check-maintenance/', { 
       truck_id: truckId, 
       current_mileage: mileage 
     }),
+
+  // Додаткові методи
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
   deleteWork: (workId) => instance.delete(`/works/${workId}/`), 
   addPart: (orderId, data) => instance.post(`/orders/${orderId}/add_part/`, data),
@@ -78,6 +84,7 @@ export const inventoryAPI = {
   getAll: (params) => instance.get('/inventory/', { params }),
 };
 
+// maintenanceAPI залишаємо для сумісності, хоча логіку перенесли в orders
 export const maintenanceAPI = {
     checkRegulations: (truckId, mileage) => 
         instance.get(`/maintenance/check-regulations/`, { params: { truck_id: truckId, mileage } }),
