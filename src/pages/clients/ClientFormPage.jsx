@@ -23,11 +23,8 @@ function ClientFormPage() {
     setLoading(true);
     try {
       const response = await clientsAPI.getById(id);
-      
-      // 🔥 ВИПРАВЛЕННЯ: "Розпаковуємо" відповідь
-      // Було: form.setFieldsValue(response); -> Це викликало помилку
+      // 🔥 ВИПРАВЛЕННЯ: Беремо дані з .data
       const data = response.data || response;
-      
       form.setFieldsValue(data);
     } catch (error) {
       console.error('Error fetching client:', error);
@@ -43,21 +40,24 @@ function ClientFormPage() {
     try {
       if (isEdit) {
         await clientsAPI.update(id, values);
-        message.success('Клієнта успішно оновлено');
+        message.success('Клієнта оновлено');
       } else {
         await clientsAPI.create(values);
-        message.success('Клієнта успішно створено');
+        message.success('Клієнта створено');
       }
       navigate('/clients');
     } catch (error) {
       console.error('Error saving client:', error);
       if (error.response?.data) {
-        const errors = error.response.data;
-        Object.keys(errors).forEach(key => {
-          message.error(`${key}: ${errors[key]}`);
-        });
+          const errors = error.response.data;
+          // Якщо сервер повернув помилки валідації
+          Object.keys(errors).forEach(key => {
+             // Виводимо або строкою, або якщо це масив - джойнимо
+             const errorMsg = Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key];
+             message.error(`${key}: ${errorMsg}`);
+          });
       } else {
-        message.error('Не вдалося зберегти клієнта');
+          message.error('Не вдалося зберегти клієнта');
       }
     } finally {
       setSaving(false);
