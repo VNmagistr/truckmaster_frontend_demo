@@ -179,7 +179,7 @@ function TruckDetailPage() {
             <code>{truck.full_vin}</code>
           </Descriptions.Item>
           <Descriptions.Item label="Останні 7 VIN">
-            <code>...{truck.last_seven_vin}</code>
+            <code>{truck.last_seven_vin}</code>
           </Descriptions.Item>
           <Descriptions.Item label="Євростандарт">
             {truck.euro_standard ? (
