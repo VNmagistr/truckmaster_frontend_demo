@@ -7,11 +7,11 @@ export default defineConfig({
     port: 3000,
   },
   build: {
-    // Збільшуємо ліміт до 3MB, щоб не бачити жовтих попереджень
+    // Просто піднімаємо ліміт, щоб не було попереджень
     chunkSizeWarningLimit: 3000,
     rollupOptions: {
       output: {
-        // Видаляємо manualChunks, бо він спричиняє помилку з createContext
+        // 🔥 ПРИБИРАЄМО manualChunks - це вирішить проблему з createContext
         manualChunks: undefined,
       },
     },
