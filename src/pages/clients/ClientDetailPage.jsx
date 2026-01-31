@@ -21,25 +21,26 @@ function ClientDetailPage() {
   const fetchClientData = async () => {
     setLoading(true);
     try {
-      // Отримуємо "сирі" відповіді від сервера
+      // 🔥 ВИПРАВЛЕННЯ ТУТ:
+      // Замість неіснуючого .getByClient(id) використовуємо .getAll({ client: id })
       const [clientResponse, trucksResponse, ordersResponse] = await Promise.all([
         clientsAPI.getById(id),
-        trucksAPI.getByClient(id).catch(() => ({ data: [] })),
+        trucksAPI.getAll({ client: id }).catch(() => ({ data: [] })),
         ordersAPI.getAll({ client: id }).catch(() => ({ data: [] })),
       ]);
 
-      // 🔥 ВИПРАВЛЕННЯ: Дістаємо дані з обгорток (.data)
+      // Розпаковка даних (.data)
       const clientData = clientResponse.data || clientResponse;
       const trucksData = trucksResponse.data || trucksResponse;
       const ordersData = ordersResponse.data || ordersResponse;
 
       setClient(clientData);
       
-      // Обробка списків (враховуючи пагінацію Django)
+      // Враховуємо пагінацію (results)
       setTrucks(trucksData.results || trucksData || []);
       
+      // Фільтруємо замовлення (про всяк випадок, якщо API повернуло всі)
       const allOrders = ordersData.results || ordersData || [];
-      // Фільтруємо замовлення
       const filteredOrders = allOrders.filter(order => {
         const orderClientId = order.client?.id || order.client;
         return String(orderClientId) === String(id);
