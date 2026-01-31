@@ -8,7 +8,7 @@ import { formatPhone } from '../../utils/formatters';
 
 function ClientsPage() {
   const [clients, setClients] = useState([]);
-  const [searchText, setSearchText] = useState(''); // Стан для пошуку
+  const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -18,7 +18,13 @@ function ClientsPage() {
 
   const fetchClients = async () => {
     try {
-      const data = await clientsAPI.getAll();
+      // 1. Отримуємо відповідь
+      const response = await clientsAPI.getAll();
+      
+      // 2. 🔥 ВИПРАВЛЕННЯ: Дістаємо дані з обгортки axios (.data)
+      const data = response.data || response;
+      
+      // 3. Враховуємо пагінацію Django (results) або звичайний масив
       setClients(data.results || data || []);
     } catch (error) {
       console.error('Error fetching clients:', error);
@@ -32,13 +38,12 @@ function ClientsPage() {
     try {
       await clientsAPI.delete(id);
       message.success('Клієнта видалено');
-      fetchClients(); // Оновлюємо список
+      fetchClients();
     } catch (error) {
       message.error('Не вдалося видалити клієнта');
     }
   };
 
-  // --- ЛОГІКА ПОШУКУ ---
   const filteredClients = clients.filter(client => {
     const value = searchText.toLowerCase();
     return (
@@ -90,7 +95,6 @@ function ClientsPage() {
         title="Клієнти"
         extra={
           <Space>
-            {/* ПОЛЕ ПОШУКУ */}
             <Input
               placeholder="Пошук клієнта..."
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
@@ -108,7 +112,7 @@ function ClientsPage() {
       <Card>
         <Table
           columns={columns}
-          dataSource={filteredClients} // Використовуємо відфільтровані дані
+          dataSource={filteredClients}
           rowKey="id"
           pagination={{ pageSize: 10 }}
         />

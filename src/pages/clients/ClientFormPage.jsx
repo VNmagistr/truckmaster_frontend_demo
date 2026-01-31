@@ -22,7 +22,9 @@ function ClientFormPage() {
   const fetchClient = async () => {
     setLoading(true);
     try {
-      const data = await clientsAPI.getById(id);
+      const response = await clientsAPI.getById(id);
+      // 🔥 ВИПРАВЛЕННЯ: Беремо дані з .data
+      const data = response.data || response;
       form.setFieldsValue(data);
     } catch (error) {
       console.error('Error fetching client:', error);
@@ -38,48 +40,33 @@ function ClientFormPage() {
     try {
       if (isEdit) {
         await clientsAPI.update(id, values);
-        message.success('Клієнта успішно оновлено');
+        message.success('Дані клієнта оновлено');
       } else {
         await clientsAPI.create(values);
-        message.success('Клієнта успішно створено');
+        message.success('Клієнта створено');
       }
       navigate('/clients');
     } catch (error) {
-      console.error('Error saving client:', error);
-      if (error.response?.data) {
-        const errors = error.response.data;
-        Object.keys(errors).forEach(key => {
-          message.error(`${key}: ${errors[key]}`);
-        });
-      } else {
-        message.error('Не вдалося зберегти клієнта');
-      }
+      console.error('Save error:', error);
+      message.error('Не вдалося зберегти дані');
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div>
-      <PageHeader
-        title={isEdit ? 'Редагувати клієнта' : 'Новий клієнт'}
-        showBack
-      />
-
-      <Card style={{ maxWidth: 600 }}>
+      <PageHeader title={isEdit ? 'Редагування клієнта' : 'Новий клієнт'} showBack />
+      
+      <Card style={{ maxWidth: 800, margin: '0 auto' }}>
         <Form
           form={form}
           layout="vertical"
           onFinish={onFinish}
           initialValues={{
-            name: '',
-            phone: '',
-            email: '',
-            address: '',
+            active: true
           }}
         >
           <Form.Item
@@ -122,7 +109,9 @@ function ClientFormPage() {
               >
                 {isEdit ? 'Зберегти зміни' : 'Створити клієнта'}
               </Button>
-              <Button onClick={() => navigate('/clients')}>Скасувати</Button>
+              <Button onClick={() => navigate('/clients')}>
+                Скасувати
+              </Button>
             </Space>
           </Form.Item>
         </Form>
