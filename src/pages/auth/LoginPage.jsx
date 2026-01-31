@@ -11,24 +11,24 @@ function LoginPage() {
   const { setAuth } = useAuthStore();
 
   const onFinish = async (values) => {
-    setLoading(true);
-    try {
-      const response = await authAPI.login(values.username, values.password);
-      
-      const userData = { username: values.username };
-      
-      // ✅ ВИКОРИСТОВУЄМО authStore.setAuth()
-      setAuth(userData, response.access, response.refresh);
-      
-      message.success('Успішний вхід!');
-      navigate('/dashboard', { replace: true });
-    } catch (error) {
-      console.error('Login error:', error);
-      message.error('Невірний логін або пароль');
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    // ✅ ВИПРАВЛЕНО: передаємо об'єкт, а не окремі параметри
+    const response = await authAPI.login(values);
+    
+    const userData = { username: values.username };
+    
+    setAuth(userData, response.access, response.refresh);
+    
+    message.success('Успішний вхід!');
+    navigate('/dashboard', { replace: true });
+  } catch (error) {
+    console.error('Login error:', error);
+    message.error('Невірний логін або пароль');
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <Card
