@@ -23,75 +23,60 @@ function OrderFormPage() {
   const isEdit = Boolean(id);
 
   useEffect(() => {
-    initPage();
-  }, [id]);
+    const initData = async () => {
+      setLoading(true);
+      try {
+        // 1. Вантажимо клієнтів
+        const clientsResp = await clientsAPI.getAll({ page_size: 100 }).catch(() => []);
+        // 🔥 ВИПРАВЛЕННЯ: Розпаковка .data
+        const clientsData = clientsResp.data || clientsResp;
+        setClients(clientsData.results || clientsData || []);
 
-  const initPage = async () => {
-    setLoading(true);
-    try {
-      // 1. Вантажимо список клієнтів (перші 100)
-      const clientsResp = await clientsAPI.getAll({ page_size: 100 });
-      const clientsData = clientsResp.data || clientsResp;
-      const initialClients = clientsData.results || clientsData || [];
-      setClients(initialClients);
+        // 2. Якщо редагування - вантажимо замовлення
+        if (isEdit) {
+          const orderResp = await ordersAPI.getById(id);
+          // 🔥 ВИПРАВЛЕННЯ: Розпаковка .data
+          const orderData = orderResp.data || orderResp;
 
-      // 2. Якщо редагування - вантажимо замовлення
-      if (isEdit) {
-        const orderResp = await ordersAPI.getById(id);
-        const orderData = orderResp.data || orderResp;
+          if (orderData) {
+            if (orderData.truck) {
+                const initialTruck = {
+                    id: orderData.truck.id,
+                    license_plate: orderData.truck.license_plate,
+                    specific_model_name: orderData.truck.specific_model_name,
+                    client_name: orderData.client?.name
+                };
+                setTruckOptions([initialTruck]);
+            }
 
-        // --- ЛОГІКА ДЛЯ КОРЕКТНОГО ВІДОБРАЖЕННЯ SELECT ---
-        
-        // Вантажівка: додаємо поточну в список опцій
-        if (orderData.truck) {
-             const t = orderData.truck;
-             // Формуємо об'єкт для Select
-             const truckOption = {
-                 id: t.id,
-                 license_plate: t.license_plate,
-                 specific_model_name: t.specific_model_name,
-                 client_name: t.client?.name || orderData.client?.name
-             };
-             setTruckOptions([truckOption]);
+            form.setFieldsValue({
+              ...orderData,
+              client: orderData.client?.id || orderData.client,
+              truck: orderData.truck?.id || orderData.truck,
+              current_mileage: orderData.current_mileage
+            });
+            
+            if (orderData.truck && orderData.current_mileage) {
+               checkMaintenance(orderData.truck.id || orderData.truck, orderData.current_mileage);
+            }
+          }
         }
-
-        // Клієнт: перевіряємо, чи є він в списку, якщо ні - довантажуємо
-        const clientId = orderData.client?.id || orderData.client;
-        if (clientId && !initialClients.find(c => c.id === clientId)) {
-            try {
-                const clientResp = await clientsAPI.getById(clientId);
-                const clientObj = clientResp.data || clientResp;
-                setClients(prev => [...prev, clientObj]);
-            } catch (e) { console.error("Missing client fetch error", e); }
-        }
-
-        // Заповнюємо форму
-        form.setFieldsValue({
-          ...orderData,
-          client: clientId,
-          truck: orderData.truck?.id || orderData.truck,
-          current_mileage: orderData.current_mileage
-        });
-        
-        // Перевірка регламенту
-        if (orderData.truck && orderData.current_mileage) {
-            checkMaintenance(orderData.truck.id || orderData.truck, orderData.current_mileage);
-        }
+      } catch (error) {
+        console.error('Init error:', error);
+        message.error('Помилка завантаження даних');
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Init error:', error);
-      message.error('Помилка ініціалізації сторінки');
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    initData();
+  }, [id, isEdit, form]);
 
   const handleSearchTruck = async (value) => {
       if (!value || value.length < 2) return; 
       setSearchingTrucks(true);
       try {
           const res = await ordersAPI.searchTruck(value);
-          // Бекенд повертає { results: [...] } або відразу масив
           const data = res.data || res;
           setTruckOptions(data.results || data || []);
       } catch (error) {
@@ -106,12 +91,9 @@ function OrderFormPage() {
   const handleTruckSelect = (truckId, option) => {
       const truckData = option.item;
       if (truckData && truckData.client) {
-          // Якщо в об'єкті вантажівки є ID клієнта, підставляємо його
-          const cid = typeof truckData.client === 'object' ? truckData.client.id : truckData.client;
-          form.setFieldsValue({ client: cid });
-          
-          // Якщо цього клієнта немає в списку, треба б його довантажити, 
-          // але для спрощення поки просто встановимо ID.
+           // Обробка вкладеного об'єкта client або client_id
+          const cid = typeof truckData.client === 'object' ? truckData.client.id : (truckData.client || truckData.client_id);
+          if (cid) form.setFieldsValue({ client: cid });
       }
       setAlerts([]);
       const mileage = form.getFieldValue('current_mileage');
@@ -121,9 +103,18 @@ function OrderFormPage() {
   const checkMaintenance = async (truckId, mileage) => {
       if (!truckId || !mileage) return;
       try {
-          const res = await ordersAPI.checkMaintenance ? ordersAPI.checkMaintenance(truckId, mileage) : { data: {} };
-          if (res.data && res.data.alerts) setAlerts(res.data.alerts);
-      } catch (error) { console.error("Check failed", error); }
+          // Перевірка на існування методу
+          if (!ordersAPI.checkMaintenance) return;
+          
+          const res = await ordersAPI.checkMaintenance(truckId, mileage);
+          const data = res.data || res;
+          
+          if (data && data.alerts) {
+              setAlerts(data.alerts);
+          }
+      } catch (error) {
+          console.error("Reglament check failed", error);
+      }
   };
 
   const handleMileageChange = (e) => {
@@ -181,10 +172,14 @@ function OrderFormPage() {
           <Card>
             <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: 'OPEN' }}>
               
-              <Form.Item name="truck" label="Автомобіль (Введіть номер)" rules={[{ required: true, message: 'Оберіть авто' }]}>
+              <Form.Item
+                name="truck"
+                label="Автомобіль (Введіть номер)"
+                rules={[{ required: true, message: 'Оберіть авто' }]}
+              >
                 <Select
                     showSearch
-                    placeholder="Введіть номер..."
+                    placeholder="Введіть номер (напр. 1234)..."
                     filterOption={false}
                     onSearch={debouncedSearch}
                     onSelect={handleTruckSelect}
