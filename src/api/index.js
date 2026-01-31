@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const baseURL = 'http://http://157.230.114.19:8000/api'; 
+const baseURL = 'http://157.230.114.19/:8000/api'; 
 
 const instance = axios.create({
   baseURL,
@@ -13,18 +13,16 @@ instance.interceptors.request.use((config) => {
     return config;
 });
 
-// --- AUTH API (Був відсутній у твоєму файлі!) ---
+// Додаємо authAPI (ти його пропустив у минулому файлі)
 export const authAPI = {
   login: (data) => instance.post('/token/', data),
   refreshToken: (refresh) => instance.post('/token/refresh/', { refresh }),
   me: () => instance.get('/accounts/me/'),
 };
 
-// --- ORDERS API ---
 export const ordersAPI = {
   getAll: (params) => instance.get('/orders/', { params }),
   getById: (id) => instance.get(`/orders/${id}/`),
-  
   create: (data) => {
     if (data instanceof FormData) {
         return instance.post('/orders/', data, {
@@ -33,7 +31,6 @@ export const ordersAPI = {
     }
     return instance.post('/orders/', data);
   },
-  
   update: (id, data) => instance.patch(`/orders/${id}/`, data),
   delete: (id) => instance.delete(`/orders/${id}/`),
   
@@ -44,7 +41,6 @@ export const ordersAPI = {
   addPart: (orderId, data) => instance.post(`/orders/${orderId}/add_part/`, data),
 };
 
-// --- MAINTENANCE API ---
 export const maintenanceAPI = {
     checkRegulations: (truckId, mileage) => 
         instance.post('/orders/check-maintenance/', { 
@@ -53,7 +49,6 @@ export const maintenanceAPI = {
         }),
 };
 
-// --- ІНШІ API ---
 export const clientsAPI = { 
     getAll: (params) => instance.get('/clients/', { params }),
     getById: (id) => instance.get(`/clients/${id}/`),

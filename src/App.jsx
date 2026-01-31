@@ -8,7 +8,7 @@ import 'dayjs/locale/uk';
 import { MainLayout, AuthLayout } from './layouts';
 import { ProtectedRoute, LoadingSpinner } from './components';
 
-// 🟢 ПОВЕРТАЄМО ІМПОРТ ЧЕРЕЗ INDEX (Це безпечно, якщо ви виправили pages/orders/index.js)
+// 🟢 ПОВЕРТАЄМО ЦЕЙ ІМПОРТ (він правильний для твоєї структури)
 import { Welcome } from './pages'; 
 
 // Lazy loading
@@ -38,41 +38,57 @@ const ProductDetailPage = lazy(() => import('./pages/inventory/ProductDetailPage
 // Bot
 const BotPage = lazy(() => import('./pages/bot/BotPage'));
 
+dayjs.locale('uk');
+
+const theme = {
+  token: {
+    colorPrimary: '#1890ff',
+    borderRadius: 6,
+    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+  },
+};
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
-      
-      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/welcome" element={<Welcome />} />
+      {/* 1. Головна сторінка */}
+      <Route path="/" element={<Welcome />} />
 
-        {/* Clients */}
+      {/* 2. Сторінка логіну */}
+      <Route element={<AuthLayout />}>
+        <Route path="/login" element={<LoginPage />} />
+      </Route>
+
+      {/* 3. Захищені маршрути */}
+      <Route
+        element={
+          <ProtectedRoute>
+            <MainLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route path="/dashboard" element={<DashboardPage />} />
+        
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/new" element={<ClientFormPage />} />
         <Route path="/clients/:id" element={<ClientDetailPage />} />
         <Route path="/clients/:id/edit" element={<ClientFormPage />} />
 
-        {/* Trucks */}
         <Route path="/trucks" element={<TrucksPage />} />
         <Route path="/trucks/new" element={<TruckFormPage />} />
         <Route path="/trucks/:id" element={<TruckDetailPage />} />
         <Route path="/trucks/:id/edit" element={<TruckFormPage />} />
 
-        {/* Orders */}
         <Route path="/orders" element={<OrdersPage />} />
         <Route path="/orders/new" element={<OrderFormPage />} />
         <Route path="/orders/:id" element={<OrderDetailPage />} />
         <Route path="/orders/:id/edit" element={<OrderFormPage />} />
 
-        {/* Inventory */}
         <Route path="/inventory" element={<InventoryPage />} />
         <Route path="/inventory/new" element={<ProductFormPage />} />
         <Route path="/inventory/:id" element={<ProductDetailPage />} />
         <Route path="/inventory/:id/edit" element={<ProductFormPage />} />
 
-        {/* Bot */}
         <Route path="/bot" element={<BotPage />} />
       </Route>
 
@@ -83,7 +99,7 @@ function AppRoutes() {
 
 function App() {
   return (
-    <ConfigProvider locale={ukUA} theme={{ token: { colorPrimary: '#1677ff' } }}>
+    <ConfigProvider locale={ukUA} theme={theme}>
       <AntApp>
         <BrowserRouter>
           <Suspense fallback={<LoadingSpinner />}>
