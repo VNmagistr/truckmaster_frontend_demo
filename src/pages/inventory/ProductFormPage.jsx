@@ -11,7 +11,7 @@ function ProductFormPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   
-  // Ініціалізуємо як масиви, щоб уникнути map errors
+  // Ініціалізуємо як масиви
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [filteredSubcategories, setFilteredSubcategories] = useState([]);
@@ -21,11 +21,8 @@ function ProductFormPage() {
   const isEdit = Boolean(id);
 
   useEffect(() => {
-    // Спочатку вантажимо категорії, потім (якщо треба) товар
     fetchCategories().then(() => {
-        if (isEdit) {
-            fetchProduct();
-        }
+        if (isEdit) fetchProduct();
     });
   }, [id]);
 
@@ -36,24 +33,18 @@ function ProductFormPage() {
         inventoryAPI.getSubcategories().catch(() => []),
       ]);
 
-      // 🔥 ВИПРАВЛЕННЯ: Безпечна розпаковка даних
-      
-      // 1. Категорії
-      const catData = categoriesRes.data || categoriesRes; // Дістаємо .data з Axios
-      const catList = catData.results || catData || [];    // Дістаємо .results з пагінації (якщо є)
-      setCategories(Array.isArray(catList) ? catList : []);
+      // Безпечна розпаковка даних
+      const catData = categoriesRes.data || categoriesRes;
+      const catList = Array.isArray(catData) ? catData : (catData.results || []);
+      setCategories(catList);
 
-      // 2. Підкатегорії
       const subData = subcategoriesRes.data || subcategoriesRes;
-      const subList = subData.results || subData || [];
-      const safeSubs = Array.isArray(subList) ? subList : [];
-      
-      setSubcategories(safeSubs);
-      setFilteredSubcategories(safeSubs);
+      const subList = Array.isArray(subData) ? subData : (subData.results || []);
+      setSubcategories(subList);
+      setFilteredSubcategories(subList);
 
     } catch (error) {
       console.error('Error fetching categories:', error);
-      // Не кидаємо помилку користувачу, щоб форма все одно відкрилась
     }
   };
 
@@ -68,11 +59,15 @@ function ProductFormPage() {
         subcategory: data.subcategory?.id || data.subcategory,
       });
       
-      // Якщо у товару є категорія, фільтруємо підкатегорії
-      // (data.subcategory може бути об'єктом або ID, тому перевіряємо)
+      // Фільтруємо підкатегорії, якщо у товару є категорія
       if (data.subcategory && typeof data.subcategory === 'object' && data.subcategory.category) {
          handleCategoryChange(data.subcategory.category);
+      } else if (data.category) { // Якщо категорія прийшла окремим полем
+         handleCategoryChange(data.category);
+         // Встановлюємо віртуальне поле для відображення в селекті
+         form.setFieldsValue({ category_filter: data.category });
       }
+
     } catch (error) {
       console.error('Error fetching product:', error);
       message.error('Не вдалося завантажити дані товару');
@@ -83,9 +78,9 @@ function ProductFormPage() {
   };
 
   const handleCategoryChange = (categoryId) => {
-    // Скидаємо поле підкатегорії при зміні категорії
-    // form.setFieldsValue({ subcategory: null }); 
-
+    // При зміні категорії очищаємо підкатегорію, щоб не лишилось некоректне значення
+    form.setFieldsValue({ subcategory: null });
+    
     if (categoryId) {
       const filtered = subcategories.filter(sub => sub.category === categoryId);
       setFilteredSubcategories(filtered);
@@ -97,11 +92,15 @@ function ProductFormPage() {
   const onFinish = async (values) => {
     setSaving(true);
     try {
+      // Очищаємо дані від віртуальних полів перед відправкою
+      const cleanValues = { ...values };
+      delete cleanValues.category_filter; // Це поле тільки для UI, серверу воно не треба
+
       if (isEdit) {
-        await inventoryAPI.updateProduct(id, values);
+        await inventoryAPI.updateProduct(id, cleanValues);
         message.success('Товар успішно оновлено');
       } else {
-        await inventoryAPI.createProduct(values);
+        await inventoryAPI.createProduct(cleanValues);
         message.success('Товар успішно створено');
       }
       navigate('/inventory');
@@ -109,11 +108,17 @@ function ProductFormPage() {
       console.error('Error saving product:', error);
       if (error.response?.data) {
         const errors = error.response.data;
-        Object.keys(errors).forEach(key => {
-          // Якщо помилка - масив, з'єднуємо в рядок
-          const msg = Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key];
-          message.error(`${key}: ${msg}`);
-        });
+        // Виводимо помилки гарно
+        if (typeof errors === 'object') {
+             Object.keys(errors).forEach(key => {
+               const msg = Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key];
+               message.error(`${key}: ${msg}`);
+             });
+        } else {
+            message.error(`Помилка: ${JSON.stringify(errors)}`);
+        }
+      } else if (error.response?.status === 405) {
+         message.error('Помилка 405: Створення заборонено сервером. Оновіть inventory/views.py');
       } else {
         message.error('Не вдалося зберегти товар');
       }
@@ -122,9 +127,7 @@ function ProductFormPage() {
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div>
@@ -175,18 +178,15 @@ function ProductFormPage() {
             <Input placeholder="Повна назва товару" />
           </Form.Item>
 
-          <Form.Item
-            name="description"
-            label="Опис"
-          >
+          <Form.Item name="description" label="Опис">
             <Input.TextArea rows={3} placeholder="Опис товару" />
           </Form.Item>
 
           <Row gutter={24}>
             <Col xs={24} md={8}>
               <Form.Item
+                name="category_filter"
                 label="Категорія"
-                name="category_filter" // Це віртуальне поле для фільтрації, не відправляємо на сервер
               >
                 <Select
                   placeholder="Оберіть категорію"
@@ -216,10 +216,7 @@ function ProductFormPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item
-                name="viscosity"
-                label="В'язкість (для олив)"
-              >
+              <Form.Item name="viscosity" label="В'язкість (для олив)">
                 <Input placeholder="5W-30, 10W-40, тощо" />
               </Form.Item>
             </Col>
@@ -227,10 +224,7 @@ function ProductFormPage() {
 
           <Row gutter={24}>
             <Col xs={24} md={6}>
-              <Form.Item
-                name="unit"
-                label="Одиниця виміру"
-              >
+              <Form.Item name="unit" label="Одиниця виміру">
                 <Select>
                   {Object.values(UNITS).map(unit => (
                     <Select.Option key={unit.value} value={unit.value}>
@@ -241,103 +235,55 @@ function ProductFormPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item
-                name="cost_price"
-                label="Собівартість"
-              >
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={0}
-                  precision={2}
-                  addonAfter="грн"
-                />
+              <Form.Item name="cost_price" label="Собівартість">
+                <InputNumber style={{ width: '100%' }} min={0} precision={2} addonAfter="грн" />
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item
-                name="selling_price"
-                label="Ціна продажу"
-                rules={[{ required: true, message: 'Введіть ціну' }]}
-              >
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={0}
-                  precision={2}
-                  addonAfter="грн"
-                />
+              <Form.Item name="selling_price" label="Ціна продажу" rules={[{ required: true, message: 'Введіть ціну' }]}>
+                <InputNumber style={{ width: '100%' }} min={0} precision={2} addonAfter="грн" />
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item
-                name="volume_per_unit"
-                label="Об'єм в упаковці (л)"
-              >
-                <InputNumber
-                  style={{ width: '100%' }}
-                  min={0}
-                  precision={2}
-                />
+              <Form.Item name="volume_per_unit" label="Об'єм в упаковці (л)">
+                <InputNumber style={{ width: '100%' }} min={0} precision={2} />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={24}>
             <Col xs={24} md={8}>
-              <Form.Item
-                name="current_stock"
-                label="Поточний залишок"
-              >
+              <Form.Item name="current_stock" label="Поточний залишок">
                 <InputNumber style={{ width: '100%' }} min={0} />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item
-                name="min_stock_level"
-                label="Мінімальний залишок"
-              >
+              <Form.Item name="min_stock_level" label="Мінімальний залишок">
                 <InputNumber style={{ width: '100%' }} min={0} />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item
-                name="address_in_stock"
-                label="Місце на складі"
-              >
+              <Form.Item name="address_in_stock" label="Місце на складі">
                 <Input placeholder="Полиця, секція" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item
-            name="specifications"
-            label="Специфікації"
-          >
+          <Form.Item name="specifications" label="Специфікації">
             <Input.TextArea rows={2} placeholder="Технічні характеристики" />
           </Form.Item>
 
-          <Form.Item
-            name="notes"
-            label="Примітки"
-          >
+          <Form.Item name="notes" label="Примітки">
             <Input.TextArea rows={2} placeholder="Додаткові примітки" />
           </Form.Item>
 
-          <Form.Item
-            name="is_active"
-            label="Активний"
-            valuePropName="checked"
-          >
+          <Form.Item name="is_active" label="Активний" valuePropName="checked">
             <Switch />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
             <Space>
-              <Button
-                type="primary"
-                htmlType="submit"
-                loading={saving}
-                icon={<SaveOutlined />}
-              >
+              <Button type="primary" htmlType="submit" loading={saving} icon={<SaveOutlined />}>
                 {isEdit ? 'Зберегти зміни' : 'Створити товар'}
               </Button>
               <Button onClick={() => navigate('/inventory')}>Скасувати</Button>
