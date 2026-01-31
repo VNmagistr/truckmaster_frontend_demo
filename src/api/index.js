@@ -37,7 +37,6 @@ export const ordersAPI = {
   delete: (id) => instance.delete(`/orders/${id}/`),
   searchTruck: (plate) => instance.get('/orders/search-truck/', { params: { plate } }),
   checkMaintenance: (truckId, mileage) => instance.post('/orders/check-maintenance/', { truck_id: truckId, current_mileage: mileage }),
-  
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
   addPart: (orderId, data) => instance.post(`/orders/${orderId}/add_part/`, data),
 };
@@ -58,7 +57,6 @@ export const trucksAPI = {
     delete: (id) => instance.delete(`/trucks/${id}/`),
 };
 
-// 🔥 ОНОВЛЕНО: Повний набір методів для Складу
 export const inventoryAPI = { 
     getAll: (params) => instance.get('/inventory/', { params }),
     getById: (id) => instance.get(`/inventory/${id}/`),
@@ -66,14 +64,16 @@ export const inventoryAPI = {
     update: (id, data) => instance.patch(`/inventory/${id}/`, data),
     delete: (id) => instance.delete(`/inventory/${id}/`),
     
-    // Аліаси (дублюючі назви), щоб не ламати існуючий код у ProductFormPage/DetailPage
+    // Аліаси для форми (щоб код у ProductFormPage працював)
     getProductById: (id) => instance.get(`/inventory/${id}/`),
     createProduct: (data) => instance.post('/inventory/', data),
     updateProduct: (id, data) => instance.patch(`/inventory/${id}/`, data),
     
-    // Методи для категорій та залишків (додано заглушки catch, щоб не падало, якщо бекенд ще не готовий)
+    // Методи для категорій
     getCategories: () => instance.get('/inventory/categories/'),
     getSubcategories: () => instance.get('/inventory/subcategories/'),
+    
+    // Методи для детального перегляду
     getStockByProduct: (id) => instance.get(`/inventory/${id}/stock/`),
     getMovementsByProduct: (id) => instance.get(`/inventory/${id}/movements/`),
 };
