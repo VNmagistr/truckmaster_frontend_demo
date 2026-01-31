@@ -10,18 +10,23 @@ function ProductFormPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  
+  // Ініціалізуємо як масиви, щоб уникнути map errors
   const [categories, setCategories] = useState([]);
   const [subcategories, setSubcategories] = useState([]);
   const [filteredSubcategories, setFilteredSubcategories] = useState([]);
+  
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
   useEffect(() => {
-    fetchCategories();
-    if (isEdit) {
-      fetchProduct();
-    }
+    // Спочатку вантажимо категорії, потім (якщо треба) товар
+    fetchCategories().then(() => {
+        if (isEdit) {
+            fetchProduct();
+        }
+    });
   }, [id]);
 
   const fetchCategories = async () => {
@@ -30,26 +35,43 @@ function ProductFormPage() {
         inventoryAPI.getCategories().catch(() => []),
         inventoryAPI.getSubcategories().catch(() => []),
       ]);
-      setCategories(categoriesRes.results || categoriesRes || []);
-      const subs = subcategoriesRes.results || subcategoriesRes || [];
-      setSubcategories(subs);
-      setFilteredSubcategories(subs);
+
+      // 🔥 ВИПРАВЛЕННЯ: Безпечна розпаковка даних
+      
+      // 1. Категорії
+      const catData = categoriesRes.data || categoriesRes; // Дістаємо .data з Axios
+      const catList = catData.results || catData || [];    // Дістаємо .results з пагінації (якщо є)
+      setCategories(Array.isArray(catList) ? catList : []);
+
+      // 2. Підкатегорії
+      const subData = subcategoriesRes.data || subcategoriesRes;
+      const subList = subData.results || subData || [];
+      const safeSubs = Array.isArray(subList) ? subList : [];
+      
+      setSubcategories(safeSubs);
+      setFilteredSubcategories(safeSubs);
+
     } catch (error) {
       console.error('Error fetching categories:', error);
+      // Не кидаємо помилку користувачу, щоб форма все одно відкрилась
     }
   };
 
   const fetchProduct = async () => {
     setLoading(true);
     try {
-      const data = await inventoryAPI.getProductById(id);
+      const response = await inventoryAPI.getProductById(id);
+      const data = response.data || response;
+      
       form.setFieldsValue({
         ...data,
         subcategory: data.subcategory?.id || data.subcategory,
       });
       
-      if (data.subcategory?.category) {
-        handleCategoryChange(data.subcategory.category);
+      // Якщо у товару є категорія, фільтруємо підкатегорії
+      // (data.subcategory може бути об'єктом або ID, тому перевіряємо)
+      if (data.subcategory && typeof data.subcategory === 'object' && data.subcategory.category) {
+         handleCategoryChange(data.subcategory.category);
       }
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -61,6 +83,9 @@ function ProductFormPage() {
   };
 
   const handleCategoryChange = (categoryId) => {
+    // Скидаємо поле підкатегорії при зміні категорії
+    // form.setFieldsValue({ subcategory: null }); 
+
     if (categoryId) {
       const filtered = subcategories.filter(sub => sub.category === categoryId);
       setFilteredSubcategories(filtered);
@@ -85,7 +110,9 @@ function ProductFormPage() {
       if (error.response?.data) {
         const errors = error.response.data;
         Object.keys(errors).forEach(key => {
-          message.error(`${key}: ${errors[key]}`);
+          // Якщо помилка - масив, з'єднуємо в рядок
+          const msg = Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key];
+          message.error(`${key}: ${msg}`);
         });
       } else {
         message.error('Не вдалося зберегти товар');
@@ -159,6 +186,7 @@ function ProductFormPage() {
             <Col xs={24} md={8}>
               <Form.Item
                 label="Категорія"
+                name="category_filter" // Це віртуальне поле для фільтрації, не відправляємо на сервер
               >
                 <Select
                   placeholder="Оберіть категорію"
