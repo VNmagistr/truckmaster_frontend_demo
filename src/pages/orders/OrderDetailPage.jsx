@@ -1,23 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Table, Tag, message, Tabs, Space, Modal, Form, Select, InputNumber, AutoComplete, Input } from 'antd';
+import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber } from 'antd';
 import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatMoney } from '../../utils/formatters';
-
-// Тестові дані, які будуть показані, якщо сервер не відповість
-const MOCK_WORKS = [
-  { id: 1, name: 'Діагностика ходової' },
-  { id: 2, name: 'Заміна оливи' },
-  { id: 3, name: 'Комп\'ютерна діагностика' },
-  { id: 4, name: 'Шиномонтаж' },
-];
-
-const MOCK_EMPLOYEES = [
-  { id: 1, name: 'Механік 1' },
-  { id: 2, name: 'Механік 2' },
-];
 
 function OrderDetailPage() {
   const [order, setOrder] = useState(null);
@@ -27,6 +14,7 @@ function OrderDetailPage() {
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Списки для модалок
   const [worksList, setWorksList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
   const [partsList, setPartsList] = useState([]);
@@ -44,10 +32,10 @@ function OrderDetailPage() {
   const initPage = async () => {
     setLoading(true);
     try {
-      const orderData = await ordersAPI.getById(id);
-      setOrder(orderData);
+      const response = await ordersAPI.getById(id);
+      setOrder(response.data || response);
 
-      // Пробуємо завантажити довідники, але не блокуємо сторінку при помилці
+      // Завантажуємо довідники фоном
       loadDirectories();
     } catch (error) {
       console.error('Error loading order:', error);
@@ -59,37 +47,40 @@ function OrderDetailPage() {
 
   const loadDirectories = async () => {
     try {
-        const works = await worksAPI.getAll().catch(() => []);
-        // Якщо API повернуло пустоту або помилку, використовуємо MOCK_WORKS для тесту
-        setWorksList((works.results || works).length > 0 ? (works.results || works) : MOCK_WORKS);
-        
-        const employees = await employeesAPI.getAll().catch(() => []);
-        setEmployeesList((employees.results || employees).length > 0 ? (employees.results || employees) : MOCK_EMPLOYEES);
+        const [worksResp, empResp, partsResp] = await Promise.all([
+            worksAPI.getAll().catch(() => ({ data: [] })),
+            employeesAPI.getAll().catch(() => ({ data: [] })),
+            inventoryAPI.getAll({ page_size: 1000 }).catch(() => ({ data: [] }))
+        ]);
 
-        const parts = await inventoryAPI.getAll({ page_size: 1000 }).catch(() => []);
-        setPartsList(parts.results || parts || []);
+        const worksData = worksResp.data || worksResp;
+        setWorksList(worksData.results || worksData || []);
+
+        const empData = empResp.data || empResp;
+        setEmployeesList(empData.results || empData || []);
+
+        const partsData = partsResp.data || partsResp;
+        setPartsList(partsData.results || partsData || []);
+        
     } catch (e) {
         console.warn("Directories fetch warning", e);
-        // Фолбек на мок-дані, щоб поля не були пустими
-        setWorksList(MOCK_WORKS);
-        setEmployeesList(MOCK_EMPLOYEES);
     }
   };
 
   const handleAddWork = async (values) => {
     setModalLoading(true);
     try {
-      // Якщо користувач ввів текст, якого немає в списку, відправляємо його як текст
       await ordersAPI.addWork(id, values);
       message.success('Роботу додано');
       setIsWorkModalOpen(false);
       formWork.resetFields();
       
-      const updatedOrder = await ordersAPI.getById(id);
-      setOrder(updatedOrder);
+      // Оновлюємо замовлення
+      const updated = await ordersAPI.getById(id);
+      setOrder(updated.data || updated);
     } catch (error) {
       console.error(error);
-      message.error('Помилка додавання. Перевірте, чи існують довідники на сервері.');
+      message.error('Помилка додавання роботи');
     } finally {
       setModalLoading(false);
     }
@@ -102,8 +93,9 @@ function OrderDetailPage() {
       message.success('Запчастину додано');
       setIsPartModalOpen(false);
       formPart.resetFields();
-      const updatedOrder = await ordersAPI.getById(id);
-      setOrder(updatedOrder);
+      
+      const updated = await ordersAPI.getById(id);
+      setOrder(updated.data || updated);
     } catch (error) {
        const errorMsg = error.response?.data?.error || 'Помилка при додаванні запчастини';
        message.error(errorMsg);
@@ -119,12 +111,14 @@ function OrderDetailPage() {
     }
   };
 
-  // Хелпер для відображення імен
+  // Хелпер для отримання імені зі списку
   const getName = (item, list, nameField = 'name') => {
     if (!item) return '-';
-    if (typeof item === 'object') return item[nameField] || item.username || '-';
+    // Якщо item - це вже об'єкт (наприклад, {id: 1, name: "Іван"})
+    if (typeof item === 'object') return item[nameField] || item.username || item.license_plate || '-';
+    // Якщо item - це ID, шукаємо в списку
     const found = list.find(x => String(x.id) === String(item));
-    return found ? (found[nameField] || found.username) : item; // Повертаємо саме значення, якщо не знайшли (раптом це просто текст)
+    return found ? (found[nameField] || found.username || found.license_plate) : item; 
   };
 
   const worksColumns = [
@@ -132,13 +126,7 @@ function OrderDetailPage() {
       title: 'Робота',
       dataIndex: 'work',
       key: 'work',
-      render: (val, record) => {
-          // Пріоритет: назва з об'єкта -> назва зі списку -> опис -> сире значення
-          if (typeof val === 'object' && val.name) return val.name;
-          const fromList = getName(val, worksList);
-          if (fromList !== val && fromList !== '-') return fromList; 
-          return record.description || val || 'Без назви';
-      },
+      render: (val, record) => getName(val, worksList) || record.description || 'Без назви',
     },
     {
       title: 'Виконавець',
@@ -146,18 +134,8 @@ function OrderDetailPage() {
       key: 'employee',
       render: (val) => getName(val, employeesList),
     },
-    {
-      title: 'Годин',
-      dataIndex: 'hours', 
-      key: 'hours',
-      render: (val) => val || '-',
-    },
-    {
-        title: 'Вартість',
-        dataIndex: 'amount',
-        key: 'amount',
-        render: (val) => formatMoney(val),
-    },
+    { title: 'Годин', dataIndex: 'hours', key: 'hours' },
+    { title: 'Вартість', dataIndex: 'amount', key: 'amount', render: (val) => formatMoney(val) },
   ];
 
   const partsColumns = [
@@ -167,7 +145,7 @@ function OrderDetailPage() {
       key: 'part',
       render: (val) => {
           const partObj = typeof val === 'object' ? val : partsList.find(p => String(p.id) === String(val));
-          if (!partObj) return '-';
+          if (!partObj) return typeof val === 'object' ? (val.name || '-') : val;
           return (
             <div>
                 <div>{partObj.name}</div>
@@ -176,22 +154,9 @@ function OrderDetailPage() {
           );
       },
     },
-    {
-      title: 'Кількість',
-      dataIndex: 'quantity',
-      key: 'quantity',
-    },
-    {
-      title: 'Ціна',
-      dataIndex: 'price',
-      key: 'price',
-      render: (val) => formatMoney(val),
-    },
-    {
-        title: 'Сума',
-        key: 'total',
-        render: (_, record) => formatMoney((record.price || 0) * (record.quantity || 1)),
-    }
+    { title: 'Кількість', dataIndex: 'quantity', key: 'quantity' },
+    { title: 'Ціна', dataIndex: 'price', key: 'price', render: (val) => formatMoney(val) },
+    { title: 'Сума', key: 'total', render: (_, record) => formatMoney((record.price || 0) * (record.quantity || 1)) }
   ];
 
   if (loading) return <LoadingSpinner />;
@@ -205,24 +170,10 @@ function OrderDetailPage() {
       label: `Виконані роботи (${order.works?.length || 0})`,
       children: (
         <div>
-            <Button 
-                type="dashed" 
-                icon={<PlusOutlined />} 
-                onClick={() => setIsWorkModalOpen(true)} 
-                style={{ marginBottom: 16, width: '100%' }}
-            >
+            <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsWorkModalOpen(true)} style={{ marginBottom: 16, width: '100%' }}>
                 Додати роботу
             </Button>
-            
-            <Table
-                columns={worksColumns}
-                dataSource={order.works || []}
-                rowKey={(r) => r.id || Math.random()}
-                pagination={false}
-                locale={{ emptyText: 'Роботи ще не додано' }}
-                size="small"
-                bordered
-            />
+            <Table columns={worksColumns} dataSource={order.works || []} rowKey="id" pagination={false} size="small" bordered />
         </div>
       ),
     },
@@ -231,23 +182,10 @@ function OrderDetailPage() {
       label: `Використані запчастини (${orderParts.length})`,
       children: (
         <div>
-             <Button 
-                type="dashed" 
-                icon={<ToolOutlined />} 
-                onClick={() => setIsPartModalOpen(true)} 
-                style={{ marginBottom: 16, width: '100%' }}
-            >
-                Списати запчастину зі складу
+             <Button type="dashed" icon={<ToolOutlined />} onClick={() => setIsPartModalOpen(true)} style={{ marginBottom: 16, width: '100%' }}>
+                Списати запчастину
             </Button>
-            <Table
-                columns={partsColumns}
-                dataSource={orderParts}
-                rowKey={(r) => r.id || Math.random()}
-                pagination={false}
-                locale={{ emptyText: 'Запчастини не використано' }}
-                size="small"
-                bordered
-            />
+            <Table columns={partsColumns} dataSource={orderParts} rowKey="id" pagination={false} size="small" bordered />
         </div>
       ),
     },
@@ -261,30 +199,17 @@ function OrderDetailPage() {
         extra={
           <Space>
             <Button icon={<PrinterOutlined />}>Друк</Button>
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/orders/${id}/edit`)}
-            >
-              Редагувати шапку
-            </Button>
+            <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(`/orders/${id}/edit`)}>Редагувати</Button>
           </Space>
         }
       />
 
       <Card style={{ marginBottom: 16 }}>
         <Descriptions column={{ xs: 1, sm: 2, md: 3 }} bordered size="small">
-          <Descriptions.Item label="Номер">
-            <strong>{order.order_number || `#${order.id}`}</strong>
-          </Descriptions.Item>
-          <Descriptions.Item label="Статус">
-            <StatusTag status={order.status} type="order" />
-          </Descriptions.Item>
-          <Descriptions.Item label="Сума до сплати">
-            <strong style={{ color: '#52c41a', fontSize: '15px' }}>
-              {formatMoney(order.total_cost)}
-            </strong>
-          </Descriptions.Item>
+          <Descriptions.Item label="Номер"><strong>{order.order_number || `#${order.id}`}</strong></Descriptions.Item>
+          <Descriptions.Item label="Статус"><StatusTag status={order.status} type="order" /></Descriptions.Item>
+          <Descriptions.Item label="Сума"><strong style={{ color: '#52c41a' }}>{formatMoney(order.total_cost)}</strong></Descriptions.Item>
+          
           <Descriptions.Item label="Клієнт">
             {order.client ? (
               <Link to={`/clients/${order.client.id || order.client}`}>
@@ -292,16 +217,17 @@ function OrderDetailPage() {
               </Link>
             ) : '-'}
           </Descriptions.Item>
+          
           <Descriptions.Item label="Вантажівка">
-             {/* Відображаємо навіть якщо це просто ID */}
              {order.truck ? (
                 <Link to={`/trucks/${(order.truck.id || order.truck)}`}>
-                  {typeof order.truck === 'object' ? order.truck.license_plate : `Авто #${order.truck}`}
+                  {getName(order.truck, [], 'license_plate')}
                 </Link>
              ) : '-'}
           </Descriptions.Item>
+          
           <Descriptions.Item label="VIN">
-            {order.truck?.last_seven_vin ? `...${order.truck.last_seven_vin}` : '-'}
+             {order.truck?.last_seven_vin || (order.truck && order.truck.full_vin ? `...${order.truck.full_vin.slice(-7)}` : '-')}
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -310,81 +236,35 @@ function OrderDetailPage() {
         <Tabs items={tabItems} />
       </Card>
 
-      {/* --- МОДАЛКА: ДОДАТИ РОБОТУ (Виправлено) --- */}
-      <Modal
-        title="Додати роботу"
-        open={isWorkModalOpen}
-        onCancel={() => setIsWorkModalOpen(false)}
-        footer={null}
-        destroyOnClose
-      >
+      {/* Модалки залишаємо як є, але в Select використовуємо worksList */}
+      <Modal title="Додати роботу" open={isWorkModalOpen} onCancel={() => setIsWorkModalOpen(false)} footer={null} destroyOnClose>
         <Form form={formWork} layout="vertical" onFinish={handleAddWork}>
-            {/* Тут ми замінили жорсткий Select на AutoComplete/Input. 
-              Тепер користувач може писати що завгодно, якщо API не працює.
-            */}
-            <Form.Item name="work" label="Послуга" rules={[{ required: true, message: 'Введіть назву послуги' }]}>
-                 {/* Використовуємо Select з mode="tags" або просто AutoComplete, щоб можна було вводити свій текст */}
-                 <Select
-                    showSearch
-                    placeholder="Введіть або оберіть послугу"
-                    optionFilterProp="label"
-                    allowClear
-                    // mode="tags" // Дозволяє вводити нові значення (якщо бекенд підтримує рядки)
-                    options={worksList.map(w => ({ value: w.id, label: w.name }))}
-                 />
-            </Form.Item>
-            
-            <Form.Item name="employee" label="Механік">
+            <Form.Item name="work" label="Послуга" rules={[{ required: true }]}>
                  <Select 
-                    showSearch
-                    placeholder="Оберіть механіка (або введіть ID)"
-                    optionFilterProp="label"
-                    allowClear
-                    options={employeesList.map(e => ({ value: e.id, label: e.name || e.username }))}
+                    showSearch placeholder="Оберіть послугу" optionFilterProp="label" 
+                    options={worksList.map(w => ({ value: w.id, label: w.name }))} 
                  />
             </Form.Item>
-
-            <Form.Item name="hours" label="Годин" initialValue={1}>
-                <InputNumber min={0.1} step={0.1} style={{ width: '100%' }} />
+            <Form.Item name="employee" label="Механік">
+                 <Select showSearch placeholder="Оберіть механіка" optionFilterProp="label" options={employeesList.map(e => ({ value: e.id, label: e.name || e.username }))} />
             </Form.Item>
-            
-            <Button type="primary" htmlType="submit" loading={modalLoading} block>
-                Зберегти
-            </Button>
+            <Form.Item name="hours" label="Годин" initialValue={1}><InputNumber min={0.1} step={0.1} style={{ width: '100%' }} /></Form.Item>
+            <Button type="primary" htmlType="submit" loading={modalLoading} block>Зберегти</Button>
         </Form>
       </Modal>
 
-      <Modal
-        title="Списати запчастину"
-        open={isPartModalOpen}
-        onCancel={() => setIsPartModalOpen(false)}
-        footer={null}
-        destroyOnClose
-      >
+      <Modal title="Списати запчастину" open={isPartModalOpen} onCancel={() => setIsPartModalOpen(false)} footer={null} destroyOnClose>
         <Form form={formPart} layout="vertical" onFinish={handleAddPart}>
             <Form.Item name="part" label="Запчастина" rules={[{ required: true }]}>
-                <Select 
-                    showSearch 
-                    placeholder="Пошук (Назва або Артикул)"
-                    optionFilterProp="label"
-                    onChange={onPartSelect}
-                    options={partsList.map(p => ({ 
-                        value: p.id, 
-                        label: `${p.sku_code} - ${p.name} (На складі: ${p.quantity})` 
-                    }))}
+                <Select showSearch placeholder="Пошук..." optionFilterProp="label" onChange={onPartSelect}
+                    options={partsList.map(p => ({ value: p.id, label: `${p.sku_code} - ${p.name}` }))}
                 />
             </Form.Item>
-            <Space style={{ display: 'flex' }} align="start">
-                <Form.Item name="quantity" label="К-сть" initialValue={1} rules={[{ required: true }]}>
-                    <InputNumber min={1} style={{ width: '100%' }} />
-                </Form.Item>
-                <Form.Item name="price" label="Ціна" rules={[{ required: true }]}>
-                    <InputNumber min={0} style={{ width: '100%' }} />
-                </Form.Item>
+            <Space>
+                <Form.Item name="quantity" label="К-сть" initialValue={1}><InputNumber min={1} /></Form.Item>
+                <Form.Item name="price" label="Ціна"><InputNumber min={0} /></Form.Item>
             </Space>
-            <Button type="primary" htmlType="submit" loading={modalLoading} block>
-                Списати
-            </Button>
+            <Button type="primary" htmlType="submit" loading={modalLoading} block>Списати</Button>
         </Form>
       </Modal>
     </div>
