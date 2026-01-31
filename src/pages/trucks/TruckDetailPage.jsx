@@ -44,10 +44,6 @@ function TruckDetailPage() {
         if (typeof truckData.base_model === 'object') {
           setBaseModelName(truckData.base_model.name);
         } else {
-            // Якщо прийшло ID, пробуємо знайти його (або зробити запит, але це довго)
-            // Краще зробити окремий запит на отримання всіх моделей і знайти потрібну, 
-            // або запит конкретної моделі, якщо є такий ендпоінт.
-            // Спробуємо отримати всі моделі (їх мало) і знайти.
              baseModelsAPI.getAll().then(res => {
                  const models = res.data?.results || res.data || [];
                  const found = models.find(m => m.id === truckData.base_model);
