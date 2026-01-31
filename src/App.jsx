@@ -7,9 +7,12 @@ import 'dayjs/locale/uk';
 
 import { MainLayout, AuthLayout } from './layouts';
 import { ProtectedRoute, LoadingSpinner } from './components';
-import { Welcome } from './pages'; // Тут import працює через index.js, це ОК
 
-// Lazy loading: Виправляємо шляхи до файлів у підпапках
+// ОПТИМІЗАЦІЯ: Імпортуємо Welcome напряму, а не через index.js, щоб уникнути зайвих завантажень
+// import { Welcome } from './pages'; // <-- Було так
+import Welcome from './pages/Welcome'; // <-- Стало так (перевір шлях, якщо Welcome.jsx лежить прямо в pages)
+
+// Lazy loading
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
 
@@ -36,83 +39,58 @@ const ProductDetailPage = lazy(() => import('./pages/inventory/ProductDetailPage
 // Bot
 const BotPage = lazy(() => import('./pages/bot/BotPage'));
 
-// Встановлюємо українську локаль для dayjs
-dayjs.locale('uk');
-
-// Тема Ant Design
-const theme = {
-  token: {
-    colorPrimary: '#1890ff',
-    borderRadius: 6,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-  },
-};
-
 function AppRoutes() {
   return (
-    <BrowserRouter>
-      <Suspense fallback={<LoadingSpinner />}>
-        <Routes>
-          {/* Головна публічна сторінка (Welcome) */}
-          <Route path="/" element={<Welcome />} />
+    <Routes>
+      <Route path="/login" element={<AuthLayout><LoginPage /></AuthLayout>} />
+      
+      <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
+        <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/welcome" element={<Welcome />} />
 
-          {/* Публічні маршрути (авторизація) */}
-          <Route element={<AuthLayout />}>
-            <Route path="/login" element={<LoginPage />} />
-          </Route>
+        {/* Clients */}
+        <Route path="/clients" element={<ClientsPage />} />
+        <Route path="/clients/new" element={<ClientFormPage />} />
+        <Route path="/clients/:id" element={<ClientDetailPage />} />
+        <Route path="/clients/:id/edit" element={<ClientFormPage />} />
 
-          {/* Захищені маршрути */}
-          <Route
-            element={
-              <ProtectedRoute>
-                <MainLayout />
-              </ProtectedRoute>
-            }
-          >
-            {/* Dashboard */}
-            <Route path="/dashboard" element={<DashboardPage />} />
-            
-            {/* Clients */}
-            <Route path="/clients" element={<ClientsPage />} />
-            <Route path="/clients/new" element={<ClientFormPage />} />
-            <Route path="/clients/:id" element={<ClientDetailPage />} />
-            <Route path="/clients/:id/edit" element={<ClientFormPage />} />
+        {/* Trucks */}
+        <Route path="/trucks" element={<TrucksPage />} />
+        <Route path="/trucks/new" element={<TruckFormPage />} />
+        <Route path="/trucks/:id" element={<TruckDetailPage />} />
+        <Route path="/trucks/:id/edit" element={<TruckFormPage />} />
 
-            {/* Trucks */}
-            <Route path="/trucks" element={<TrucksPage />} />
-            <Route path="/trucks/new" element={<TruckFormPage />} />
-            <Route path="/trucks/:id" element={<TruckDetailPage />} />
-            <Route path="/trucks/:id/edit" element={<TruckFormPage />} />
+        {/* Orders */}
+        <Route path="/orders" element={<OrdersPage />} />
+        <Route path="/orders/new" element={<OrderFormPage />} />
+        <Route path="/orders/:id" element={<OrderDetailPage />} />
+        <Route path="/orders/:id/edit" element={<OrderFormPage />} />
 
-            {/* Orders */}
-            <Route path="/orders" element={<OrdersPage />} />
-            <Route path="/orders/new" element={<OrderFormPage />} />
-            <Route path="/orders/:id" element={<OrderDetailPage />} />
-            <Route path="/orders/:id/edit" element={<OrderFormPage />} />
+        {/* Inventory */}
+        <Route path="/inventory" element={<InventoryPage />} />
+        <Route path="/inventory/new" element={<ProductFormPage />} />
+        <Route path="/inventory/:id" element={<ProductDetailPage />} />
+        <Route path="/inventory/:id/edit" element={<ProductFormPage />} />
 
-            {/* Inventory */}
-            <Route path="/inventory" element={<InventoryPage />} />
-            <Route path="/inventory/new" element={<ProductFormPage />} />
-            <Route path="/inventory/:id" element={<ProductDetailPage />} />
-            <Route path="/inventory/:id/edit" element={<ProductFormPage />} />
+        {/* Bot */}
+        <Route path="/bot" element={<BotPage />} />
+      </Route>
 
-            {/* Bot */}
-            <Route path="/bot" element={<BotPage />} />
-          </Route>
-
-          {/* 404 - редірект на dashboard, якщо сторінку не знайдено */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
-        </Routes>
-      </Suspense>
-    </BrowserRouter>
+      <Route path="*" element={<Navigate to="/dashboard" replace />} />
+    </Routes>
   );
 }
 
 function App() {
   return (
-    <ConfigProvider locale={ukUA} theme={theme}>
+    <ConfigProvider locale={ukUA} theme={{ token: { colorPrimary: '#1677ff' } }}>
       <AntApp>
-        <AppRoutes />
+        <BrowserRouter>
+          <Suspense fallback={<LoadingSpinner />}>
+            <AppRoutes />
+          </Suspense>
+        </BrowserRouter>
       </AntApp>
     </ConfigProvider>
   );
