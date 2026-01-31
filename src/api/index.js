@@ -1,26 +1,35 @@
 import axios from 'axios';
 
-// Твій базовий конфіг (залиш як є)
-const baseURL = 'http://127.0.0.1:8000/api';
+// 🔴 УВАГА: Тут має бути ЗОВНІШНІЙ IP твого сервера.
+// Не 127.0.0.1 і не localhost.
+// Наприклад: 'http://164.92.155.12:8000/api'
+const baseURL = 'http://http://REMOVED:8000/api'; 
+
 const instance = axios.create({
   baseURL,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// Додаємо інтерцептори (залиш свої, якщо вони є)
 instance.interceptors.request.use((config) => {
-    const token = localStorage.getItem('access_token');
-    if (token) config.headers.Authorization = `Bearer ${token}`;
-    return config;
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
+
+export const authAPI = {
+  login: (data) => instance.post('/token/', data),
+  refreshToken: (refresh) => instance.post('/token/refresh/', { refresh }),
+  me: () => instance.get('/accounts/me/'),
+};
 
 export const ordersAPI = {
   getAll: (params) => instance.get('/orders/', { params }),
   getById: (id) => instance.get(`/orders/${id}/`),
-  
-  // ОНОВЛЕНО: Тепер вміє працювати з фото
   create: (data) => {
-    // Якщо data це FormData (є фото), браузер сам поставить правильний заголовок
     if (data instanceof FormData) {
         return instance.post('/orders/', data, {
             headers: { 'Content-Type': 'multipart/form-data' }
@@ -28,28 +37,50 @@ export const ordersAPI = {
     }
     return instance.post('/orders/', data);
   },
-  
   update: (id, data) => instance.patch(`/orders/${id}/`, data),
+  delete: (id) => instance.delete(`/orders/${id}/`),
   
-  // Методи для робіт
+  // Нові методи
+  searchTruck: (plate) => instance.get('/orders/search-truck/', { params: { plate } }),
+  checkMaintenance: (truckId, mileage) => 
+    instance.post('/orders/check-maintenance/', { 
+      truck_id: truckId, 
+      current_mileage: mileage 
+    }),
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
-  deleteWork: (workId) => instance.delete(`/works/${workId}/`), // Перевір шлях на бекенді
-  
-  // Методи для запчастин
+  deleteWork: (workId) => instance.delete(`/works/${workId}/`), 
   addPart: (orderId, data) => instance.post(`/orders/${orderId}/add_part/`, data),
 };
 
+export const clientsAPI = {
+  getAll: (params) => instance.get('/clients/', { params }),
+  getById: (id) => instance.get(`/clients/${id}/`),
+  create: (data) => instance.post('/clients/', data),
+  update: (id, data) => instance.patch(`/clients/${id}/`, data),
+};
+
+export const trucksAPI = {
+  getAll: (params) => instance.get('/trucks/', { params }),
+  getById: (id) => instance.get(`/trucks/${id}/`),
+  create: (data) => instance.post('/trucks/', data),
+  update: (id, data) => instance.patch(`/trucks/${id}/`, data),
+};
+
+export const worksAPI = {
+  getAll: (params) => instance.get('/service-works/', { params }),
+};
+
+export const employeesAPI = {
+  getAll: () => instance.get('/users/', { params: { role: 'mechanic' } }),
+};
+
+export const inventoryAPI = {
+  getAll: (params) => instance.get('/inventory/', { params }),
+};
+
 export const maintenanceAPI = {
-    // НОВЕ: Перевірка регламенту
     checkRegulations: (truckId, mileage) => 
         instance.get(`/maintenance/check-regulations/`, { params: { truck_id: truckId, mileage } }),
 };
-
-// ... інші API (clientsAPI, trucksAPI, etc.) залиш без змін ...
-export const clientsAPI = { getAll: (p) => instance.get('/clients/', { params: p }) };
-export const trucksAPI = { getAll: (p) => instance.get('/trucks/', { params: p }) };
-export const worksAPI = { getAll: () => instance.get('/service-works/') }; // Або як у тебе називається прайс
-export const employeesAPI = { getAll: () => instance.get('/users/', { params: { role: 'mechanic' } }) };
-export const inventoryAPI = { getAll: (p) => instance.get('/inventory/', { params: p }) };
 
 export default instance;
