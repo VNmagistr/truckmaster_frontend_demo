@@ -7,25 +7,12 @@ export default defineConfig({
     port: 3000,
   },
   build: {
-    // Збільшуємо ліміт попередження (щоб не "кричало" дарма)
-    chunkSizeWarningLimit: 1600,
+    // Збільшуємо ліміт до 3MB, щоб не бачити жовтих попереджень
+    chunkSizeWarningLimit: 3000,
     rollupOptions: {
       output: {
-        // Оця магія розбиває великий файл на менші
-        manualChunks(id) {
-          if (id.includes('node_modules')) {
-            // Виносимо Ant Design в окремий файл (він найбільший)
-            if (id.includes('antd') || id.includes('@ant-design')) {
-              return 'antd';
-            }
-            // Виносимо React та роутер
-            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
-              return 'react-vendor';
-            }
-            // Всі інші бібліотеки
-            return 'vendor';
-          }
-        },
+        // Видаляємо manualChunks, бо він спричиняє помилку з createContext
+        manualChunks: undefined,
       },
     },
   },
