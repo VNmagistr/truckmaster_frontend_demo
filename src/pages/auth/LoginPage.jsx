@@ -15,14 +15,18 @@ function LoginPage() {
     try {
       const response = await authAPI.login(values);
       
-      // 🔥 ВИПРАВЛЕННЯ: Явно зберігаємо токени, щоб axios interceptor їх побачив
-      localStorage.setItem('access_token', response.access);
-      localStorage.setItem('refresh_token', response.refresh);
+      // 🔥 ВИПРАВЛЕННЯ ТУТ:
+      // Axios повертає дані всередині об'єкта .data
+      // Було: response.access (це undefined)
+      // Стало: response.data.access
+      const { access, refresh } = response.data; 
+
+      localStorage.setItem('access_token', access);
+      localStorage.setItem('refresh_token', refresh);
       
       const userData = { username: values.username };
       
-      // Оновлюємо стан програми (Zustand)
-      setAuth(userData, response.access, response.refresh);
+      setAuth(userData, access, refresh);
       
       message.success('Успішний вхід!');
       navigate('/dashboard', { replace: true });
