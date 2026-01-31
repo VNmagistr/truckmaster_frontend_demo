@@ -3,35 +3,63 @@ import { Table, Button, Space, Input, message, Popconfirm, Card, Select } from '
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import { ordersAPI } from '../../api';
-import { PageHeader, LoadingSpinner, EmptyState, StatusTag } from '../../components';
+import { PageHeader, StatusTag } from '../../components';
 import { formatDate } from '../../utils/formatters';
 import { ORDER_STATUSES } from '../../utils/constants';
 
 function OrdersPage() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchText, setSearchText] = useState(''); // Пошук
+  
+  // Стани для пагінації та фільтрів
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 20,
+    total: 0,
+  });
+  const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
+  
   const navigate = useNavigate();
 
+  // Завантажуємо дані при зміні сторінки, пошуку або статусу
   useEffect(() => {
-    fetchOrders();
-  }, [statusFilter]);
+    fetchOrders(pagination.current, pagination.pageSize, searchText, statusFilter);
+  }, [pagination.current, pagination.pageSize, statusFilter]); 
+  // searchText додамо в окремий ефект з debounce (затримкою), або по Enter, 
+  // поки що залишимо просту логіку: пошук спрацює при вводі, але краще додати кнопку або debounce.
 
-  const fetchOrders = async () => {
+  // Обробка пошуку (з затримкою, щоб не спамити сервер)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        fetchOrders(1, pagination.pageSize, searchText, statusFilter);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const fetchOrders = async (page, pageSize, search, status) => {
     setLoading(true);
     try {
-      // Завантажуємо ВСІ замовлення для швидкого пошуку на клієнті
       const params = {
+        page: page,
+        page_size: pageSize,
         ordering: '-created_at',
       };
       
-      if (statusFilter) {
-        params.status = statusFilter;
-      }
+      if (search) params.search = search; // Сервер повинен підтримувати ?search=
+      if (status) params.status = status;
 
       const response = await ordersAPI.getAll(params);
-      setOrders(response.results || response || []);
+      const data = response.data || response;
+      
+      setOrders(data.results || []);
+      setPagination(prev => ({
+        ...prev,
+        current: page,
+        pageSize: pageSize,
+        total: data.count || 0,
+      }));
+
     } catch (error) {
       console.error('Error fetching orders:', error);
       message.error('Не вдалося завантажити список замовлень');
@@ -44,25 +72,20 @@ function OrdersPage() {
     try {
       await ordersAPI.delete(id);
       message.success('Замовлення видалено');
-      fetchOrders();
+      fetchOrders(pagination.current, pagination.pageSize, searchText, statusFilter);
     } catch (error) {
       message.error('Не вдалося видалити замовлення');
     }
   };
 
-  // --- ЛОГІКА ПОШУКУ ---
-  const filteredOrders = orders.filter(order => {
-    const value = searchText.toLowerCase();
-    const orderNum = order.order_number ? String(order.order_number).toLowerCase() : String(order.id);
-    const truckPlate = order.truck?.license_plate?.toLowerCase() || '';
-    const clientName = order.client?.name?.toLowerCase() || '';
-
-    return (
-      orderNum.includes(value) ||
-      truckPlate.includes(value) ||
-      clientName.includes(value)
-    );
-  });
+  const handleTableChange = (newPagination) => {
+    setPagination(prev => ({
+        ...prev,
+        current: newPagination.current,
+        pageSize: newPagination.pageSize
+    }));
+    // fetchOrders викликається через useEffect
+  };
 
   const columns = [
     {
@@ -70,19 +93,27 @@ function OrdersPage() {
       dataIndex: 'order_number',
       key: 'order_number',
       render: (text, record) => <Link to={`/orders/${record.id}`}>{text || `#${record.id}`}</Link>,
-      sorter: (a, b) => (a.order_number || a.id) - (b.order_number || b.id),
+      sorter: false, // Сортування поки вимкнемо, бо воно має бути серверним
     },
     {
       title: 'Клієнт',
       dataIndex: ['client', 'name'],
       key: 'client',
-      render: (text, record) => record.client ? <Link to={`/clients/${record.client.id}`}>{text}</Link> : '-',
+      render: (text, record) => {
+          const clientName = record.client?.name || record.client_name || '-';
+          const clientId = record.client?.id || (typeof record.client === 'object' ? null : record.client);
+          return clientId ? <Link to={`/clients/${clientId}`}>{clientName}</Link> : clientName;
+      },
     },
     {
       title: 'Вантажівка',
       dataIndex: ['truck', 'license_plate'],
       key: 'truck',
-      render: (text, record) => record.truck ? <Link to={`/trucks/${record.truck.id}`}>{text}</Link> : '-',
+      render: (text, record) => {
+          const plate = record.truck?.license_plate || record.truck_plate || '-';
+          const truckId = record.truck?.id || (typeof record.truck === 'object' ? null : record.truck);
+          return truckId ? <Link to={`/trucks/${truckId}`}>{plate}</Link> : plate;
+      },
     },
     {
       title: 'Статус',
@@ -95,7 +126,6 @@ function OrdersPage() {
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date) => formatDate(date),
-      sorter: (a, b) => new Date(a.created_at) - new Date(b.created_at),
     },
     {
       title: 'Дії',
@@ -112,18 +142,16 @@ function OrdersPage() {
     },
   ];
 
-  if (loading) return <LoadingSpinner />;
-
   return (
     <div>
       <PageHeader
         title="Наряди-замовлення"
         extra={
           <Space>
-            {/* ПОЛЕ ПОШУКУ */}
             <Input
-              placeholder="Пошук (№, авто, клієнт)..."
+              placeholder="Пошук..."
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+              value={searchText}
               onChange={e => setSearchText(e.target.value)}
               style={{ width: 220 }}
               allowClear
@@ -154,25 +182,20 @@ function OrdersPage() {
       />
 
       <Card>
-        {orders.length > 0 ? (
-          <Table
-            columns={columns}
-            dataSource={filteredOrders} // Відфільтровані дані
-            rowKey="id"
-            // Пагінація тепер на клієнті
-            pagination={{ 
-              pageSize: 20,
-              showSizeChanger: true, 
+        <Table
+          columns={columns}
+          dataSource={orders}
+          rowKey="id"
+          pagination={{
+              current: pagination.current,
+              pageSize: pagination.pageSize,
+              total: pagination.total,
+              showSizeChanger: true,
               showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`
-            }}
-          />
-        ) : (
-          <EmptyState
-            description="Замовлень поки немає"
-            buttonText="Створити замовлення"
-            onButtonClick={() => navigate('/orders/new')}
-          />
-        )}
+          }}
+          onChange={handleTableChange}
+          loading={loading}
+        />
       </Card>
     </div>
   );
