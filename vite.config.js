@@ -1,37 +1,32 @@
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
-  
-  return {
-    plugins: [react()],
-    server: {
-      port: 5173,
-      proxy: {
-        '/api': {
-          target: env.VITE_API_URL || 'http://localhost:8000',
-          changeOrigin: true,
-        },
-      },
-    },
-    build: {
-      outDir: 'dist',
-      sourcemap: false,
-      minify: 'esbuild',
-      chunkSizeWarningLimit: 1500, // Підняли ліміт, щоб не сварився на великий vendor файл
-      rollupOptions: {
-        output: {
-          manualChunks: (id) => {
-            // ПРОСТА І НАДІЙНА СТРАТЕГІЯ:
-            // Всі бібліотеки (node_modules) збираємо в один файл 'vendor'.
-            // Це гарантує, що React, Antd та інші залежності будуть "бачити" одне одного.
-            if (id.includes('node_modules')) {
-              return 'vendor';
+export default defineConfig({
+  plugins: [react()],
+  server: {
+    port: 3000,
+  },
+  build: {
+    // Збільшуємо ліміт попередження (щоб не "кричало" дарма)
+    chunkSizeWarningLimit: 1600,
+    rollupOptions: {
+      output: {
+        // Оця магія розбиває великий файл на менші
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            // Виносимо Ant Design в окремий файл (він найбільший)
+            if (id.includes('antd') || id.includes('@ant-design')) {
+              return 'antd';
             }
-          },
+            // Виносимо React та роутер
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router-dom')) {
+              return 'react-vendor';
+            }
+            // Всі інші бібліотеки
+            return 'vendor';
+          }
         },
       },
     },
-  };
+  },
 });
