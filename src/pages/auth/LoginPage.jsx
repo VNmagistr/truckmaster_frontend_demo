@@ -11,24 +11,28 @@ function LoginPage() {
   const { setAuth } = useAuthStore();
 
   const onFinish = async (values) => {
-  setLoading(true);
-  try {
-    // ✅ ВИПРАВЛЕНО: передаємо об'єкт, а не окремі параметри
-    const response = await authAPI.login(values);
-    
-    const userData = { username: values.username };
-    
-    setAuth(userData, response.access, response.refresh);
-    
-    message.success('Успішний вхід!');
-    navigate('/dashboard', { replace: true });
-  } catch (error) {
-    console.error('Login error:', error);
-    message.error('Невірний логін або пароль');
-  } finally {
-    setLoading(false);
-  }
-};
+    setLoading(true);
+    try {
+      const response = await authAPI.login(values);
+      
+      // 🔥 ВИПРАВЛЕННЯ: Явно зберігаємо токени, щоб axios interceptor їх побачив
+      localStorage.setItem('access_token', response.access);
+      localStorage.setItem('refresh_token', response.refresh);
+      
+      const userData = { username: values.username };
+      
+      // Оновлюємо стан програми (Zustand)
+      setAuth(userData, response.access, response.refresh);
+      
+      message.success('Успішний вхід!');
+      navigate('/dashboard', { replace: true });
+    } catch (error) {
+      console.error('Login error:', error);
+      message.error('Невірний логін або пароль');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Card
