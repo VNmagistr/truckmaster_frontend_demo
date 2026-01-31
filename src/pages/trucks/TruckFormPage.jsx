@@ -27,8 +27,9 @@ function TruckFormPage() {
   const fetchClients = async () => {
     try {
       const response = await clientsAPI.getAll({ page_size: 1000 });
-      const data = response.results || response;
-      setClients(Array.isArray(data) ? data : []);
+      // 🔥 ВИПРАВЛЕННЯ: Розпаковка .data
+      const data = response.data || response;
+      setClients(data.results || data || []);
     } catch (error) {
       console.error('Error fetching clients:', error);
     }
@@ -36,6 +37,8 @@ function TruckFormPage() {
 
   const fetchBaseModels = async () => {
     try {
+      // Тут використовується fetch, а не axios, тому response.json() коректний,
+      // але треба перевірити структуру відповіді
       const response = await fetch('/api/base-models/');
       if (response.ok) {
         const data = await response.json();
@@ -43,6 +46,7 @@ function TruckFormPage() {
       }
     } catch (error) {
       console.error('Error fetching base models:', error);
+      // Фоллбек дані
       setBaseModels([
         { id: 1, name: 'Daily' },
         { id: 2, name: 'Eurocargo' },
@@ -56,7 +60,10 @@ function TruckFormPage() {
   const fetchTruck = async () => {
     setLoading(true);
     try {
-      const data = await trucksAPI.getById(id);
+      const response = await trucksAPI.getById(id);
+      // 🔥 ВИПРАВЛЕННЯ: Розпаковка .data
+      const data = response.data || response;
+      
       form.setFieldsValue({
         ...data,
         client: data.client?.id || data.client,
@@ -76,10 +83,10 @@ function TruckFormPage() {
     try {
       if (isEdit) {
         await trucksAPI.update(id, values);
-        message.success('Вантажівку успішно оновлено');
+        message.success('Вантажівку оновлено');
       } else {
         await trucksAPI.create(values);
-        message.success('Вантажівку успішно створено');
+        message.success('Вантажівку створено');
       }
       navigate('/trucks');
     } catch (error) {
@@ -87,7 +94,8 @@ function TruckFormPage() {
       if (error.response?.data) {
         const errors = error.response.data;
         Object.keys(errors).forEach(key => {
-          message.error(`${key}: ${errors[key]}`);
+          const errorMsg = Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key];
+          message.error(`${key}: ${errorMsg}`);
         });
       } else {
         message.error('Не вдалося зберегти вантажівку');
@@ -97,9 +105,7 @@ function TruckFormPage() {
     }
   };
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
+  if (loading) return <LoadingSpinner />;
 
   return (
     <div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Space, Table, Tag, message, Tabs } from 'antd';
+import { Card, Descriptions, Button, Table, Tag, message, Tabs } from 'antd';
 import { EditOutlined, FileTextOutlined, ToolOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { trucksAPI, ordersAPI } from '../../api';
@@ -10,6 +10,7 @@ import { EURO_STANDARDS } from '../../utils/constants';
 function TruckDetailPage() {
   const [truck, setTruck] = useState(null);
   const [orders, setOrders] = useState([]);
+  const [ordersTotal, setOrdersTotal] = useState(0); // Лічильник замовлень
   const [loading, setLoading] = useState(true);
   const { id } = useParams();
   const navigate = useNavigate();
@@ -21,24 +22,25 @@ function TruckDetailPage() {
   const fetchTruckData = async () => {
     setLoading(true);
     try {
-      const [truckData, ordersData] = await Promise.all([
+      // 🔥 ОПТИМІЗАЦІЯ: Вантажимо тільки останні 20 замовлень
+      const [truckResponse, ordersResponse] = await Promise.all([
         trucksAPI.getById(id),
-        ordersAPI.getAll({ truck: id }).catch(() => ({ results: [] })),
+        ordersAPI.getAll({ 
+          truck: id, 
+          page_size: 20,
+          ordering: '-created_at' 
+        }).catch(() => ({ data: [] })),
       ]);
+
+      // 🔥 ВИПРАВЛЕННЯ: Розпаковуємо .data
+      const truckData = truckResponse.data || truckResponse;
+      const ordersData = ordersResponse.data || ordersResponse;
 
       setTruck(truckData);
 
-      // --- ВИПРАВЛЕННЯ ТУТ ---
-      // Фільтруємо замовлення, щоб залишити тільки ті, що стосуються цієї вантажівки
-      const allOrders = ordersData.results || ordersData || [];
-      const filteredOrders = allOrders.filter(order => {
-        // Враховуємо, що truck може бути об'єктом або ID
-        const orderTruckId = order.truck?.id || order.truck;
-        return String(orderTruckId) === String(id);
-      });
-
-      setOrders(filteredOrders);
-      // ----------------------
+      // Зберігаємо замовлення та їх кількість
+      setOrders(ordersData.results || ordersData || []);
+      setOrdersTotal(ordersData.count || (ordersData.results ? ordersData.results.length : ordersData.length) || 0);
 
     } catch (error) {
       console.error('Error fetching truck:', error);
@@ -79,13 +81,8 @@ function TruckDetailPage() {
     },
   ];
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (!truck) {
-    return null;
-  }
+  if (loading) return <LoadingSpinner />;
+  if (!truck) return null;
 
   const tabItems = [
     {
@@ -93,7 +90,7 @@ function TruckDetailPage() {
       label: (
         <span>
           <FileTextOutlined />
-          Історія замовлень ({orders.length})
+          Історія замовлень ({ordersTotal})
         </span>
       ),
       children: (
@@ -101,8 +98,9 @@ function TruckDetailPage() {
           columns={ordersColumns}
           dataSource={orders}
           rowKey="id"
-          pagination={{ pageSize: 10 }}
+          pagination={false}
           locale={{ emptyText: 'Немає замовлень' }}
+          footer={() => ordersTotal > 20 ? <div style={{textAlign: 'center', color: '#999'}}>Показано останні 20 записів</div> : null}
         />
       ),
     },

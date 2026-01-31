@@ -7,7 +7,7 @@ import { PageHeader, LoadingSpinner } from '../../components';
 
 function TrucksPage() {
   const [trucks, setTrucks] = useState([]);
-  const [searchText, setSearchText] = useState(''); // Стан для пошуку
+  const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -17,7 +17,9 @@ function TrucksPage() {
 
   const fetchTrucks = async () => {
     try {
-      const data = await trucksAPI.getAll();
+      const response = await trucksAPI.getAll();
+      // 🔥 ВИПРАВЛЕННЯ: Спочатку дістаємо .data з Axios, потім .results з Django
+      const data = response.data || response;
       setTrucks(data.results || data || []);
     } catch (error) {
       console.error('Error fetching trucks:', error);
@@ -37,7 +39,6 @@ function TrucksPage() {
     }
   };
 
-  // --- ЛОГІКА ПОШУКУ ---
   const filteredTrucks = trucks.filter(truck => {
     const value = searchText.toLowerCase();
     return (
@@ -96,7 +97,6 @@ function TrucksPage() {
         title="Вантажівки"
         extra={
           <Space>
-            {/* ПОЛЕ ПОШУКУ */}
             <Input
               placeholder="Пошук авто..."
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
@@ -113,7 +113,7 @@ function TrucksPage() {
       <Card>
         <Table
           columns={columns}
-          dataSource={filteredTrucks} // Використовуємо відфільтровані дані
+          dataSource={filteredTrucks}
           rowKey="id"
           pagination={{ pageSize: 10 }}
         />
