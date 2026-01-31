@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, message, Popconfirm, Card, Tag } from 'antd';
+import { Table, Button, Space, Input, message, Popconfirm, Card } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
 import { trucksAPI } from '../../api';
@@ -7,20 +7,49 @@ import { PageHeader, LoadingSpinner } from '../../components';
 
 function TrucksPage() {
   const [trucks, setTrucks] = useState([]);
-  const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 20,
+    total: 0,
+  });
+  const [searchText, setSearchText] = useState('');
+  
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchTrucks();
-  }, []);
+    fetchTrucks(pagination.current, searchText);
+  }, [pagination.current]);
 
-  const fetchTrucks = async () => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        setPagination(prev => ({ ...prev, current: 1 }));
+        fetchTrucks(1, searchText);
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const fetchTrucks = async (page, search) => {
+    setLoading(true);
     try {
-      const response = await trucksAPI.getAll();
-      // 🔥 ВИПРАВЛЕННЯ: Спочатку дістаємо .data з Axios, потім .results з Django
+      const params = {
+        page: page,
+        page_size: 20,
+        ordering: '-created_at',
+      };
+      
+      if (search) params.search = search;
+
+      const response = await trucksAPI.getAll(params);
       const data = response.data || response;
-      setTrucks(data.results || data || []);
+      
+      setTrucks(data.results || []);
+      setPagination(prev => ({
+        ...prev,
+        current: page,
+        total: data.count || 0,
+      }));
     } catch (error) {
       console.error('Error fetching trucks:', error);
       message.error('Не вдалося завантажити вантажівки');
@@ -33,21 +62,11 @@ function TrucksPage() {
     try {
       await trucksAPI.delete(id);
       message.success('Вантажівку видалено');
-      fetchTrucks();
+      fetchTrucks(pagination.current, searchText);
     } catch (error) {
       message.error('Не вдалося видалити вантажівку');
     }
   };
-
-  const filteredTrucks = trucks.filter(truck => {
-    const value = searchText.toLowerCase();
-    return (
-      truck.license_plate?.toLowerCase().includes(value) ||
-      truck.full_vin?.toLowerCase().includes(value) ||
-      truck.last_seven_vin?.toLowerCase().includes(value) ||
-      truck.specific_model_name?.toLowerCase().includes(value)
-    );
-  });
 
   const columns = [
     {
@@ -55,7 +74,6 @@ function TrucksPage() {
       dataIndex: 'license_plate',
       key: 'license_plate',
       render: (text, record) => <Link to={`/trucks/${record.id}`}>{text}</Link>,
-      sorter: (a, b) => a.license_plate.localeCompare(b.license_plate),
     },
     {
       title: 'Модель',
@@ -66,7 +84,7 @@ function TrucksPage() {
       title: 'VIN (останні 7)',
       dataIndex: 'last_seven_vin',
       key: 'vin',
-      render: (vin) => `${vin}`,
+      render: (vin) => `...${vin}`,
     },
     {
       title: 'Клієнт',
@@ -89,8 +107,6 @@ function TrucksPage() {
     },
   ];
 
-  if (loading) return <LoadingSpinner />;
-
   return (
     <div>
       <PageHeader
@@ -98,8 +114,9 @@ function TrucksPage() {
         extra={
           <Space>
             <Input
-              placeholder="Пошук авто..."
+              placeholder="Пошук авто (номер, VIN)..."
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+              value={searchText}
               onChange={e => setSearchText(e.target.value)}
               style={{ width: 250 }}
               allowClear
@@ -113,9 +130,17 @@ function TrucksPage() {
       <Card>
         <Table
           columns={columns}
-          dataSource={filteredTrucks}
+          dataSource={trucks}
           rowKey="id"
-          pagination={{ pageSize: 10 }}
+          pagination={{
+            current: pagination.current,
+            pageSize: 20,
+            total: pagination.total,
+            showSizeChanger: false,
+            showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`
+          }}
+          onChange={(newPagination) => setPagination(prev => ({ ...prev, current: newPagination.current }))}
+          loading={loading}
         />
       </Card>
     </div>
