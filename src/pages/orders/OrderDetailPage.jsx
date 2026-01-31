@@ -10,12 +10,11 @@ function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   
-  // Стани модальних вікон
   const [isWorkModalOpen, setIsWorkModalOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
 
-  // Довідники
+  // Ініціалізуємо як пусті масиви
   const [worksList, setWorksList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
   const [partsList, setPartsList] = useState([]);
@@ -33,86 +32,93 @@ function OrderDetailPage() {
   const initPage = async () => {
     setLoading(true);
     try {
-      console.log("Fetching order ID:", id);
+      console.log(`Fetching order ID: ${id}`);
       const response = await ordersAPI.getById(id);
-      
-      // Безпечна розпаковка
       const data = response.data || response;
+      
       console.log("Order Data loaded:", data);
       
-      if (!data) throw new Error("Отримано пусті дані");
-      
+      if (!data) throw new Error("Дані замовлення відсутні");
       setOrder(data);
 
       // Фонове завантаження довідників
       loadDirectories();
     } catch (error) {
       console.error('CRITICAL ERROR loading order:', error);
-      message.error('Помилка завантаження: ' + (error.message || 'Невідома помилка'));
-      // Ми НЕ перекидаємо користувача, щоб він міг побачити помилку в консолі
+      message.error('Не вдалося завантажити замовлення');
     } finally {
       setLoading(false);
     }
   };
 
+  // --- ФУНКЦІЯ БЕЗПЕКИ ---
+  // Перетворює будь-що (null, undefined, об'єкт, response) в масив
+  const ensureArray = (input) => {
+      if (!input) return [];
+      if (Array.isArray(input)) return input;
+      // Якщо це відповідь з пагінацією Django { results: [...] }
+      if (input.results && Array.isArray(input.results)) return input.results;
+      // Якщо це об'єкт Axios { data: [...] }
+      if (input.data && Array.isArray(input.data)) return input.data;
+      // Якщо це об'єкт Axios з пагінацією { data: { results: [...] } }
+      if (input.data && input.data.results && Array.isArray(input.data.results)) return input.data.results;
+      
+      return [];
+  };
+
   const loadDirectories = async () => {
     try {
+        // Використовуємо allSettled, щоб одна помилка (наприклад 404 по механіках) не ламала все інше
         const [worksResp, empResp, partsResp] = await Promise.allSettled([
-            worksAPI.getAll().catch(e => []),
-            employeesAPI.getAll().catch(e => []),
-            inventoryAPI.getAll({ page_size: 1000 }).catch(e => [])
+            worksAPI.getAll(),
+            employeesAPI.getAll(),
+            inventoryAPI.getAll({ page_size: 1000 })
         ]);
 
-        // Обробка результатів Promise.allSettled
-        const unwrap = (res) => {
-            if (res.status === 'fulfilled') {
-                const val = res.value;
-                return (val.data && val.data.results) ? val.data.results : (val.data || val || []);
-            }
-            return [];
+        // Розпаковка результатів
+        const getValue = (result) => {
+             if (result.status === 'fulfilled') {
+                 return ensureArray(result.value);
+             }
+             console.warn("Directory fetch failed:", result.reason);
+             return [];
         };
 
-        setWorksList(unwrap(worksResp));
-        setEmployeesList(unwrap(empResp));
-        setPartsList(unwrap(partsResp));
+        setWorksList(getValue(worksResp));
+        setEmployeesList(getValue(empResp));
+        setPartsList(getValue(partsResp));
         
     } catch (e) {
-        console.warn("Directories fetch warning", e);
+        console.error("Global directory error", e);
     }
   };
 
-  // --- Хелпери для безпечного відображення ---
-  
-  // Отримати назву клієнта/вантажівки, навіть якщо це просто ID
+  // --- Хелпери ---
+
   const getSafeName = (entity, field = 'name') => {
       if (!entity) return '-';
-      if (typeof entity === 'object') {
-          return entity[field] || '-';
-      }
-      return `ID: ${entity}`; // Якщо це просто ID, показуємо його
+      if (typeof entity === 'object') return entity[field] || '-';
+      return entity; // Якщо ID
   };
 
   const getSafeId = (entity) => {
-      if (!entity) return null;
-      if (typeof entity === 'object') return entity.id;
-      return entity;
+     if (!entity) return null;
+     if (typeof entity === 'object') return entity.id;
+     return entity;
   };
 
-  // Хелпер для пошуку назв у списках (для робіт і запчастин)
   const resolveNameInList = (itemId, list, nameField = 'name') => {
     if (!itemId) return '-';
-    // Якщо прийшов об'єкт
     if (typeof itemId === 'object') return itemId[nameField] || itemId.username || itemId.license_plate || '-';
     
-    // Якщо список ще не завантажився
-    if (!list || list.length === 0) return itemId;
-
-    // Шукаємо по ID
-    const found = list.find(x => String(x.id) === String(itemId));
+    // Переконаємось, що list це масив перед пошуком
+    const safeList = ensureArray(list);
+    const found = safeList.find(x => String(x.id) === String(itemId));
+    
     return found ? (found[nameField] || found.username || found.license_plate) : itemId; 
   };
 
-  // --- Обробники форм ---
+  // --- Обробники ---
 
   const handleAddWork = async (values) => {
     setModalLoading(true);
@@ -121,7 +127,7 @@ function OrderDetailPage() {
       message.success('Роботу додано');
       setIsWorkModalOpen(false);
       formWork.resetFields();
-      initPage(); // Перезавантажуємо замовлення
+      initPage();
     } catch (error) {
       console.error(error);
       message.error('Помилка додавання роботи');
@@ -137,7 +143,7 @@ function OrderDetailPage() {
       message.success('Запчастину додано');
       setIsPartModalOpen(false);
       formPart.resetFields();
-      initPage(); // Перезавантажуємо замовлення
+      initPage();
     } catch (error) {
        const errorMsg = error.response?.data?.error || 'Помилка при додаванні запчастини';
        message.error(errorMsg);
@@ -147,26 +153,38 @@ function OrderDetailPage() {
   };
 
   const onPartSelect = (partId) => {
-    const part = partsList.find(p => p.id === partId);
+    const safeList = ensureArray(partsList);
+    const part = safeList.find(p => p.id === partId);
     if (part) {
         formPart.setFieldsValue({ price: part.selling_price });
     }
   };
 
-  // --- Колонк таблиць ---
+  // --- Відображення ---
+
+  if (loading) return <LoadingSpinner />;
+  if (!order) return <div style={{padding: 20, textAlign: 'center'}}>Помилка: Немає даних замовлення</div>;
+
+  // Гарантуємо, що це масиви перед рендером
+  const safeWorksList = ensureArray(worksList);
+  const safeEmployeesList = ensureArray(employeesList);
+  const safePartsList = ensureArray(partsList);
+  
+  const orderWorks = ensureArray(order.works);
+  const orderParts = ensureArray(order.parts || order.used_parts);
 
   const worksColumns = [
     {
       title: 'Робота',
       dataIndex: 'work',
       key: 'work',
-      render: (val, record) => resolveNameInList(val, worksList) || record.description || 'Без назви',
+      render: (val, record) => resolveNameInList(val, safeWorksList) || record.description || 'Без назви',
     },
     {
       title: 'Виконавець',
       dataIndex: 'employee',
       key: 'employee',
-      render: (val) => resolveNameInList(val, employeesList),
+      render: (val) => resolveNameInList(val, safeEmployeesList),
     },
     { title: 'Годин', dataIndex: 'hours', key: 'hours' },
     { title: 'Вартість', dataIndex: 'amount', key: 'amount', render: (val) => formatMoney(val) },
@@ -178,7 +196,7 @@ function OrderDetailPage() {
       dataIndex: 'part',
       key: 'part',
       render: (val) => {
-          const partObj = typeof val === 'object' ? val : partsList.find(p => String(p.id) === String(val));
+          const partObj = typeof val === 'object' ? val : safePartsList.find(p => String(p.id) === String(val));
           if (!partObj) return typeof val === 'object' ? (val.name || val) : val;
           return (
             <div>
@@ -193,14 +211,8 @@ function OrderDetailPage() {
     { title: 'Сума', key: 'total', render: (_, record) => formatMoney((record.price || 0) * (record.quantity || 1)) }
   ];
 
-  if (loading) return <LoadingSpinner />;
-  
-  // Якщо замовлення не завантажилось (помилка), показуємо це
-  if (!order) return <div style={{ padding: 20, textAlign: 'center' }}>Помилка відображення замовлення. Перевірте консоль.</div>;
-
-  // Безпечний доступ до масивів
-  const orderParts = order.parts || order.used_parts || [];
-  const orderWorks = order.works || [];
+  const clientId = getSafeId(order.client);
+  const truckId = getSafeId(order.truck);
 
   const tabItems = [
     {
@@ -244,9 +256,6 @@ function OrderDetailPage() {
       ),
     },
   ];
-
-  const clientId = getSafeId(order.client);
-  const truckId = getSafeId(order.truck);
 
   return (
     <div>
@@ -292,7 +301,6 @@ function OrderDetailPage() {
           </Descriptions.Item>
           
           <Descriptions.Item label="VIN">
-             {/* Дуже обережна перевірка VIN */}
              {order.truck?.last_seven_vin || 
               (order.truck && typeof order.truck === 'object' && order.truck.full_vin ? `...${order.truck.full_vin.slice(-7)}` : '-')}
           </Descriptions.Item>
@@ -312,7 +320,8 @@ function OrderDetailPage() {
                     showSearch 
                     placeholder="Оберіть послугу" 
                     optionFilterProp="label" 
-                    options={worksList.map(w => ({ value: w.id, label: w.name }))} 
+                    // 🔥 ЗАХИСТ ВІД КРАШУ ТУТ:
+                    options={safeWorksList.map(w => ({ value: w.id, label: w.name }))} 
                  />
             </Form.Item>
             <Form.Item name="employee" label="Механік">
@@ -320,7 +329,8 @@ function OrderDetailPage() {
                     showSearch 
                     placeholder="Оберіть механіка" 
                     optionFilterProp="label" 
-                    options={employeesList.map(e => ({ value: e.id, label: e.name || e.username }))} 
+                    // 🔥 ЗАХИСТ ВІД КРАШУ ТУТ:
+                    options={safeEmployeesList.map(e => ({ value: e.id, label: e.name || e.username }))} 
                  />
             </Form.Item>
             <Form.Item name="hours" label="Годин" initialValue={1} rules={[{ required: true }]}>
@@ -338,7 +348,8 @@ function OrderDetailPage() {
                     placeholder="Пошук (Назва або Артикул)"
                     optionFilterProp="label"
                     onChange={onPartSelect}
-                    options={partsList.map(p => ({ 
+                    // 🔥 ЗАХИСТ ВІД КРАШУ ТУТ:
+                    options={safePartsList.map(p => ({ 
                         value: p.id, 
                         label: `${p.sku_code} - ${p.name} (Склад: ${p.quantity})` 
                     }))}
