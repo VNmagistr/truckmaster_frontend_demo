@@ -4,7 +4,7 @@ import { EditOutlined, CarOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { clientsAPI, trucksAPI, ordersAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
-import { formatPhone, formatDate } from '../../utils/formatters';
+import { formatPhone, formatDate, formatMoney } from '../../utils/formatters';
 
 function ClientDetailPage() {
   const [client, setClient] = useState(null);
@@ -21,30 +21,25 @@ function ClientDetailPage() {
   const fetchClientData = async () => {
     setLoading(true);
     try {
-      // Запитуємо дані. Навіть якщо ordersAPI поверне всі замовлення, ми їх відфільтруємо нижче.
-      const [clientData, trucksData, ordersData] = await Promise.all([
+      // Запитуємо дані паралельно
+      const [clientResponse, trucksResponse, ordersResponse] = await Promise.all([
         clientsAPI.getById(id),
-        trucksAPI.getByClient(id).catch(() => ({ results: [] })),
-        ordersAPI.getAll({ client: id }).catch(() => ({ results: [] })),
+        trucksAPI.getByClient(id).catch(() => ({ data: [] })),
+        ordersAPI.getAll({ client: id }).catch(() => ({ data: [] })),
       ]);
 
-      setClient(clientData);
-      setTrucks(trucksData.results || trucksData || []);
+      // 🔥 ВИПРАВЛЕННЯ: "Розпаковуємо" дані (.data)
+      const clientData = clientResponse.data || clientResponse;
+      const trucksData = trucksResponse.data || trucksResponse;
+      const ordersData = ordersResponse.data || ordersResponse;
 
-      // --- ВИПРАВЛЕННЯ ТУТ ---
-      // Фільтруємо замовлення на стороні клієнта, щоб прибрати чужі
-      const allOrders = ordersData.results || ordersData || [];
-      const filteredOrders = allOrders.filter(order => {
-        // Перевіряємо, в якому форматі прийшов клієнт (як об'єкт з ID або просто число)
-        const orderClientId = order.client?.id || order.client;
-        return String(orderClientId) === String(id);
-      });
-      
-      setOrders(filteredOrders);
-      // ----------------------
+      setClient(clientData);
+      // Враховуємо пагінацію (results) або звичайний масив
+      setTrucks(trucksData.results || trucksData || []);
+      setOrders(ordersData.results || ordersData || []);
 
     } catch (error) {
-      console.error('Error fetching client:', error);
+      console.error('Error fetching client details:', error);
       message.error('Не вдалося завантажити дані клієнта');
       navigate('/clients');
     } finally {
@@ -52,74 +47,47 @@ function ClientDetailPage() {
     }
   };
 
+  if (loading) return <LoadingSpinner />;
+  if (!client) return null;
+
+  // ... (Решта коду колонок таблиць залишається без змін)
   const trucksColumns = [
-    {
-      title: 'Номерний знак',
-      dataIndex: 'license_plate',
-      key: 'license_plate',
-      render: (text, record) => (
-        <Link to={`/trucks/${record.id}`}>{text}</Link>
-      ),
-    },
-    {
-      title: 'Модель',
-      dataIndex: 'specific_model_name',
-      key: 'model',
-    },
-    {
-      title: 'VIN',
-      dataIndex: 'last_seven_vin',
-      key: 'vin',
-      render: (vin) => `...${vin}`,
-    },
-    {
-      title: 'Євростандарт',
-      dataIndex: 'euro_standard',
-      key: 'euro',
-      render: (euro) => euro ? <Tag>{euro}</Tag> : '-',
-    },
+    { title: 'Марка', dataIndex: 'brand', key: 'brand' },
+    { title: 'Номерний знак', dataIndex: 'license_plate', key: 'license_plate' },
+    { title: 'VIN', dataIndex: 'vin_code', key: 'vin_code' },
+    { title: 'Рік', dataIndex: 'year', key: 'year' },
   ];
 
   const ordersColumns = [
-    {
-      title: '№ Замовлення',
-      dataIndex: 'order_number',
+    { 
+      title: 'Номер', 
+      dataIndex: 'order_number', 
       key: 'order_number',
-      render: (text, record) => (
-        <Link to={`/orders/${record.id}`}>{text || `#${record.id}`}</Link>
-      ),
+      render: (text, record) => <Link to={`/orders/${record.id}`}>#{text || record.id}</Link>
     },
-    {
-      title: 'Вантажівка',
-      dataIndex: 'truck',
-      key: 'truck',
-      render: (truck) => truck?.license_plate || '-',
+    { 
+      title: 'Дата', 
+      dataIndex: 'created_at', 
+      key: 'created_at',
+      render: (date) => formatDate(date)
     },
-    {
-      title: 'Статус',
-      dataIndex: 'status',
+    { 
+      title: 'Статус', 
+      dataIndex: 'status', 
       key: 'status',
-      render: (status) => <StatusTag status={status} type="order" />,
+      render: (status) => <StatusTag status={status} type="order" />
     },
-    {
-      title: 'Дата',
-      dataIndex: 'created_at',
-      key: 'date',
-      render: (date) => formatDate(date),
+    { 
+      title: 'Сума', 
+      dataIndex: 'total_amount', 
+      key: 'total_amount',
+      render: (amount) => formatMoney(amount)
     },
   ];
 
-  if (loading) {
-    return <LoadingSpinner />;
-  }
-
-  if (!client) {
-    return null;
-  }
-
-  const tabItems = [
+  const items = [
     {
-      key: 'trucks',
+      key: '1',
       label: (
         <span>
           <CarOutlined />
@@ -137,7 +105,7 @@ function ClientDetailPage() {
       ),
     },
     {
-      key: 'orders',
+      key: '2',
       label: (
         <span>
           <FileTextOutlined />
@@ -194,7 +162,7 @@ function ClientDetailPage() {
       </Card>
 
       <Card>
-        <Tabs items={tabItems} />
+        <Tabs defaultActiveKey="1" items={items} />
       </Card>
     </div>
   );
