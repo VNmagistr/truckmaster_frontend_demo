@@ -8,24 +8,55 @@ import { formatPhone } from '../../utils/formatters';
 
 function ClientsPage() {
   const [clients, setClients] = useState([]);
-  const [searchText, setSearchText] = useState('');
   const [loading, setLoading] = useState(true);
+  
+  // Стани для пагінації та пошуку
+  const [pagination, setPagination] = useState({
+    current: 1,
+    pageSize: 20,
+    total: 0,
+  });
+  const [searchText, setSearchText] = useState('');
+
   const navigate = useNavigate();
 
+  // Завантаження при зміні сторінки
   useEffect(() => {
-    fetchClients();
-  }, []);
+    fetchClients(pagination.current, searchText);
+  }, [pagination.current]);
 
-  const fetchClients = async () => {
+  // Завантаження при зміні пошуку (з затримкою/debounce)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        // При пошуку завжди скидаємо на 1-шу сторінку
+        setPagination(prev => ({ ...prev, current: 1 })); 
+        fetchClients(1, searchText);
+    }, 600); // Чекаємо 600мс після останнього натискання клавіші
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const fetchClients = async (page, search) => {
+    setLoading(true);
     try {
-      // 1. Отримуємо відповідь
-      const response = await clientsAPI.getAll();
+      const params = {
+        page: page,
+        page_size: 20,
+        ordering: '-created_at',
+      };
       
-      // 2. 🔥 ВИПРАВЛЕННЯ: Дістаємо дані з обгортки axios (.data)
+      // Якщо є пошук - додаємо параметр
+      if (search) params.search = search;
+
+      const response = await clientsAPI.getAll(params);
       const data = response.data || response;
       
-      // 3. Враховуємо пагінацію Django (results) або звичайний масив
-      setClients(data.results || data || []);
+      setClients(data.results || []);
+      setPagination(prev => ({
+        ...prev,
+        current: page,
+        total: data.count || 0,
+      }));
+
     } catch (error) {
       console.error('Error fetching clients:', error);
       message.error('Не вдалося завантажити клієнтів');
@@ -38,20 +69,11 @@ function ClientsPage() {
     try {
       await clientsAPI.delete(id);
       message.success('Клієнта видалено');
-      fetchClients();
+      fetchClients(pagination.current, searchText);
     } catch (error) {
       message.error('Не вдалося видалити клієнта');
     }
   };
-
-  const filteredClients = clients.filter(client => {
-    const value = searchText.toLowerCase();
-    return (
-      client.name?.toLowerCase().includes(value) ||
-      client.phone?.includes(value) ||
-      client.email?.toLowerCase().includes(value)
-    );
-  });
 
   const columns = [
     {
@@ -59,7 +81,6 @@ function ClientsPage() {
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => <Link to={`/clients/${record.id}`}>{text}</Link>,
-      sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
       title: 'Телефон',
@@ -71,6 +92,7 @@ function ClientsPage() {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
+      render: (email) => email || '-',
     },
     {
       title: 'Дії',
@@ -87,8 +109,6 @@ function ClientsPage() {
     },
   ];
 
-  if (loading) return <LoadingSpinner />;
-
   return (
     <div>
       <PageHeader
@@ -98,23 +118,31 @@ function ClientsPage() {
             <Input
               placeholder="Пошук клієнта..."
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+              value={searchText}
               onChange={e => setSearchText(e.target.value)}
               style={{ width: 250 }}
               allowClear
             />
             <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/clients/new')}>
-              Додати клієнта
+              Новий клієнт
             </Button>
           </Space>
         }
       />
-      
       <Card>
         <Table
           columns={columns}
-          dataSource={filteredClients}
+          dataSource={clients}
           rowKey="id"
-          pagination={{ pageSize: 10 }}
+          pagination={{
+            current: pagination.current,
+            pageSize: 20,
+            total: pagination.total,
+            showSizeChanger: false, // Можна увімкнути, якщо сервер підтримує динамічний page_size
+            showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`
+          }}
+          onChange={(newPagination) => setPagination(prev => ({ ...prev, current: newPagination.current }))}
+          loading={loading}
         />
       </Card>
     </div>
