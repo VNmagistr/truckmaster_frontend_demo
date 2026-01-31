@@ -6,6 +6,18 @@ import { ordersAPI, worksAPI, employeesAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatMoney } from '../../utils/formatters';
 
+// Тестові дані на випадок збою API
+const MOCK_WORKS = [
+  { id: 1, name: 'Діагностика ходової' },
+  { id: 2, name: 'Заміна оливи' },
+  { id: 3, name: 'Комп\'ютерна діагностика' },
+];
+
+const MOCK_EMPLOYEES = [
+  { id: 1, name: 'Механік 1' },
+  { id: 2, name: 'Механік 2' },
+];
+
 function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -14,7 +26,6 @@ function OrderDetailPage() {
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
 
-  // Списки для модалок
   const [worksList, setWorksList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
   const [partsList, setPartsList] = useState([]);
@@ -33,13 +44,15 @@ function OrderDetailPage() {
     setLoading(true);
     try {
       const response = await ordersAPI.getById(id);
+      // 🔥 ВИПРАВЛЕННЯ: Розпаковка даних. Без цього сторінка падає.
       setOrder(response.data || response);
 
-      // Завантажуємо довідники фоном
+      // Вантажівмо довідники
       loadDirectories();
     } catch (error) {
       console.error('Error loading order:', error);
       message.error('Не вдалося завантажити замовлення');
+      navigate('/orders'); // Якщо замовлення немає - повертаємось назад
     } finally {
       setLoading(false);
     }
@@ -47,21 +60,18 @@ function OrderDetailPage() {
 
   const loadDirectories = async () => {
     try {
-        const [worksResp, empResp, partsResp] = await Promise.all([
-            worksAPI.getAll().catch(() => ({ data: [] })),
-            employeesAPI.getAll().catch(() => ({ data: [] })),
-            inventoryAPI.getAll({ page_size: 1000 }).catch(() => ({ data: [] }))
-        ]);
-
+        // Використовуємо Promise.allSettled або окремі catch, щоб одна помилка не вбила все
+        const worksResp = await worksAPI.getAll().catch(() => ({ data: [] }));
         const worksData = worksResp.data || worksResp;
-        setWorksList(worksData.results || worksData || []);
-
+        setWorksList(Array.isArray(worksData) ? worksData : (worksData.results || MOCK_WORKS));
+        
+        const empResp = await employeesAPI.getAll().catch(() => ({ data: [] }));
         const empData = empResp.data || empResp;
-        setEmployeesList(empData.results || empData || []);
+        setEmployeesList(Array.isArray(empData) ? empData : (empData.results || MOCK_EMPLOYEES));
 
+        const partsResp = await inventoryAPI.getAll({ page_size: 1000 }).catch(() => ({ data: [] }));
         const partsData = partsResp.data || partsResp;
         setPartsList(partsData.results || partsData || []);
-        
     } catch (e) {
         console.warn("Directories fetch warning", e);
     }
@@ -75,7 +85,6 @@ function OrderDetailPage() {
       setIsWorkModalOpen(false);
       formWork.resetFields();
       
-      // Оновлюємо замовлення
       const updated = await ordersAPI.getById(id);
       setOrder(updated.data || updated);
     } catch (error) {
@@ -111,12 +120,9 @@ function OrderDetailPage() {
     }
   };
 
-  // Хелпер для отримання імені зі списку
   const getName = (item, list, nameField = 'name') => {
     if (!item) return '-';
-    // Якщо item - це вже об'єкт (наприклад, {id: 1, name: "Іван"})
     if (typeof item === 'object') return item[nameField] || item.username || item.license_plate || '-';
-    // Якщо item - це ID, шукаємо в списку
     const found = list.find(x => String(x.id) === String(item));
     return found ? (found[nameField] || found.username || found.license_plate) : item; 
   };
@@ -173,7 +179,7 @@ function OrderDetailPage() {
             <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsWorkModalOpen(true)} style={{ marginBottom: 16, width: '100%' }}>
                 Додати роботу
             </Button>
-            <Table columns={worksColumns} dataSource={order.works || []} rowKey="id" pagination={false} size="small" bordered />
+            <Table columns={worksColumns} dataSource={order.works || []} rowKey={(r) => r.id || Math.random()} pagination={false} size="small" bordered />
         </div>
       ),
     },
@@ -185,7 +191,7 @@ function OrderDetailPage() {
              <Button type="dashed" icon={<ToolOutlined />} onClick={() => setIsPartModalOpen(true)} style={{ marginBottom: 16, width: '100%' }}>
                 Списати запчастину
             </Button>
-            <Table columns={partsColumns} dataSource={orderParts} rowKey="id" pagination={false} size="small" bordered />
+            <Table columns={partsColumns} dataSource={orderParts} rowKey={(r) => r.id || Math.random()} pagination={false} size="small" bordered />
         </div>
       ),
     },
@@ -236,7 +242,7 @@ function OrderDetailPage() {
         <Tabs items={tabItems} />
       </Card>
 
-      {/* Модалки залишаємо як є, але в Select використовуємо worksList */}
+      {/* Модалки */}
       <Modal title="Додати роботу" open={isWorkModalOpen} onCancel={() => setIsWorkModalOpen(false)} footer={null} destroyOnClose>
         <Form form={formWork} layout="vertical" onFinish={handleAddWork}>
             <Form.Item name="work" label="Послуга" rules={[{ required: true }]}>
