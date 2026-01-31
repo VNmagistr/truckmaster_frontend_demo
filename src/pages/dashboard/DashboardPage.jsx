@@ -33,53 +33,35 @@ function DashboardPage() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [statsResponse, clientsResponse, trucksResponse, ordersResponse] = await Promise.all([
-        ordersAPI.getStats ? ordersAPI.getStats() : Promise.resolve({}), 
+      // 🔥 ВИПРАВЛЕННЯ: Прибрали запит getStats, якого не існує на сервері (він давав 404)
+      const [clientsResponse, trucksResponse, ordersResponse] = await Promise.all([
         clientsAPI.getAll(),
         trucksAPI.getAll(),
         ordersAPI.getAll({ page_size: 5, ordering: '-created_at' }),
       ]);
 
-      // 🔥 ВИПРАВЛЕННЯ: "Розпаковуємо" axios-відповідь (.data)
+      // Розпаковка даних (.data)
       const clientsData = clientsResponse.data || clientsResponse;
       const trucksData = trucksResponse.data || trucksResponse;
       const ordersData = ordersResponse.data || ordersResponse;
-      const statsData = statsResponse.data || statsResponse;
 
-      // Рахуємо клієнтів (враховуємо пагінацію Django: { count: 10, results: [...] })
-      const clientsCount = clientsData.count || clientsData.length || 0;
+      // Рахуємо кількість (Django pagination повертає count)
+      const clientsCount = clientsData.count || (Array.isArray(clientsData) ? clientsData.length : 0);
+      const trucksCount = trucksData.count || (Array.isArray(trucksData) ? trucksData.length : 0);
       
-      // Рахуємо вантажівки
-      const trucksCount = trucksData.count || trucksData.length || 0;
-      
-      // Обробка замовлень
-      // Django з пагінацією повертає масив у полі .results
       const ordersList = ordersData.results || ordersData || [];
       const totalOrdersCount = ordersData.count || ordersList.length || 0;
-      
-      // Якщо є статистика від бекенда
-      if (statsData && statsData.total_orders) {
-        setStats({
-          totalClients: statsData.total_clients || clientsCount,
-          totalTrucks: statsData.total_trucks || trucksCount,
-          totalOrders: statsData.total_orders,
-          openOrders: statsData.open_orders || 0,
-          inProgressOrders: statsData.in_progress_orders || 0,
-          monthlyRevenue: statsData.monthly_revenue || 0,
-        });
-      } else {
-        // Фоллбек (рахуємо самі, якщо бекенд не дав готової статистики)
-        setStats({
-          totalClients: clientsCount,
-          totalTrucks: trucksCount,
-          totalOrders: totalOrdersCount,
-          openOrders: 0, 
-          inProgressOrders: 0,
-          monthlyRevenue: 0,
-        });
-      }
 
-      // Беремо перші 5 замовлень для таблиці
+      // Встановлюємо статистику
+      setStats({
+        totalClients: clientsCount,
+        totalTrucks: trucksCount,
+        totalOrders: totalOrdersCount,
+        openOrders: 0, // Поки ставимо 0, бо сервер не віддає детальної статистики
+        inProgressOrders: 0,
+        monthlyRevenue: 0,
+      });
+
       setRecentOrders(Array.isArray(ordersList) ? ordersList.slice(0, 5) : []);
       
       // Мокові дані для графіка
@@ -95,7 +77,7 @@ function DashboardPage() {
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      // message.error('Не вдалося завантажити статистику'); // Можна тимчасово вимкнути, щоб не лякало
+      // message.error('Не вдалося завантажити статистику'); // Можна тимчасово приховати
     } finally {
       setLoading(false);
     }
@@ -104,9 +86,9 @@ function DashboardPage() {
   const recentOrdersColumns = [
     {
       title: '№',
-      dataIndex: 'id', // Використовуємо ID, якщо order_number немає
-      key: 'id',
-      render: (text, record) => <Link to={`/orders/${record.id}`}>#{record.order_number || record.id}</Link>,
+      dataIndex: 'order_number',
+      key: 'order_number',
+      render: (text, record) => <Link to={`/orders/${record.id}`}>{text || `#${record.id}`}</Link>,
     },
     {
       title: 'Клієнт',
