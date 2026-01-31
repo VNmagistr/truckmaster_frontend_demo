@@ -22,7 +22,7 @@ export const authAPI = {
 export const ordersAPI = {
   getAll: (params) => instance.get('/orders/', { params }),
   getById: (id) => instance.get(`/orders/${id}/`),
-  getStats: () => instance.get('/orders/stats/'), // Додав, щоб працював дашборд
+  getStats: () => instance.get('/orders/stats/'),
   create: (data) => {
     if (data instanceof FormData) {
         return instance.post('/orders/', data, {
@@ -48,7 +48,6 @@ export const maintenanceAPI = {
         }),
 };
 
-// 🔥 ВИПРАВЛЕНО: Додані методи create, update, delete
 export const clientsAPI = { 
     getAll: (params) => instance.get('/clients/', { params }),
     getById: (id) => instance.get(`/clients/${id}/`),
@@ -57,15 +56,18 @@ export const clientsAPI = {
     delete: (id) => instance.delete(`/clients/${id}/`),
 };
 
-// 🔥 ВИПРАВЛЕНО: Додані методи create, update, delete для вантажівок теж
 export const trucksAPI = { 
     getAll: (params) => instance.get('/trucks/', { params }),
     getById: (id) => instance.get(`/trucks/${id}/`),
     create: (data) => instance.post('/trucks/', data),
     update: (id, data) => instance.patch(`/trucks/${id}/`, data),
     delete: (id) => instance.delete(`/trucks/${id}/`),
-    // Допоміжний метод для зручності, хоча ми вже використали getAll({ client: id })
     getByClient: (clientId) => instance.get('/trucks/', { params: { client: clientId } }),
+};
+
+// 🔥 ДОДАНО: API для базових моделей
+export const baseModelsAPI = {
+    getAll: () => instance.get('/base-models/'),
 };
 
 export const worksAPI = { getAll: () => instance.get('/service-works/') };

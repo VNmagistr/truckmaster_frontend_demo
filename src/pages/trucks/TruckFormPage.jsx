@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message, Space, Select } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { trucksAPI, clientsAPI } from '../../api';
+// 🔥 ДОДАНО імпорт baseModelsAPI
+import { trucksAPI, clientsAPI, baseModelsAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import { EURO_STANDARDS } from '../../utils/constants';
 
@@ -27,7 +28,6 @@ function TruckFormPage() {
   const fetchClients = async () => {
     try {
       const response = await clientsAPI.getAll({ page_size: 1000 });
-      // 🔥 ВИПРАВЛЕННЯ: Розпаковка .data
       const data = response.data || response;
       setClients(data.results || data || []);
     } catch (error) {
@@ -35,18 +35,15 @@ function TruckFormPage() {
     }
   };
 
+  // 🔥 ВИПРАВЛЕНО: Використовуємо axios через baseModelsAPI замість fetch
   const fetchBaseModels = async () => {
     try {
-      // Тут використовується fetch, а не axios, тому response.json() коректний,
-      // але треба перевірити структуру відповіді
-      const response = await fetch('/api/base-models/');
-      if (response.ok) {
-        const data = await response.json();
-        setBaseModels(data.results || data || []);
-      }
+      const response = await baseModelsAPI.getAll();
+      const data = response.data || response;
+      setBaseModels(data.results || data || []);
     } catch (error) {
       console.error('Error fetching base models:', error);
-      // Фоллбек дані
+      // Фоллбек дані залишаємо про всяк випадок
       setBaseModels([
         { id: 1, name: 'Daily' },
         { id: 2, name: 'Eurocargo' },
@@ -61,7 +58,6 @@ function TruckFormPage() {
     setLoading(true);
     try {
       const response = await trucksAPI.getById(id);
-      // 🔥 ВИПРАВЛЕННЯ: Розпаковка .data
       const data = response.data || response;
       
       form.setFieldsValue({
@@ -83,10 +79,10 @@ function TruckFormPage() {
     try {
       if (isEdit) {
         await trucksAPI.update(id, values);
-        message.success('Вантажівку оновлено');
+        message.success('Вантажівку успішно оновлено');
       } else {
         await trucksAPI.create(values);
-        message.success('Вантажівку створено');
+        message.success('Вантажівку успішно створено');
       }
       navigate('/trucks');
     } catch (error) {
@@ -94,8 +90,7 @@ function TruckFormPage() {
       if (error.response?.data) {
         const errors = error.response.data;
         Object.keys(errors).forEach(key => {
-          const errorMsg = Array.isArray(errors[key]) ? errors[key].join(', ') : errors[key];
-          message.error(`${key}: ${errorMsg}`);
+          message.error(`${key}: ${errors[key]}`);
         });
       } else {
         message.error('Не вдалося зберегти вантажівку');
@@ -105,7 +100,9 @@ function TruckFormPage() {
     }
   };
 
-  if (loading) return <LoadingSpinner />;
+  if (loading) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div>
