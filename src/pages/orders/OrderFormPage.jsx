@@ -47,12 +47,25 @@ function OrderFormPage() {
           const orderData = orderResp.data || orderResp;
 
           if (orderData) {
+            // Встановлюємо клієнта в список, якщо його там немає (для коректного відображення імені)
+            if (orderData.client) {
+                const clientId = orderData.client.id || orderData.client;
+                // Якщо прийшов об'єкт з іменем, перевіряємо чи є він в списку
+                if (typeof orderData.client === 'object' && orderData.client.name) {
+                    setClients(prev => {
+                        const exists = prev.find(c => c.id === clientId);
+                        return exists ? prev : [...prev, { id: clientId, name: orderData.client.name }];
+                    });
+                }
+            }
+
             if (orderData.truck) {
+              const truckObj = orderData.truck;
               const initialTruck = {
-                id: orderData.truck.id,
-                license_plate: orderData.truck.license_plate,
-                specific_model_name: orderData.truck.specific_model_name || orderData.truck.model,
-                client_id: orderData.client?.id,
+                id: truckObj.id,
+                license_plate: truckObj.license_plate,
+                specific_model_name: truckObj.specific_model_name || truckObj.model,
+                client_id: orderData.client?.id || (typeof orderData.client === 'number' ? orderData.client : null),
                 client_name: orderData.client?.name
               };
               setTruckOptions([initialTruck]);
@@ -67,7 +80,7 @@ function OrderFormPage() {
               current_mileage: orderData.current_mileage
             });
             
-            // Якщо є фото, показуємо, що вони завантажені (опціонально можна додати прев'ю)
+            // Заповнення фото
             if (orderData.car_photo) setCarPhotoList([{ uid: '-1', name: 'car_photo.jpg', status: 'done', url: orderData.car_photo }]);
             if (orderData.odometer_photo) setOdometerPhotoList([{ uid: '-2', name: 'odometer.jpg', status: 'done', url: orderData.odometer_photo }]);
             if (orderData.dashboard_photo) setDashboardPhotoList([{ uid: '-3', name: 'dashboard.jpg', status: 'done', url: orderData.dashboard_photo }]);
@@ -109,7 +122,6 @@ function OrderFormPage() {
     }
   };
 
-  // Debounce для пошуку (600мс затримка)
   const debouncedSearch = useMemo(() => debounce(handleSearchTruck, 600), []);
 
   // Обробка вибору авто
@@ -119,43 +131,50 @@ function OrderFormPage() {
     if (truckData) {
       setSelectedTruck(truckData);
       
-      // 🔥 ВИПРАВЛЕНА ЛОГІКА ВИЗНАЧЕННЯ ВЛАСНИКА
       let clientId = null;
+      let clientName = null;
       
       // 1. Перевіряємо чи прийшов об'єкт client
       if (truckData.client && typeof truckData.client === 'object') {
           clientId = truckData.client.id;
+          clientName = truckData.client.name;
       } 
-      // 2. Перевіряємо чи прийшов client_id (якщо серіалізатор плоский)
+      // 2. Перевіряємо чи прийшов client_id
       else if (truckData.client_id) {
           clientId = truckData.client_id;
+          clientName = truckData.client_name;
       }
       // 3. Перевіряємо чи прийшов client як ID
       else if (truckData.client) {
           clientId = truckData.client;
+          // Спробуємо взяти ім'я з поля client_name, якщо воно є на рівні вантажівки
+          clientName = truckData.client_name;
       }
 
       if (clientId) {
+        // 🔥 ФІКС: Якщо клієнта немає в поточному списку 'clients', додаємо його тимчасово,
+        // щоб Select міг відобразити ім'я замість ID
+        const clientExists = clients.find(c => c.id === clientId);
+        if (!clientExists && clientName) {
+            setClients(prev => [...prev, { id: clientId, name: clientName }]);
+        }
+
         form.setFieldsValue({ client: clientId });
         setClientLocked(true);
       } else {
-        // Якщо авто без власника - дозволяємо вибрати вручну
         setClientLocked(false);
         form.setFieldsValue({ client: undefined });
       }
     }
     
-    // Очищаємо попередні alerts
     setAlerts([]);
     
-    // Перевіряємо регламенти якщо є пробіг
     const mileage = form.getFieldValue('current_mileage');
     if (mileage) {
       checkMaintenance(truckId, mileage);
     }
   };
 
-  // Очищення вибору авто
   const handleTruckClear = () => {
     setSelectedTruck(null);
     setClientLocked(false);
@@ -163,31 +182,22 @@ function OrderFormPage() {
     setAlerts([]);
   };
 
-  // Перевірка регламентів ТО
   const checkMaintenance = async (truckId, mileage) => {
     if (!truckId || !mileage) return;
-    
     try {
       if (!ordersAPI.checkMaintenance) return;
-      
       const res = await ordersAPI.checkMaintenance(truckId, mileage);
       const data = res.data || res;
-      
-      if (data && data.alerts) {
-        setAlerts(data.alerts);
-      }
+      if (data && data.alerts) setAlerts(data.alerts);
     } catch (error) {
       console.error("Помилка перевірки регламентів:", error);
     }
   };
 
-  // Обробка зміни пробігу
   const handleMileageChange = (e) => {
     const mileage = e.target.value;
     const truckId = form.getFieldValue('truck');
-    
     if (truckId && mileage) {
-      // Debounce перевірки регламентів
       const timer = setTimeout(() => checkMaintenance(truckId, mileage), 800);
       return () => clearTimeout(timer);
     }
@@ -204,16 +214,12 @@ function OrderFormPage() {
         }
       });
 
-      // 🔥 ДОДАВАННЯ ФОТО В FORMDATA
-      // Перевіряємо, чи це новий файл (має originFileObj)
       if (carPhotoList.length > 0 && carPhotoList[0].originFileObj) {
         formData.append('car_photo', carPhotoList[0].originFileObj);
       }
-      
       if (odometerPhotoList.length > 0 && odometerPhotoList[0].originFileObj) {
         formData.append('odometer_photo', odometerPhotoList[0].originFileObj);
       }
-      
       if (dashboardPhotoList.length > 0 && dashboardPhotoList[0].originFileObj) {
         formData.append('dashboard_photo', dashboardPhotoList[0].originFileObj);
       }
@@ -234,9 +240,8 @@ function OrderFormPage() {
     }
   };
 
-  // Загальні пропси для компонентів Upload
   const uploadProps = {
-    beforeUpload: () => false, // Забороняємо автоматичне завантаження
+    beforeUpload: () => false,
     maxCount: 1,
     listType: "picture-card",
     showUploadList: { showPreviewIcon: true, showRemoveIcon: true }
@@ -253,7 +258,6 @@ function OrderFormPage() {
           <Card>
             <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: 'OPEN' }}>
               
-              {/* Пошук автомобіля */}
               <Form.Item
                 name="truck"
                 label={
@@ -303,7 +307,6 @@ function OrderFormPage() {
                 </Select>
               </Form.Item>
 
-              {/* Інформація про вибране авто */}
               {selectedTruck && (
                 <Card 
                   size="small" 
@@ -329,7 +332,6 @@ function OrderFormPage() {
                 </Card>
               )}
 
-              {/* Власник (клієнт) */}
               <Form.Item 
                 name="client" 
                 label={
@@ -354,7 +356,6 @@ function OrderFormPage() {
                 </Select>
               </Form.Item>
 
-              {/* Кнопка для зміни власника вручну */}
               {clientLocked && (
                 <div style={{ marginTop: -12, marginBottom: 16 }}>
                   <Button 
@@ -369,7 +370,6 @@ function OrderFormPage() {
 
               <Divider />
 
-              {/* Пробіг */}
               <Form.Item 
                 name="current_mileage" 
                 label="Поточний пробіг" 
@@ -384,7 +384,6 @@ function OrderFormPage() {
                 />
               </Form.Item>
 
-              {/* Алерти про регламенти */}
               {alerts.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
                   {alerts.map((alert, idx) => (
@@ -403,7 +402,6 @@ function OrderFormPage() {
               <Divider orientation="left">Фотофіксація</Divider>
 
               <Row gutter={16}>
-                {/* 1. Фото авто/номера */}
                 <Col xs={24} sm={8}>
                   <Form.Item label="Фото авто/номера">
                     <Upload 
@@ -421,7 +419,6 @@ function OrderFormPage() {
                   </Form.Item>
                 </Col>
 
-                {/* 2. Фото одометра */}
                 <Col xs={24} sm={8}>
                   <Form.Item label="Фото одометра">
                     <Upload 
@@ -439,7 +436,6 @@ function OrderFormPage() {
                   </Form.Item>
                 </Col>
 
-                {/* 3. Фото панелі приладів */}
                 <Col xs={24} sm={8}>
                   <Form.Item label="Фото панелі приладів">
                     <Upload 
@@ -485,7 +481,6 @@ function OrderFormPage() {
           </Card>
         </Col>
 
-        {/* Бічна панель з підказками */}
         <Col xs={24} lg={8}>
           <Card title="Підказки" size="small">
             <ol style={{ paddingLeft: 16, margin: 0 }}>
