@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Form, Input, Button, Card, message, Space, Select, Upload, Alert, Row, Col, Typography, Spin, Divider } from 'antd';
-import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, SearchOutlined, CarOutlined, UserOutlined } from '@ant-design/icons';
+import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, SearchOutlined, CarOutlined, UserOutlined, CameraOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ordersAPI, clientsAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
@@ -22,7 +22,11 @@ function OrderFormPage() {
   const [clientLocked, setClientLocked] = useState(false);
   
   const [alerts, setAlerts] = useState([]);
-  const [fileList, setFileList] = useState([]);
+  
+  // Окремі стани для кожного фото
+  const [carPhotoList, setCarPhotoList] = useState([]);
+  const [odometerPhotoList, setOdometerPhotoList] = useState([]);
+  const [dashboardPhotoList, setDashboardPhotoList] = useState([]);
   
   const { id } = useParams();
   const navigate = useNavigate();
@@ -63,6 +67,11 @@ function OrderFormPage() {
               current_mileage: orderData.current_mileage
             });
             
+            // Якщо є фото, показуємо, що вони завантажені (опціонально можна додати прев'ю)
+            if (orderData.car_photo) setCarPhotoList([{ uid: '-1', name: 'car_photo.jpg', status: 'done', url: orderData.car_photo }]);
+            if (orderData.odometer_photo) setOdometerPhotoList([{ uid: '-2', name: 'odometer.jpg', status: 'done', url: orderData.odometer_photo }]);
+            if (orderData.dashboard_photo) setDashboardPhotoList([{ uid: '-3', name: 'dashboard.jpg', status: 'done', url: orderData.dashboard_photo }]);
+
             if (orderData.truck && orderData.current_mileage) {
               checkMaintenance(orderData.truck.id || orderData.truck, orderData.current_mileage);
             }
@@ -110,13 +119,29 @@ function OrderFormPage() {
     if (truckData) {
       setSelectedTruck(truckData);
       
-      // Автоматично підставляємо власника
-      if (truckData.client_id) {
-        form.setFieldsValue({ client: truckData.client_id });
+      // 🔥 ВИПРАВЛЕНА ЛОГІКА ВИЗНАЧЕННЯ ВЛАСНИКА
+      let clientId = null;
+      
+      // 1. Перевіряємо чи прийшов об'єкт client
+      if (truckData.client && typeof truckData.client === 'object') {
+          clientId = truckData.client.id;
+      } 
+      // 2. Перевіряємо чи прийшов client_id (якщо серіалізатор плоский)
+      else if (truckData.client_id) {
+          clientId = truckData.client_id;
+      }
+      // 3. Перевіряємо чи прийшов client як ID
+      else if (truckData.client) {
+          clientId = truckData.client;
+      }
+
+      if (clientId) {
+        form.setFieldsValue({ client: clientId });
         setClientLocked(true);
       } else {
         // Якщо авто без власника - дозволяємо вибрати вручну
         setClientLocked(false);
+        form.setFieldsValue({ client: undefined });
       }
     }
     
@@ -168,8 +193,6 @@ function OrderFormPage() {
     }
   };
 
-  const handleFileChange = ({ fileList: newFileList }) => setFileList(newFileList);
-
   const onFinish = async (values) => {
     setSaving(true);
     try {
@@ -181,13 +204,19 @@ function OrderFormPage() {
         }
       });
 
-      fileList.forEach((file, index) => {
-        if (file.originFileObj) {
-          if (index === 0) formData.append('car_photo', file.originFileObj);
-          else if (index === 1) formData.append('odometer_photo', file.originFileObj);
-          else if (index === 2) formData.append('dashboard_photo', file.originFileObj);
-        }
-      });
+      // 🔥 ДОДАВАННЯ ФОТО В FORMDATA
+      // Перевіряємо, чи це новий файл (має originFileObj)
+      if (carPhotoList.length > 0 && carPhotoList[0].originFileObj) {
+        formData.append('car_photo', carPhotoList[0].originFileObj);
+      }
+      
+      if (odometerPhotoList.length > 0 && odometerPhotoList[0].originFileObj) {
+        formData.append('odometer_photo', odometerPhotoList[0].originFileObj);
+      }
+      
+      if (dashboardPhotoList.length > 0 && dashboardPhotoList[0].originFileObj) {
+        formData.append('dashboard_photo', dashboardPhotoList[0].originFileObj);
+      }
 
       if (isEdit) {
         await ordersAPI.update(id, formData);
@@ -203,6 +232,14 @@ function OrderFormPage() {
     } finally {
       setSaving(false);
     }
+  };
+
+  // Загальні пропси для компонентів Upload
+  const uploadProps = {
+    beforeUpload: () => false, // Забороняємо автоматичне завантаження
+    maxCount: 1,
+    listType: "picture-card",
+    showUploadList: { showPreviewIcon: true, showRemoveIcon: true }
   };
 
   if (loading) return <LoadingSpinner />;
@@ -363,27 +400,64 @@ function OrderFormPage() {
                 </div>
               )}
 
-              <Divider />
+              <Divider orientation="left">Фотофіксація</Divider>
 
-              {/* Фото */}
-              <Form.Item label="Фотофіксація (авто, одометр, панель)">
-                <Upload 
-                  listType="picture-card" 
-                  fileList={fileList} 
-                  onChange={handleFileChange} 
-                  beforeUpload={() => false} 
-                  maxCount={3}
-                >
-                  {fileList.length < 3 && (
-                    <div>
-                      <UploadOutlined />
-                      <div style={{ marginTop: 8 }}>Фото</div>
-                    </div>
-                  )}
-                </Upload>
-              </Form.Item>
+              <Row gutter={16}>
+                {/* 1. Фото авто/номера */}
+                <Col xs={24} sm={8}>
+                  <Form.Item label="Фото авто/номера">
+                    <Upload 
+                      {...uploadProps}
+                      fileList={carPhotoList} 
+                      onChange={({ fileList }) => setCarPhotoList(fileList)}
+                    >
+                      {carPhotoList.length < 1 && (
+                        <div>
+                          <CameraOutlined />
+                          <div style={{ marginTop: 8 }}>Номер</div>
+                        </div>
+                      )}
+                    </Upload>
+                  </Form.Item>
+                </Col>
 
-              {/* Опис проблеми */}
+                {/* 2. Фото одометра */}
+                <Col xs={24} sm={8}>
+                  <Form.Item label="Фото одометра">
+                    <Upload 
+                      {...uploadProps}
+                      fileList={odometerPhotoList} 
+                      onChange={({ fileList }) => setOdometerPhotoList(fileList)}
+                    >
+                      {odometerPhotoList.length < 1 && (
+                        <div>
+                          <CameraOutlined />
+                          <div style={{ marginTop: 8 }}>Пробіг</div>
+                        </div>
+                      )}
+                    </Upload>
+                  </Form.Item>
+                </Col>
+
+                {/* 3. Фото панелі приладів */}
+                <Col xs={24} sm={8}>
+                  <Form.Item label="Фото панелі приладів">
+                    <Upload 
+                      {...uploadProps}
+                      fileList={dashboardPhotoList} 
+                      onChange={({ fileList }) => setDashboardPhotoList(fileList)}
+                    >
+                      {dashboardPhotoList.length < 1 && (
+                        <div>
+                          <CameraOutlined />
+                          <div style={{ marginTop: 8 }}>Панель</div>
+                        </div>
+                      )}
+                    </Upload>
+                  </Form.Item>
+                </Col>
+              </Row>
+
               <Form.Item name="problem_description" label="Опис проблеми / скарги клієнта">
                 <Input.TextArea 
                   rows={4} 
@@ -391,7 +465,6 @@ function OrderFormPage() {
                 />
               </Form.Item>
 
-              {/* Кнопки */}
               <Form.Item>
                 <Space size="middle">
                   <Button 
@@ -426,7 +499,7 @@ function OrderFormPage() {
                 <Text>Вкажіть поточний пробіг для перевірки регламентів ТО</Text>
               </li>
               <li>
-                <Text>Додайте фото авто та одометра</Text>
+                <Text>Обов'язково додайте 3 фотографії для фіксації стану авто</Text>
               </li>
             </ol>
           </Card>
