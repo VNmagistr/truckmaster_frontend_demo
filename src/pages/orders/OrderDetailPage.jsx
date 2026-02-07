@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber } from 'antd';
-import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert } from 'antd';
+import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
@@ -14,7 +14,6 @@ function OrderDetailPage() {
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [modalLoading, setModalLoading] = useState(false);
 
-  // Ініціалізуємо як пусті масиви
   const [worksList, setWorksList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
   const [partsList, setPartsList] = useState([]);
@@ -32,55 +31,39 @@ function OrderDetailPage() {
   const initPage = async () => {
     setLoading(true);
     try {
-      console.log(`Fetching order ID: ${id}`);
       const response = await ordersAPI.getById(id);
       const data = response.data || response;
-      
-      console.log("Order Data loaded:", data);
       
       if (!data) throw new Error("Дані замовлення відсутні");
       setOrder(data);
 
-      // Фонове завантаження довідників
       loadDirectories();
     } catch (error) {
       console.error('CRITICAL ERROR loading order:', error);
-      message.error('Не вдалося завантажити замовлення');
+      message.error('Не вдалося завантажити замовлення (можливо, воно видалене)');
     } finally {
       setLoading(false);
     }
   };
 
-  // --- ФУНКЦІЯ БЕЗПЕКИ ---
-  // Перетворює будь-що (null, undefined, об'єкт, response) в масив
   const ensureArray = (input) => {
       if (!input) return [];
       if (Array.isArray(input)) return input;
-      // Якщо це відповідь з пагінацією Django { results: [...] }
       if (input.results && Array.isArray(input.results)) return input.results;
-      // Якщо це об'єкт Axios { data: [...] }
       if (input.data && Array.isArray(input.data)) return input.data;
-      // Якщо це об'єкт Axios з пагінацією { data: { results: [...] } }
-      if (input.data && input.data.results && Array.isArray(input.data.results)) return input.data.results;
-      
       return [];
   };
 
   const loadDirectories = async () => {
     try {
-        // Використовуємо allSettled, щоб одна помилка (наприклад 404 по механіках) не ламала все інше
         const [worksResp, empResp, partsResp] = await Promise.allSettled([
             worksAPI.getAll(),
             employeesAPI.getAll(),
             inventoryAPI.getAll({ page_size: 1000 })
         ]);
 
-        // Розпаковка результатів
         const getValue = (result) => {
-             if (result.status === 'fulfilled') {
-                 return ensureArray(result.value);
-             }
-             console.warn("Directory fetch failed:", result.reason);
+             if (result.status === 'fulfilled') return ensureArray(result.value);
              return [];
         };
 
@@ -94,11 +77,10 @@ function OrderDetailPage() {
   };
 
   // --- Хелпери ---
-
   const getSafeName = (entity, field = 'name') => {
       if (!entity) return '-';
       if (typeof entity === 'object') return entity[field] || '-';
-      return entity; // Якщо ID
+      return entity;
   };
 
   const getSafeId = (entity) => {
@@ -110,15 +92,10 @@ function OrderDetailPage() {
   const resolveNameInList = (itemId, list, nameField = 'name') => {
     if (!itemId) return '-';
     if (typeof itemId === 'object') return itemId[nameField] || itemId.username || itemId.license_plate || '-';
-    
-    // Переконаємось, що list це масив перед пошуком
     const safeList = ensureArray(list);
     const found = safeList.find(x => String(x.id) === String(itemId));
-    
     return found ? (found[nameField] || found.username || found.license_plate) : itemId; 
   };
-
-  // --- Обробники ---
 
   const handleAddWork = async (values) => {
     setModalLoading(true);
@@ -160,18 +137,18 @@ function OrderDetailPage() {
     }
   };
 
-  // --- Відображення ---
-
   if (loading) return <LoadingSpinner />;
   if (!order) return <div style={{padding: 20, textAlign: 'center'}}>Помилка: Немає даних замовлення</div>;
 
-  // Гарантуємо, що це масиви перед рендером
   const safeWorksList = ensureArray(worksList);
   const safeEmployeesList = ensureArray(employeesList);
   const safePartsList = ensureArray(partsList);
   
   const orderWorks = ensureArray(order.works);
   const orderParts = ensureArray(order.parts || order.used_parts);
+  
+  // Перевірка на видалення
+  const isDeleted = order.marked_for_deletion;
 
   const worksColumns = [
     {
@@ -220,7 +197,13 @@ function OrderDetailPage() {
       label: `Виконані роботи (${orderWorks.length})`,
       children: (
         <div>
-            <Button type="dashed" icon={<PlusOutlined />} onClick={() => setIsWorkModalOpen(true)} style={{ marginBottom: 16, width: '100%' }}>
+            <Button 
+                type="dashed" 
+                icon={<PlusOutlined />} 
+                onClick={() => setIsWorkModalOpen(true)} 
+                disabled={isDeleted} // Блокуємо, якщо видалено
+                style={{ marginBottom: 16, width: '100%' }}
+            >
                 Додати роботу
             </Button>
             <Table 
@@ -240,7 +223,13 @@ function OrderDetailPage() {
       label: `Використані запчастини (${orderParts.length})`,
       children: (
         <div>
-             <Button type="dashed" icon={<ToolOutlined />} onClick={() => setIsPartModalOpen(true)} style={{ marginBottom: 16, width: '100%' }}>
+             <Button 
+                type="dashed" 
+                icon={<ToolOutlined />} 
+                onClick={() => setIsPartModalOpen(true)} 
+                disabled={isDeleted} // Блокуємо, якщо видалено
+                style={{ marginBottom: 16, width: '100%' }}
+            >
                 Списати запчастину
             </Button>
             <Table 
@@ -265,10 +254,28 @@ function OrderDetailPage() {
         extra={
           <Space>
             <Button icon={<PrinterOutlined />}>Друк</Button>
-            <Button type="primary" icon={<EditOutlined />} onClick={() => navigate(`/orders/${id}/edit`)}>Редагувати</Button>
+            <Button 
+                type="primary" 
+                icon={<EditOutlined />} 
+                onClick={() => navigate(`/orders/${id}/edit`)}
+                disabled={isDeleted} // Блокуємо редагування
+            >
+                Редагувати
+            </Button>
           </Space>
         }
       />
+
+      {isDeleted && (
+          <Alert
+            message="Увага! Це замовлення позначено на видалення"
+            description={`Причина: ${order.deletion_reason || 'Не вказана'}. Редагування та додавання нових позицій заблоковано.`}
+            type="error"
+            showIcon
+            icon={<DeleteOutlined />}
+            style={{ marginBottom: 16 }}
+          />
+      )}
 
       <Card style={{ marginBottom: 16 }}>
         <Descriptions column={{ xs: 1, sm: 2, md: 3 }} bordered size="small">
@@ -320,7 +327,6 @@ function OrderDetailPage() {
                     showSearch 
                     placeholder="Оберіть послугу" 
                     optionFilterProp="label" 
-                    // 🔥 ЗАХИСТ ВІД КРАШУ ТУТ:
                     options={safeWorksList.map(w => ({ value: w.id, label: w.name }))} 
                  />
             </Form.Item>
@@ -329,7 +335,6 @@ function OrderDetailPage() {
                     showSearch 
                     placeholder="Оберіть механіка" 
                     optionFilterProp="label" 
-                    // 🔥 ЗАХИСТ ВІД КРАШУ ТУТ:
                     options={safeEmployeesList.map(e => ({ value: e.id, label: e.name || e.username }))} 
                  />
             </Form.Item>
@@ -348,7 +353,6 @@ function OrderDetailPage() {
                     placeholder="Пошук (Назва або Артикул)"
                     optionFilterProp="label"
                     onChange={onPartSelect}
-                    // 🔥 ЗАХИСТ ВІД КРАШУ ТУТ:
                     options={safePartsList.map(p => ({ 
                         value: p.id, 
                         label: `${p.sku_code} - ${p.name} (Склад: ${p.quantity})` 
