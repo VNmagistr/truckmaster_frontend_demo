@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, message, Popconfirm, Card, Select } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import { Link, useNavigate } from 'react-router-dom';
+import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
 import { ordersAPI } from '../../api';
-import { PageHeader, LoadingSpinner, EmptyState, StatusTag } from '../../components';
+import { PageHeader, LoadingSpinner } from '../../components';
 import { formatDate } from '../../utils/formatters';
 import { ORDER_STATUSES } from '../../utils/constants';
+
+const { confirm } = Modal;
 
 function OrdersPage() {
   const [orders, setOrders] = useState([]);
@@ -20,13 +22,30 @@ function OrdersPage() {
   
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
+  
+  // Стан для модального вікна видалення
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
+  const [deleteForm] = Form.useForm();
+  const [markingLoading, setMarkingLoading] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchOrders(pagination.current, pagination.pageSize, statusFilter);
+    fetchOrders(pagination.current, pagination.pageSize, statusFilter, searchText);
   }, [pagination.current, pagination.pageSize, statusFilter]);
 
-  const fetchOrders = async (page, pageSize, status) => {
+  // Додаємо debounce для пошуку
+  useEffect(() => {
+    const timer = setTimeout(() => {
+        if (searchText !== '') {
+            fetchOrders(1, pagination.pageSize, statusFilter, searchText);
+        }
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [searchText]);
+
+  const fetchOrders = async (page, pageSize, status, search) => {
     setLoading(true);
     try {
       const params = {
@@ -35,88 +54,113 @@ function OrdersPage() {
         ordering: '-created_at',
       };
       
-      if (status) {
-        params.status = status;
-      }
+      if (status) params.status = status;
+      if (search) params.search = search;
 
       const response = await ordersAPI.getAll(params);
-      // 🔥 ВИПРАВЛЕННЯ: Розпаковка даних
-      const data = response.data || response;
-      
+      const data = response.data || response; // Обробка різних форматів відповіді
+
       setOrders(data.results || []);
-      setPagination(prev => ({
-        ...prev,
+      setPagination({
+        ...pagination,
         current: page,
-        total: data.count || 0
-      }));
-      
+        total: data.count || 0,
+      });
     } catch (error) {
-      console.error('Error fetching orders:', error);
-      message.error('Не вдалося завантажити список замовлень');
+      console.error('Fetch error:', error);
+      message.error('Помилка завантаження замовлень');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    try {
-      await ordersAPI.delete(id);
-      message.success('Замовлення видалено');
-      fetchOrders(pagination.current, pagination.pageSize, statusFilter);
-    } catch (error) {
-      message.error('Не вдалося видалити замовлення');
-    }
+  const handleTableChange = (newPagination) => {
+    setPagination(newPagination);
   };
 
-  // Фільтрація на сервері (якщо пошук реалізовано), поки що клієнтська для відображених
-  const filteredOrders = orders.filter(order => {
-    const value = searchText.toLowerCase();
-    const orderNum = order.order_number ? String(order.order_number).toLowerCase() : String(order.id);
-    const truckPlate = order.truck?.license_plate?.toLowerCase() || '';
-    const clientName = order.client?.name?.toLowerCase() || '';
+  // Відкриття модалки для видалення
+  const showDeleteConfirm = (order) => {
+    setOrderToDelete(order);
+    deleteForm.resetFields();
+    setIsDeleteModalOpen(true);
+  };
 
-    return (
-      orderNum.includes(value) ||
-      truckPlate.includes(value) ||
-      clientName.includes(value)
-    );
-  });
-  
-  const handleTableChange = (newPagination) => {
-    setPagination(prev => ({
-        ...prev,
-        current: newPagination.current,
-        pageSize: newPagination.pageSize
-    }));
+  // Логіка "М'якого видалення" (Mark for deletion)
+  const handleMarkForDeletion = async (values) => {
+    if (!orderToDelete) return;
+    
+    setMarkingLoading(true);
+    try {
+        const formData = new FormData();
+        formData.append('marked_for_deletion', 'true');
+        formData.append('deletion_reason', values.reason);
+
+        // Використовуємо update (PATCH) замість delete
+        await ordersAPI.update(orderToDelete.id, formData);
+        
+        message.success('Замовлення позначено на видалення. Адміністратор перевірить запит.');
+        setIsDeleteModalOpen(false);
+        setOrderToDelete(null);
+        
+        // Оновлюємо список
+        fetchOrders(pagination.current, pagination.pageSize, statusFilter, searchText);
+    } catch (error) {
+        console.error('Delete mark error:', error);
+        message.error('Не вдалося позначити на видалення');
+    } finally {
+        setMarkingLoading(false);
+    }
   };
 
   const columns = [
     {
-      title: '№',
+      title: 'Номер',
       dataIndex: 'order_number',
       key: 'order_number',
-      render: (text, record) => <Link to={`/orders/${record.id}`}>{text || `#${record.id}`}</Link>,
+      render: (text, record) => (
+        <Space>
+            <span style={{ fontWeight: 'bold' }}>{text}</span>
+            {record.marked_for_deletion && (
+                <Tag color="error">На видалення</Tag>
+            )}
+        </Space>
+      )
+    },
+    {
+      title: 'Авто',
+      key: 'truck',
+      render: (_, record) => (
+        <div>
+          <div style={{ fontWeight: 500 }}>{record.truck?.license_plate || '-'}</div>
+          <div style={{ fontSize: '12px', color: '#888' }}>
+            {record.truck?.specific_model_name || record.truck?.model || ''}
+          </div>
+        </div>
+      ),
     },
     {
       title: 'Клієнт',
       dataIndex: ['client', 'name'],
       key: 'client',
-      render: (text, record) => record.client ? <Link to={`/clients/${record.client.id}`}>{text}</Link> : '-',
-    },
-    {
-      title: 'Вантажівка',
-      dataIndex: ['truck', 'license_plate'],
-      key: 'truck',
-      render: (text, record) => record.truck ? <Link to={`/trucks/${record.truck.id}`}>{text}</Link> : '-',
+      render: (text) => text || '-',
     },
     {
       title: 'Статус',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => <StatusTag status={status} type="order" />,
+      render: (status) => {
+        const statusConfig = Object.values(ORDER_STATUSES).find(s => s.value === status);
+        return <Tag color={statusConfig?.color || 'default'}>{statusConfig?.label || status}</Tag>;
+      },
     },
     {
-      title: 'Дата',
+      title: 'Сума',
+      dataIndex: 'total_cost',
+      key: 'total_cost',
+      render: (val) => val ? `${parseFloat(val).toFixed(2)} грн` : '0.00 грн',
+    },
+    {
+      title: 'Створено',
       dataIndex: 'created_at',
       key: 'created_at',
       render: (date) => formatDate(date),
@@ -124,38 +168,58 @@ function OrdersPage() {
     {
       title: 'Дії',
       key: 'actions',
+      width: 150,
       render: (_, record) => (
-        <Space size="middle">
-          <Button icon={<EyeOutlined />} onClick={() => navigate(`/orders/${record.id}`)} />
-          <Button icon={<EditOutlined />} onClick={() => navigate(`/orders/${record.id}/edit`)} />
-          <Popconfirm title="Видалити замовлення?" onConfirm={() => handleDelete(record.id)}>
-            <Button icon={<DeleteOutlined />} danger />
-          </Popconfirm>
+        <Space size="small">
+          <Tooltip title="Перегляд">
+            <Button 
+                icon={<EyeOutlined />} 
+                onClick={() => navigate(`/orders/${record.id}`)} 
+                size="small"
+            />
+          </Tooltip>
+          
+          <Tooltip title="Редагувати">
+            <Button 
+                icon={<EditOutlined />} 
+                onClick={() => navigate(`/orders/${record.id}/edit`)} 
+                disabled={record.marked_for_deletion} // Блокуємо, якщо вже позначено
+                size="small"
+            />
+          </Tooltip>
+
+          <Tooltip title={record.marked_for_deletion ? "Вже очікує видалення" : "Позначити на видалення"}>
+            <Button 
+                danger 
+                icon={<DeleteOutlined />} 
+                onClick={() => showDeleteConfirm(record)} 
+                disabled={record.marked_for_deletion} // Блокуємо, якщо вже позначено
+                size="small"
+            />
+          </Tooltip>
         </Space>
       ),
     },
   ];
 
-  if (loading) return <LoadingSpinner />;
-
   return (
     <div>
-      <PageHeader
-        title="Наряди-замовлення"
+      <PageHeader 
+        title="Замовлення" 
         extra={
           <Space>
             <Input
-              placeholder="Пошук..."
+              placeholder="Пошук (номер, авто, клієнт)"
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
               onChange={e => setSearchText(e.target.value)}
-              style={{ width: 220 }}
+              style={{ width: 250 }}
               allowClear
             />
             
             <Select
-              placeholder="Статус"
+              placeholder="Всі статуси"
               allowClear
-              style={{ width: 150 }}
+              style={{ width: 160 }}
               value={statusFilter}
               onChange={(value) => setStatusFilter(value)}
             >
@@ -179,8 +243,9 @@ function OrdersPage() {
       <Card>
           <Table
             columns={columns}
-            dataSource={filteredOrders}
+            dataSource={orders}
             rowKey="id"
+            loading={loading}
             pagination={{ 
               current: pagination.current,
               pageSize: pagination.pageSize,
@@ -191,6 +256,39 @@ function OrdersPage() {
             onChange={handleTableChange}
           />
       </Card>
+
+      {/* Модальне вікно для підтвердження видалення */}
+      <Modal
+        title={
+            <Space>
+                <ExclamationCircleOutlined style={{ color: 'red' }} />
+                <span>Запит на видалення</span>
+            </Space>
+        }
+        open={isDeleteModalOpen}
+        onCancel={() => {
+            setIsDeleteModalOpen(false);
+            deleteForm.resetFields();
+        }}
+        confirmLoading={markingLoading}
+        onOk={() => deleteForm.submit()}
+        okText="Підтвердити"
+        okType="danger"
+        cancelText="Скасувати"
+      >
+        <p>Ви впевнені, що хочете видалити замовлення <b>{orderToDelete?.order_number}</b>?</p>
+        <p>Це дія не видалить замовлення остаточно, а відправить запит адміністратору.</p>
+        
+        <Form form={deleteForm} layout="vertical" onFinish={handleMarkForDeletion}>
+            <Form.Item 
+                name="reason" 
+                label="Причина видалення" 
+                rules={[{ required: true, message: 'Будь ласка, вкажіть причину' }]}
+            >
+                <Input.TextArea rows={3} placeholder="Наприклад: Дублікат, помилково створено..." />
+            </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
