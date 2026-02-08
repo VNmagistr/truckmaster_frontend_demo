@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Layout, Menu, Button, Dropdown, Avatar, theme } from 'antd';
 import {
   DashboardOutlined,
@@ -18,6 +18,7 @@ import useUIStore from '../store/uiStore';
 
 const { Header, Sider, Content } = Layout;
 
+// Основне меню (ліва колонка)
 const menuItems = [
   {
     key: '/dashboard',
@@ -60,21 +61,27 @@ function MainLayout() {
     token: { colorBgContainer, borderRadiusLG },
   } = theme.useToken();
 
+  // Клік по лівому меню
   const handleMenuClick = ({ key }) => {
     navigate(key);
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/');
+  // Клік по меню користувача (верхній правий кут)
+  const handleUserMenuClick = ({ key }) => {
+    if (key === 'settings') {
+      navigate('/profile'); // Перехід на сторінку профілю
+    } else if (key === 'logout') {
+      logout();
+      navigate('/');
+    }
   };
 
+  // Описуємо пункти меню користувача (Тільки дані, без функцій)
   const userMenuItems = [
     {
       key: 'settings',
       icon: <SettingOutlined />,
       label: 'Налаштування',
-      onClick: () => navigate('/profile'), // Додано перехід на профіль
     },
     {
       type: 'divider',
@@ -84,7 +91,6 @@ function MainLayout() {
       icon: <LogoutOutlined />,
       label: 'Вийти',
       danger: true,
-      onClick: handleLogout,
     },
   ];
 
@@ -101,6 +107,7 @@ function MainLayout() {
           left: 0,
           top: 0,
           bottom: 0,
+          zIndex: 100
         }}
       >
         <div
@@ -113,7 +120,9 @@ function MainLayout() {
             fontSize: sidebarCollapsed ? '16px' : '20px',
             fontWeight: 'bold',
             borderBottom: '1px solid rgba(255,255,255,0.1)',
+            cursor: 'pointer'
           }}
+          onClick={() => navigate('/dashboard')}
         >
           {sidebarCollapsed ? 'TM' : 'TruckMaster'}
         </div>
@@ -135,7 +144,7 @@ function MainLayout() {
             justifyContent: 'space-between',
             position: 'sticky',
             top: 0,
-            zIndex: 1,
+            zIndex: 99,
             boxShadow: '0 1px 4px rgba(0,0,0,0.08)',
           }}
         >
@@ -145,10 +154,19 @@ function MainLayout() {
             onClick={toggleSidebar}
             style={{ fontSize: '16px', width: 64, height: 64 }}
           />
-          <Dropdown menu={{ items: userMenuItems }} placement="bottomRight">
-            <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Avatar icon={<UserOutlined />} />
-              <span>{user?.username || 'Користувач'}</span>
+          
+          {/* Меню користувача */}
+          <Dropdown 
+            menu={{ 
+              items: userMenuItems, 
+              onClick: handleUserMenuClick // <--- ГОЛОВНЕ ВИПРАВЛЕННЯ ТУТ
+            }} 
+            placement="bottomRight"
+            arrow
+          >
+            <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12, padding: '0 8px' }}>
+              <span style={{ fontWeight: 500 }}>{user?.username || 'Користувач'}</span>
+              <Avatar icon={<UserOutlined />} style={{ backgroundColor: '#1890ff' }} />
             </div>
           </Dropdown>
         </Header>

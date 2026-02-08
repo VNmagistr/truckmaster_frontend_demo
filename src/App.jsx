@@ -8,12 +8,13 @@ import 'dayjs/locale/uk';
 import { MainLayout, AuthLayout } from './layouts';
 import { ProtectedRoute, LoadingSpinner } from './components';
 
-// 🟢 ПОВЕРТАЄМО ЦЕЙ ІМПОРТ (він правильний для твоєї структури)
 import { Welcome } from './pages'; 
 
 // Lazy loading
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
 const DashboardPage = lazy(() => import('./pages/dashboard/DashboardPage'));
+// 🔥 Додано імпорт сторінки профілю
+const ProfilePage = lazy(() => import('./pages/profile/ProfilePage'));
 
 // Clients
 const ClientsPage = lazy(() => import('./pages/clients/ClientsPage'));
@@ -68,6 +69,8 @@ function AppRoutes() {
         }
       >
         <Route path="/dashboard" element={<DashboardPage />} />
+        {/* 🔥 Додано маршрут профілю */}
+        <Route path="/profile" element={<ProfilePage />} />
         
         <Route path="/clients" element={<ClientsPage />} />
         <Route path="/clients/new" element={<ClientFormPage />} />
