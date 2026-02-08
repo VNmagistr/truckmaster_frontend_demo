@@ -74,6 +74,7 @@ function MainLayout() {
       key: 'settings',
       icon: <SettingOutlined />,
       label: 'Налаштування',
+      onClick: () => navigate('/profile'), // Додано перехід на профіль
     },
     {
       type: 'divider',

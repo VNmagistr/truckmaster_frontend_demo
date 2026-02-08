@@ -156,3 +156,10 @@ export const baseModelsAPI = {
 };
 
 export default instance;
+
+export const userAPI = {
+  getMe: () => axios.get('/api/users/me/'),
+  updateMe: (data) => axios.patch('/api/users/me/', data),
+  deleteMe: () => axios.delete('/api/users/me/'),
+  changePassword: (data) => axios.post('/api/users/me/change-password/', data),
+};
