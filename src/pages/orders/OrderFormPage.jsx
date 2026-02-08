@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Form, Input, Button, Card, message, Space, Select, Upload, Alert, Row, Col, Typography, Spin, Divider } from 'antd';
-import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, SearchOutlined, CarOutlined, UserOutlined } from '@ant-design/icons';
+import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, SearchOutlined, CarOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ordersAPI, clientsAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
@@ -20,6 +20,7 @@ function OrderFormPage() {
   // Стан для відображення вибраного авто та власника
   const [selectedTruck, setSelectedTruck] = useState(null);
   const [clientLocked, setClientLocked] = useState(false);
+  const [lockedClientName, setLockedClientName] = useState(''); // Зберігаємо ім'я окремо
   
   const [alerts, setAlerts] = useState([]);
   const [fileList, setFileList] = useState([]);
@@ -57,6 +58,9 @@ function OrderFormPage() {
               setTruckOptions([initialTruck]);
               setSelectedTruck(initialTruck);
               setClientLocked(true);
+              
+              // Зберігаємо ім'я клієнта для відображення
+              setLockedClientName(orderData.client?.name || '');
             }
 
             // Встановлюємо значення форми
@@ -84,26 +88,6 @@ function OrderFormPage() {
 
     initData();
   }, [id, isEdit, form]);
-
-  // Отримуємо ім'я клієнта для відображення
-  const getClientName = () => {
-    const clientId = form.getFieldValue('client');
-    
-    // Спочатку шукаємо в selectedTruck
-    if (selectedTruck?.client_name) {
-      return selectedTruck.client_name;
-    }
-    
-    // Потім шукаємо в списку клієнтів
-    if (clientId && clients.length > 0) {
-      const client = clients.find(c => c.id === clientId);
-      if (client) {
-        return client.name;
-      }
-    }
-    
-    return '';
-  };
 
   // Пошук авто по номеру
   const handleSearchTruck = async (value) => {
@@ -146,10 +130,12 @@ function OrderFormPage() {
       // Автоматично підставляємо власника
       if (truckData.client_id) {
         form.setFieldsValue({ client: truckData.client_id });
+        setLockedClientName(truckData.client_name || '');
         setClientLocked(true);
       } else {
         // Якщо авто без власника - дозволяємо вибрати вручну
         form.setFieldsValue({ client: undefined });
+        setLockedClientName('');
         setClientLocked(false);
         message.warning('У цього авто немає власника. Оберіть клієнта вручну.');
       }
@@ -169,6 +155,7 @@ function OrderFormPage() {
   const handleTruckClear = () => {
     setSelectedTruck(null);
     setClientLocked(false);
+    setLockedClientName('');
     form.setFieldsValue({ client: undefined });
     setAlerts([]);
     setTruckOptions([]);
@@ -177,6 +164,7 @@ function OrderFormPage() {
   // Розблокування поля клієнта
   const handleUnlockClient = () => {
     setClientLocked(false);
+    setLockedClientName('');
   };
 
   // Перевірка регламентів ТО
@@ -250,9 +238,6 @@ function OrderFormPage() {
   };
 
   if (loading) return <LoadingSpinner />;
-
-  // Отримуємо ім'я клієнта для відображення
-  const clientName = getClientName();
 
   return (
     <div>
@@ -341,70 +326,76 @@ function OrderFormPage() {
                 </Card>
               )}
 
-              {/* Власник (клієнт) */}
+              {/* Власник (клієнт) - приховане поле для форми */}
               <Form.Item 
                 name="client" 
-                label={
+                hidden={clientLocked}
+                rules={[{ required: true, message: 'Оберіть власника' }]}
+              >
+                <Select>
+                  {clients.map(c => (
+                    <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+
+              {/* Відображення власника */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ display: 'block', marginBottom: 8 }}>
                   <Space>
                     <UserOutlined />
                     <span>Власник</span>
                     {clientLocked && <Text type="success">(визначено автоматично)</Text>}
                   </Space>
-                }
-                rules={[{ required: true, message: 'Оберіть власника' }]}
-              >
+                </label>
+                
                 {clientLocked ? (
-                  // Коли заблоковано - показуємо Select але з відображенням імені
-                  <Select
-                    disabled
-                    size="large"
-                    placeholder="Власник визначено автоматично"
+                  // Коли заблоковано - показуємо ім'я клієнта як текст
+                  <div 
+                    style={{ 
+                      padding: '8px 12px', 
+                      border: '1px solid #d9d9d9', 
+                      borderRadius: '8px',
+                      backgroundColor: '#f5f5f5',
+                      fontSize: '16px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      minHeight: '40px'
+                    }}
                   >
-                    {clients.map(c => (
-                      <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
-                    ))}
-                  </Select>
+                    <Space>
+                      <CheckCircleOutlined style={{ color: '#52c41a' }} />
+                      <Text strong>{lockedClientName || 'Власник'}</Text>
+                    </Space>
+                    <Button 
+                      type="link" 
+                      size="small" 
+                      onClick={handleUnlockClient}
+                    >
+                      Змінити
+                    </Button>
+                  </div>
                 ) : (
-                  // Коли розблоковано - звичайний Select
+                  // Коли розблоковано - показуємо Select
                   <Select 
                     showSearch 
                     placeholder="Оберіть власника"
                     optionFilterProp="children"
                     size="large"
+                    value={form.getFieldValue('client')}
+                    onChange={(value) => form.setFieldsValue({ client: value })}
                     filterOption={(input, option) =>
                       (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
                     }
+                    style={{ width: '100%' }}
                   >
                     {clients.map(c => (
                       <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
                     ))}
                   </Select>
                 )}
-              </Form.Item>
-
-              {/* Показуємо ім'я клієнта окремо, якщо заблоковано */}
-              {clientLocked && clientName && (
-                <div style={{ marginTop: -12, marginBottom: 8 }}>
-                  <Text strong style={{ color: '#52c41a' }}>
-                    <UserOutlined style={{ marginRight: 6 }} />
-                    {clientName}
-                  </Text>
-                </div>
-              )}
-
-              {/* Кнопка для зміни власника вручну */}
-              {clientLocked && (
-                <div style={{ marginBottom: 16 }}>
-                  <Button 
-                    type="link" 
-                    size="small" 
-                    onClick={handleUnlockClient}
-                    style={{ padding: 0 }}
-                  >
-                    Змінити власника вручну
-                  </Button>
-                </div>
-              )}
+              </div>
 
               <Divider />
 
