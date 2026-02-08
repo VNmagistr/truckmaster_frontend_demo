@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert } from 'antd';
-import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty } from 'antd';
+import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, CameraOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
@@ -97,6 +97,25 @@ function OrderDetailPage() {
     return found ? (found[nameField] || found.username || found.license_plate) : itemId; 
   };
 
+  // Форматування пробігу
+  const formatMileage = (mileage) => {
+    if (!mileage) return '-';
+    return `${Number(mileage).toLocaleString('uk-UA')} км`;
+  };
+
+  // Отримання URL фото
+  const getPhotoUrl = (photo) => {
+    if (!photo) return null;
+    if (typeof photo === 'string') {
+      // Якщо це відносний шлях - додаємо базовий URL
+      if (photo.startsWith('/')) {
+        return `${window.location.origin}${photo}`;
+      }
+      return photo;
+    }
+    return null;
+  };
+
   const handleAddWork = async (values) => {
     setModalLoading(true);
     try {
@@ -150,6 +169,12 @@ function OrderDetailPage() {
   // Перевірка на видалення
   const isDeleted = order.marked_for_deletion;
 
+  // Фото
+  const carPhoto = getPhotoUrl(order.car_photo);
+  const odometerPhoto = getPhotoUrl(order.odometer_photo);
+  const dashboardPhoto = getPhotoUrl(order.dashboard_photo);
+  const hasPhotos = carPhoto || odometerPhoto || dashboardPhoto;
+
   const worksColumns = [
     {
       title: 'Робота',
@@ -201,7 +226,7 @@ function OrderDetailPage() {
                 type="dashed" 
                 icon={<PlusOutlined />} 
                 onClick={() => setIsWorkModalOpen(true)} 
-                disabled={isDeleted} // Блокуємо, якщо видалено
+                disabled={isDeleted}
                 style={{ marginBottom: 16, width: '100%' }}
             >
                 Додати роботу
@@ -227,7 +252,7 @@ function OrderDetailPage() {
                 type="dashed" 
                 icon={<ToolOutlined />} 
                 onClick={() => setIsPartModalOpen(true)} 
-                disabled={isDeleted} // Блокуємо, якщо видалено
+                disabled={isDeleted}
                 style={{ marginBottom: 16, width: '100%' }}
             >
                 Списати запчастину
@@ -241,6 +266,67 @@ function OrderDetailPage() {
                 bordered 
                 locale={{ emptyText: 'Запчастини не використано' }}
             />
+        </div>
+      ),
+    },
+    {
+      key: 'photos',
+      label: (
+        <span>
+          <CameraOutlined style={{ marginRight: 8 }} />
+          Фото ({[carPhoto, odometerPhoto, dashboardPhoto].filter(Boolean).length})
+        </span>
+      ),
+      children: (
+        <div>
+          {hasPhotos ? (
+            <Row gutter={[16, 16]}>
+              <Col xs={24} sm={8}>
+                <Card size="small" title="Фото авто" style={{ textAlign: 'center' }}>
+                  {carPhoto ? (
+                    <Image
+                      src={carPhoto}
+                      alt="Фото авто"
+                      style={{ maxHeight: 200, objectFit: 'contain' }}
+                      placeholder={<div style={{ padding: 20 }}>Завантаження...</div>}
+                    />
+                  ) : (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
+                  )}
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card size="small" title="Фото одометра" style={{ textAlign: 'center' }}>
+                  {odometerPhoto ? (
+                    <Image
+                      src={odometerPhoto}
+                      alt="Фото одометра"
+                      style={{ maxHeight: 200, objectFit: 'contain' }}
+                      placeholder={<div style={{ padding: 20 }}>Завантаження...</div>}
+                    />
+                  ) : (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
+                  )}
+                </Card>
+              </Col>
+              <Col xs={24} sm={8}>
+                <Card size="small" title="Фото панелі приладів" style={{ textAlign: 'center' }}>
+                  {dashboardPhoto ? (
+                    <Image
+                      src={dashboardPhoto}
+                      alt="Фото панелі приладів"
+                      style={{ maxHeight: 200, objectFit: 'contain' }}
+                      placeholder={<div style={{ padding: 20 }}>Завантаження...</div>}
+                    />
+                  ) : (
+                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
+                  )}
+                </Card>
+              </Col>
+            </Row>
+          ) : (
+            <Empty description="Фото не завантажено" />
+          )}
         </div>
       ),
     },
@@ -258,7 +344,7 @@ function OrderDetailPage() {
                 type="primary" 
                 icon={<EditOutlined />} 
                 onClick={() => navigate(`/orders/${id}/edit`)}
-                disabled={isDeleted} // Блокуємо редагування
+                disabled={isDeleted}
             >
                 Редагувати
             </Button>
@@ -307,9 +393,16 @@ function OrderDetailPage() {
              ) : '-'}
           </Descriptions.Item>
           
-          <Descriptions.Item label="VIN">
-             {order.truck?.last_seven_vin || 
-              (order.truck && typeof order.truck === 'object' && order.truck.full_vin ? `...${order.truck.full_vin.slice(-7)}` : '-')}
+          <Descriptions.Item label="VIN (останні 7)">
+             {order.truck?.last_seven_vin || '-'}
+          </Descriptions.Item>
+
+          <Descriptions.Item label="Пробіг">
+             <strong style={{ color: '#1890ff' }}>{formatMileage(order.current_mileage)}</strong>
+          </Descriptions.Item>
+
+          <Descriptions.Item label="Опис проблеми" span={2}>
+             {order.problem_description || '-'}
           </Descriptions.Item>
         </Descriptions>
       </Card>
@@ -355,7 +448,7 @@ function OrderDetailPage() {
                     onChange={onPartSelect}
                     options={safePartsList.map(p => ({ 
                         value: p.id, 
-                        label: `${p.sku_code} - ${p.name} (Склад: ${p.quantity})` 
+                        label: `${p.sku_code} - ${p.name} (Склад: ${p.quantity || p.current_stock || 0})` 
                     }))}
                 />
             </Form.Item>
