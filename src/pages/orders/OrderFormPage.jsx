@@ -20,6 +20,7 @@ function OrderFormPage() {
   // Стан для відображення вибраного авто та власника
   const [selectedTruck, setSelectedTruck] = useState(null);
   const [clientLocked, setClientLocked] = useState(false);
+  const [selectedClientName, setSelectedClientName] = useState('');
   
   const [alerts, setAlerts] = useState([]);
   const [fileList, setFileList] = useState([]);
@@ -35,7 +36,8 @@ function OrderFormPage() {
         // 1. Завантажуємо клієнтів
         const clientsResp = await clientsAPI.getAll({ page_size: 500 }).catch(() => ({ data: [] }));
         const clientsData = clientsResp.data || clientsResp;
-        setClients(clientsData.results || clientsData || []);
+        const clientsList = clientsData.results || clientsData || [];
+        setClients(clientsList);
 
         // 2. Якщо редагування - завантажуємо замовлення
         if (isEdit) {
@@ -55,6 +57,11 @@ function OrderFormPage() {
               setTruckOptions([initialTruck]);
               setSelectedTruck(initialTruck);
               setClientLocked(true);
+              
+              // Зберігаємо ім'я клієнта для відображення
+              if (orderData.client?.name) {
+                setSelectedClientName(orderData.client.name);
+              }
             }
 
             form.setFieldsValue({
@@ -121,10 +128,12 @@ function OrderFormPage() {
       // Автоматично підставляємо власника
       if (truckData.client_id) {
         form.setFieldsValue({ client: truckData.client_id });
+        setSelectedClientName(truckData.client_name || '');
         setClientLocked(true);
       } else {
         // Якщо авто без власника - дозволяємо вибрати вручну
         form.setFieldsValue({ client: undefined });
+        setSelectedClientName('');
         setClientLocked(false);
         message.warning('У цього авто немає власника. Оберіть клієнта вручну.');
       }
@@ -144,6 +153,7 @@ function OrderFormPage() {
   const handleTruckClear = () => {
     setSelectedTruck(null);
     setClientLocked(false);
+    setSelectedClientName('');
     form.setFieldsValue({ client: undefined });
     setAlerts([]);
     setTruckOptions([]);
@@ -177,6 +187,12 @@ function OrderFormPage() {
     if (truckId && mileage) {
       checkMaintenance(truckId, mileage);
     }
+  };
+
+  // Розблокування поля клієнта
+  const handleUnlockClient = () => {
+    setClientLocked(false);
+    setSelectedClientName('');
   };
 
   const handleFileChange = ({ fileList: newFileList }) => setFileList(newFileList);
@@ -320,20 +336,30 @@ function OrderFormPage() {
                 }
                 rules={[{ required: true, message: 'Оберіть власника' }]}
               >
-                <Select 
-                  showSearch 
-                  placeholder={clientLocked ? "Власник визначено автоматично" : "Оберіть власника"}
-                  optionFilterProp="children"
-                  disabled={clientLocked}
-                  size="large"
-                  filterOption={(input, option) =>
-                    (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
-                  }
-                >
-                  {clients.map(c => (
-                    <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
-                  ))}
-                </Select>
+                {clientLocked && selectedClientName ? (
+                  // Показуємо ім'я клієнта як текст коли заблоковано
+                  <Input 
+                    value={selectedClientName}
+                    disabled
+                    size="large"
+                    prefix={<UserOutlined style={{ color: '#52c41a' }} />}
+                  />
+                ) : (
+                  // Показуємо Select коли розблоковано
+                  <Select 
+                    showSearch 
+                    placeholder="Оберіть власника"
+                    optionFilterProp="children"
+                    size="large"
+                    filterOption={(input, option) =>
+                      (option?.children ?? '').toLowerCase().includes(input.toLowerCase())
+                    }
+                  >
+                    {clients.map(c => (
+                      <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
+                    ))}
+                  </Select>
+                )}
               </Form.Item>
 
               {/* Кнопка для зміни власника вручну */}
@@ -342,7 +368,7 @@ function OrderFormPage() {
                   <Button 
                     type="link" 
                     size="small" 
-                    onClick={() => setClientLocked(false)}
+                    onClick={handleUnlockClient}
                     style={{ padding: 0 }}
                   >
                     Змінити власника вручну
