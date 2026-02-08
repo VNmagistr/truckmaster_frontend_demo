@@ -20,7 +20,6 @@ function OrderFormPage() {
   // Стан для відображення вибраного авто та власника
   const [selectedTruck, setSelectedTruck] = useState(null);
   const [clientLocked, setClientLocked] = useState(false);
-  const [selectedClientName, setSelectedClientName] = useState('');
   
   const [alerts, setAlerts] = useState([]);
   const [fileList, setFileList] = useState([]);
@@ -45,6 +44,7 @@ function OrderFormPage() {
           const orderData = orderResp.data || orderResp;
 
           if (orderData) {
+            // Зберігаємо дані про авто
             if (orderData.truck) {
               const initialTruck = {
                 id: orderData.truck.id,
@@ -57,20 +57,18 @@ function OrderFormPage() {
               setTruckOptions([initialTruck]);
               setSelectedTruck(initialTruck);
               setClientLocked(true);
-              
-              // Зберігаємо ім'я клієнта для відображення
-              if (orderData.client?.name) {
-                setSelectedClientName(orderData.client.name);
-              }
             }
 
+            // Встановлюємо значення форми
             form.setFieldsValue({
-              ...orderData,
-              client: orderData.client?.id || orderData.client,
               truck: orderData.truck?.id || orderData.truck,
-              current_mileage: orderData.current_mileage
+              client: orderData.client?.id || orderData.client,
+              current_mileage: orderData.current_mileage,
+              problem_description: orderData.problem_description,
+              status: orderData.status
             });
             
+            // Перевіряємо регламенти
             if (orderData.truck && orderData.current_mileage) {
               checkMaintenance(orderData.truck.id || orderData.truck, orderData.current_mileage);
             }
@@ -86,6 +84,26 @@ function OrderFormPage() {
 
     initData();
   }, [id, isEdit, form]);
+
+  // Отримуємо ім'я клієнта для відображення
+  const getClientName = () => {
+    const clientId = form.getFieldValue('client');
+    
+    // Спочатку шукаємо в selectedTruck
+    if (selectedTruck?.client_name) {
+      return selectedTruck.client_name;
+    }
+    
+    // Потім шукаємо в списку клієнтів
+    if (clientId && clients.length > 0) {
+      const client = clients.find(c => c.id === clientId);
+      if (client) {
+        return client.name;
+      }
+    }
+    
+    return '';
+  };
 
   // Пошук авто по номеру
   const handleSearchTruck = async (value) => {
@@ -128,12 +146,10 @@ function OrderFormPage() {
       // Автоматично підставляємо власника
       if (truckData.client_id) {
         form.setFieldsValue({ client: truckData.client_id });
-        setSelectedClientName(truckData.client_name || '');
         setClientLocked(true);
       } else {
         // Якщо авто без власника - дозволяємо вибрати вручну
         form.setFieldsValue({ client: undefined });
-        setSelectedClientName('');
         setClientLocked(false);
         message.warning('У цього авто немає власника. Оберіть клієнта вручну.');
       }
@@ -153,10 +169,14 @@ function OrderFormPage() {
   const handleTruckClear = () => {
     setSelectedTruck(null);
     setClientLocked(false);
-    setSelectedClientName('');
     form.setFieldsValue({ client: undefined });
     setAlerts([]);
     setTruckOptions([]);
+  };
+
+  // Розблокування поля клієнта
+  const handleUnlockClient = () => {
+    setClientLocked(false);
   };
 
   // Перевірка регламентів ТО
@@ -187,12 +207,6 @@ function OrderFormPage() {
     if (truckId && mileage) {
       checkMaintenance(truckId, mileage);
     }
-  };
-
-  // Розблокування поля клієнта
-  const handleUnlockClient = () => {
-    setClientLocked(false);
-    setSelectedClientName('');
   };
 
   const handleFileChange = ({ fileList: newFileList }) => setFileList(newFileList);
@@ -236,6 +250,9 @@ function OrderFormPage() {
   };
 
   if (loading) return <LoadingSpinner />;
+
+  // Отримуємо ім'я клієнта для відображення
+  const clientName = getClientName();
 
   return (
     <div>
@@ -336,16 +353,19 @@ function OrderFormPage() {
                 }
                 rules={[{ required: true, message: 'Оберіть власника' }]}
               >
-                {clientLocked && selectedClientName ? (
-                  // Показуємо ім'я клієнта як текст коли заблоковано
-                  <Input 
-                    value={selectedClientName}
+                {clientLocked ? (
+                  // Коли заблоковано - показуємо Select але з відображенням імені
+                  <Select
                     disabled
                     size="large"
-                    prefix={<UserOutlined style={{ color: '#52c41a' }} />}
-                  />
+                    placeholder="Власник визначено автоматично"
+                  >
+                    {clients.map(c => (
+                      <Select.Option key={c.id} value={c.id}>{c.name}</Select.Option>
+                    ))}
+                  </Select>
                 ) : (
-                  // Показуємо Select коли розблоковано
+                  // Коли розблоковано - звичайний Select
                   <Select 
                     showSearch 
                     placeholder="Оберіть власника"
@@ -362,9 +382,19 @@ function OrderFormPage() {
                 )}
               </Form.Item>
 
+              {/* Показуємо ім'я клієнта окремо, якщо заблоковано */}
+              {clientLocked && clientName && (
+                <div style={{ marginTop: -12, marginBottom: 8 }}>
+                  <Text strong style={{ color: '#52c41a' }}>
+                    <UserOutlined style={{ marginRight: 6 }} />
+                    {clientName}
+                  </Text>
+                </div>
+              )}
+
               {/* Кнопка для зміни власника вручну */}
               {clientLocked && (
-                <div style={{ marginTop: -12, marginBottom: 16 }}>
+                <div style={{ marginBottom: 16 }}>
                   <Button 
                     type="link" 
                     size="small" 
