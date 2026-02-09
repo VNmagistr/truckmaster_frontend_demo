@@ -49,16 +49,20 @@ function OrderDetailPage() {
   const ensureArray = (input) => {
       if (!input) return [];
       if (Array.isArray(input)) return input;
-      if (input.results && Array.isArray(input.results)) return input.results;
+      // Axios response: input.data.results
+      if (input.data?.results && Array.isArray(input.data.results)) return input.data.results;
+      // Axios response: input.data (якщо це масив)
       if (input.data && Array.isArray(input.data)) return input.data;
+      // Пряма відповідь: input.results
+      if (input.results && Array.isArray(input.results)) return input.results;
       return [];
   };
 
   const loadDirectories = async () => {
     try {
         const [worksResp, empResp, partsResp] = await Promise.allSettled([
-            worksAPI.getAll(),
-            employeesAPI.getAll(),
+            worksAPI.getAll({ page_size: 5000 }),
+            employeesAPI.getAll({ page_size: 500 }),
             inventoryAPI.getAll({ page_size: 1000 })
         ]);
 
