@@ -50,6 +50,19 @@ export const authAPI = {
   me: () => instance.get('/accounts/me/'),
 };
 
+// Користувачі / Профіль
+export const userAPI = {
+  getProfile: () => instance.get('/accounts/me/'),
+  updateProfile: (data) => instance.patch('/accounts/me/', data),
+  changePassword: (data) => instance.post('/accounts/change-password/', data),
+  deleteAccount: () => instance.delete('/accounts/me/'),
+  getAll: (params) => instance.get('/users/', { params }),
+  getById: (id) => instance.get(`/users/${id}/`),
+  create: (data) => instance.post('/users/', data),
+  update: (id, data) => instance.patch(`/users/${id}/`, data),
+  delete: (id) => instance.delete(`/users/${id}/`),
+};
+
 export const ordersAPI = {
   getAll: (params) => instance.get('/orders/', { params }),
   getById: (id) => instance.get(`/orders/${id}/`),
@@ -138,7 +151,7 @@ export const inventoryAPI = {
   unmarkForDeletion: (id) => instance.post(`/inventory/${id}/unmark_for_deletion/`),
 };
 
-// Довідник робіт/послуг - використовуємо правильний URL
+// Довідник робіт/послуг
 export const worksAPI = { 
   getAll: (params) => instance.get('/work-prices/', { params }),
   getById: (id) => instance.get(`/work-prices/${id}/`),
@@ -166,6 +179,18 @@ export const employeesAPI = {
 export const baseModelsAPI = { 
   getAll: () => instance.get('/base-models/'),
   getById: (id) => instance.get(`/base-models/${id}/`),
+};
+
+// Регламенти ТО
+export const maintenanceAPI = {
+  getRules: (params) => instance.get('/maintenance-rules/', { params }),
+  getRuleById: (id) => instance.get(`/maintenance-rules/${id}/`),
+  createRule: (data) => instance.post('/maintenance-rules/', data),
+  updateRule: (id, data) => instance.patch(`/maintenance-rules/${id}/`, data),
+  deleteRule: (id) => instance.delete(`/maintenance-rules/${id}/`),
+  
+  getLogs: (params) => instance.get('/maintenance-logs/', { params }),
+  createLog: (data) => instance.post('/maintenance-logs/', data),
 };
 
 export default instance;
