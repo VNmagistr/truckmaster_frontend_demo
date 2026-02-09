@@ -20,7 +20,8 @@ instance.interceptors.response.use(
     if (error.response?.status === 401) {
       // Спроба оновити токен
       const refreshToken = localStorage.getItem('refresh_token');
-      if (refreshToken) {
+      if (refreshToken && !error.config._retry) {
+        error.config._retry = true;
         try {
           const response = await axios.post(`${baseURL}/token/refresh/`, {
             refresh: refreshToken
@@ -83,7 +84,7 @@ export const ordersAPI = {
   getDashboardStats: () => instance.get('/orders/dashboard_stats/'),
   getRecent: (limit = 10) => instance.get('/orders/recent/', { params: { limit } }),
   
-  // Роботи
+  // Роботи та запчастини до замовлення
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
   addPart: (orderId, data) => instance.post(`/orders/${orderId}/add_part/`, data),
 };
@@ -95,7 +96,7 @@ export const clientsAPI = {
   update: (id, data) => instance.patch(`/clients/${id}/`, data),
   delete: (id) => instance.delete(`/clients/${id}/`),
   
-  // Позначення на видалення (якщо є)
+  // Позначення на видалення
   markForDeletion: (id, reason) => instance.post(`/clients/${id}/mark_for_deletion/`, { reason }),
   unmarkForDeletion: (id) => instance.post(`/clients/${id}/unmark_for_deletion/`),
 };
@@ -107,7 +108,7 @@ export const trucksAPI = {
   update: (id, data) => instance.patch(`/trucks/${id}/`, data),
   delete: (id) => instance.delete(`/trucks/${id}/`),
   
-  // Позначення на видалення (якщо є)
+  // Позначення на видалення
   markForDeletion: (id, reason) => instance.post(`/trucks/${id}/mark_for_deletion/`, { reason }),
   unmarkForDeletion: (id) => instance.post(`/trucks/${id}/unmark_for_deletion/`),
 };
@@ -137,29 +138,34 @@ export const inventoryAPI = {
   unmarkForDeletion: (id) => instance.post(`/inventory/${id}/unmark_for_deletion/`),
 };
 
+// Довідник робіт/послуг - використовуємо правильний URL
 export const worksAPI = { 
-  getAll: (params) => instance.get('/works/', { params }),
-  getById: (id) => instance.get(`/works/${id}/`),
+  getAll: (params) => instance.get('/work-prices/', { params }),
+  getById: (id) => instance.get(`/work-prices/${id}/`),
+  create: (data) => instance.post('/work-prices/', data),
+  update: (id, data) => instance.patch(`/work-prices/${id}/`, data),
+  delete: (id) => instance.delete(`/work-prices/${id}/`),
 };
 
+// Групи робіт
 export const workGroupsAPI = {
   getAll: (params) => instance.get('/work-groups/', { params }),
   getById: (id) => instance.get(`/work-groups/${id}/`),
+  create: (data) => instance.post('/work-groups/', data),
+  update: (id, data) => instance.patch(`/work-groups/${id}/`, data),
+  delete: (id) => instance.delete(`/work-groups/${id}/`),
 };
 
+// Механіки/працівники
 export const employeesAPI = { 
-  getAll: (params) => instance.get('/users/', { params: { ...params, role: 'mechanic' } }) 
+  getAll: (params) => instance.get('/users/', { params: { ...params, role: 'mechanic' } }),
+  getById: (id) => instance.get(`/users/${id}/`),
 };
 
+// Базові моделі авто
 export const baseModelsAPI = { 
-  getAll: () => instance.get('/base-models/') 
+  getAll: () => instance.get('/base-models/'),
+  getById: (id) => instance.get(`/base-models/${id}/`),
 };
 
 export default instance;
-
-export const userAPI = {
-  getMe: () => axios.get('/api/users/me/'),
-  updateMe: (data) => axios.patch('/api/users/me/', data),
-  deleteMe: () => axios.delete('/api/users/me/'),
-  changePassword: (data) => axios.post('/api/users/me/change-password/', data),
-};
