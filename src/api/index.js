@@ -98,8 +98,14 @@ export const ordersAPI = {
   getRecent: (limit = 10) => instance.get('/orders/recent/', { params: { limit } }),
   
   // Роботи та запчастини до замовлення
-  addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
-  addPart: (orderId, data) => instance.post(`/orders/${orderId}/add_part/`, data),
+  addWork: (orderId, data) => instance.post('/service-works/', { 
+    service_order: orderId, 
+    ...data 
+  }),
+  addPart: (orderId, data) => instance.post('/inventory/used-parts/', { 
+    service_order: orderId, 
+    ...data 
+  }),
 };
 
 export const clientsAPI = { 
