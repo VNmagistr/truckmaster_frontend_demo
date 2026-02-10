@@ -105,6 +105,7 @@ export const ordersAPI = {
     hours_spent: data.hours || 1,
     description: data.description || ''
   }),
+  updateWork: (workId, data) => instance.patch(`/service-works/${workId}/`, data),
   removeWork: (workId) => instance.delete(`/service-works/${workId}/`),
   
   // Запчастини додаються через service-works як used_parts
