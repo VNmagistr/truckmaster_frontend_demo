@@ -171,7 +171,7 @@ export const workGroupsAPI = {
 
 // Механіки/працівники
 export const employeesAPI = { 
-  getAll: (params) => instance.get('/users/mechanics/'),
+  getAll: (params) => instance.get('/users/', { params: { ...params, group: 'Механіки' } }),
   getById: (id) => instance.get(`/users/${id}/`),
 };
 
