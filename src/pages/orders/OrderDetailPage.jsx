@@ -219,16 +219,36 @@ function OrderDetailPage() {
       title: 'Робота',
       dataIndex: 'work',
       key: 'work',
-      render: (val, record) => resolveNameInList(val, safeWorksList) || record.description || 'Без назви',
+      render: (val) => {
+        if (typeof val === 'object' && val !== null) {
+          return val.name || '-';
+        }
+        return resolveNameInList(val, safeWorksList) || '-';
+      },
     },
     {
       title: 'Виконавець',
-      dataIndex: 'employee',
-      key: 'employee',
-      render: (val) => resolveNameInList(val, safeEmployeesList),
+      dataIndex: 'mechanic',
+      key: 'mechanic',
+      render: (val) => {
+        if (typeof val === 'object' && val !== null) {
+          return val.full_name || val.username || `${val.first_name} ${val.last_name}`.trim() || '-';
+        }
+        return resolveNameInList(val, safeEmployeesList) || '-';
+      },
     },
-    { title: 'Годин', dataIndex: 'hours', key: 'hours' },
-    { title: 'Вартість', dataIndex: 'amount', key: 'amount', render: (val) => formatMoney(val) },
+    { 
+      title: 'Годин', 
+      dataIndex: 'hours_spent', 
+      key: 'hours_spent',
+      render: (val) => val || '-'
+    },
+    { 
+      title: 'Вартість', 
+      dataIndex: 'price_at_moment', 
+      key: 'price_at_moment', 
+      render: (val) => formatMoney(val) 
+    },
   ];
 
   const partsColumns = [
