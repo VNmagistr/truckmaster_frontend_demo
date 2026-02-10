@@ -60,18 +60,52 @@ function OrderDetailPage() {
 
   const loadDirectories = async () => {
     try {
-        const [worksResp, empResp, partsResp] = await Promise.allSettled([
-            worksAPI.getAll({ page_size: 5000 }),
-            employeesAPI.getAll({ page_size: 500 }),
+        // Функція для завантаження всіх сторінок
+        const fetchAllPages = async (apiCall, pageSize = 100) => {
+          let allResults = [];
+          let page = 1;
+          let hasMore = true;
+          
+          while (hasMore) {
+            try {
+              const response = await apiCall({ page, page_size: pageSize });
+              const data = response.data || response;
+              const results = data.results || data || [];
+              
+              allResults = [...allResults, ...results];
+              
+              // Перевіряємо чи є наступна сторінка
+              hasMore = data.next !== null && results.length === pageSize;
+              page++;
+              
+              // Обмеження щоб не зациклитись
+              if (page > 100) break;
+            } catch (err) {
+              console.error('Error fetching page:', page, err);
+              break;
+            }
+          }
+          
+          return allResults;
+        };
+
+        // Завантажуємо роботи (всі сторінки)
+        const worksPromise = fetchAllPages(worksAPI.getAll, 100);
+        
+        // Механіки та запчастини - зазвичай їх менше
+        const [empResp, partsResp] = await Promise.allSettled([
+            employeesAPI.getAll(),
             inventoryAPI.getAll({ page_size: 1000 })
         ]);
+
+        const works = await worksPromise;
+        setWorksList(works);
 
         const getValue = (result) => {
              if (result.status === 'fulfilled') return ensureArray(result.value);
              return [];
         };
 
-        setWorksList(getValue(worksResp));
         setEmployeesList(getValue(empResp));
         setPartsList(getValue(partsResp));
         
