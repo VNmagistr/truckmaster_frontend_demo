@@ -145,28 +145,33 @@ export const trucksAPI = {
 };
 
 export const inventoryAPI = { 
-  getAll: (params) => instance.get('/inventory/', { params }),
-  getById: (id) => instance.get(`/inventory/${id}/`),
-  create: (data) => instance.post('/inventory/', data),
-  update: (id, data) => instance.patch(`/inventory/${id}/`, data),
-  delete: (id) => instance.delete(`/inventory/${id}/`),
+  getAll: (params) => instance.get('/inventory/products/', { params }),
+  getById: (id) => instance.get(`/inventory/products/${id}/`),
+  create: (data) => instance.post('/inventory/products/', data),
+  update: (id, data) => instance.patch(`/inventory/products/${id}/`, data),
+  delete: (id) => instance.delete(`/inventory/products/${id}/`),
   
   // Аліаси для форми
-  getProductById: (id) => instance.get(`/inventory/${id}/`),
-  createProduct: (data) => instance.post('/inventory/', data),
-  updateProduct: (id, data) => instance.patch(`/inventory/${id}/`, data),
+  getProductById: (id) => instance.get(`/inventory/products/${id}/`),
+  createProduct: (data) => instance.post('/inventory/products/', data),
+  updateProduct: (id, data) => instance.patch(`/inventory/products/${id}/`, data),
   
   // Методи для категорій
   getCategories: () => instance.get('/inventory/categories/'),
   getSubcategories: () => instance.get('/inventory/subcategories/'),
   
+  // Склади
+  getWarehouses: () => instance.get('/inventory/warehouses/'),
+  getStock: (params) => instance.get('/inventory/stock/', { params }),
+  getMovements: (params) => instance.get('/inventory/movements/', { params }),
+  
   // Методи для детального перегляду
-  getStockByProduct: (id) => instance.get(`/inventory/${id}/stock/`),
-  getMovementsByProduct: (id) => instance.get(`/inventory/${id}/movements/`),
+  getStockByProduct: (id) => instance.get(`/inventory/products/${id}/stock/`),
+  getMovementsByProduct: (id) => instance.get(`/inventory/products/${id}/movements/`),
   
   // Позначення на видалення
-  markForDeletion: (id, reason) => instance.post(`/inventory/${id}/mark_for_deletion/`, { reason }),
-  unmarkForDeletion: (id) => instance.post(`/inventory/${id}/unmark_for_deletion/`),
+  markForDeletion: (id, reason) => instance.post(`/inventory/products/${id}/mark_for_deletion/`, { reason }),
+  unmarkForDeletion: (id) => instance.post(`/inventory/products/${id}/unmark_for_deletion/`),
 };
 
 // Довідник робіт/послуг
