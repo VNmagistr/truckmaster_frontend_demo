@@ -100,11 +100,22 @@ export const ordersAPI = {
   // Роботи та запчастини до замовлення
   addWork: (orderId, data) => instance.post('/service-works/', { 
     service_order: orderId, 
-    ...data 
+    work: data.work,
+    mechanic: data.employee || null,
+    hours_spent: data.hours || 1,
+    description: data.description || ''
   }),
-  addPart: (orderId, data) => instance.post('/inventory/used-parts/', { 
-    service_order: orderId, 
-    ...data 
+  removeWork: (workId) => instance.delete(`/service-works/${workId}/`),
+  
+  // Запчастини додаються через service-works як used_parts
+  addPart: (orderId, data) => instance.post('/service-works/', { 
+    service_order: orderId,
+    work: data.work,
+    used_parts: [{
+      part: data.part,
+      quantity: data.quantity,
+      unit_price: data.price
+    }]
   }),
 };
 
