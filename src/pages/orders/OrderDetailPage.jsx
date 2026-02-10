@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty } from 'antd';
+import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input } from 'antd';
 import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, CameraOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI } from '../../api';
@@ -12,6 +12,8 @@ function OrderDetailPage() {
   
   const [isWorkModalOpen, setIsWorkModalOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
+  const [isEditWorkModalOpen, setIsEditWorkModalOpen] = useState(false);
+  const [editingWork, setEditingWork] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
   const [worksList, setWorksList] = useState([]);
@@ -20,6 +22,7 @@ function OrderDetailPage() {
 
   const [formWork] = Form.useForm();
   const [formPart] = Form.useForm();
+  const [formEditWork] = Form.useForm();
   
   const { id } = useParams();
   const navigate = useNavigate();
@@ -195,6 +198,65 @@ function OrderDetailPage() {
     }
   };
 
+  // Відкрити модалку редагування роботи
+  const handleEditWork = (record) => {
+    setEditingWork(record);
+    formEditWork.setFieldsValue({
+      work: record.work?.id || record.work,
+      mechanic: record.mechanic?.id || record.mechanic,
+      hours_spent: parseFloat(record.hours_spent) || 1,
+      description: record.description || ''
+    });
+    setIsEditWorkModalOpen(true);
+  };
+
+  // Зберегти зміни роботи
+  const handleSaveEditWork = async (values) => {
+    if (!editingWork) return;
+    
+    setModalLoading(true);
+    try {
+      await ordersAPI.updateWork(editingWork.id, {
+        work: values.work,
+        mechanic: values.mechanic || null,
+        hours_spent: values.hours_spent,
+        description: values.description || ''
+      });
+      message.success('Роботу оновлено');
+      setIsEditWorkModalOpen(false);
+      setEditingWork(null);
+      formEditWork.resetFields();
+      initPage();
+    } catch (error) {
+      console.error(error);
+      message.error('Помилка оновлення роботи');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Видалити роботу
+  const handleDeleteWork = (workId) => {
+    Modal.confirm({
+      title: 'Видалити роботу?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Ви впевнені, що хочете видалити цю роботу?',
+      okText: 'Видалити',
+      okType: 'danger',
+      cancelText: 'Скасувати',
+      onOk: async () => {
+        try {
+          await ordersAPI.removeWork(workId);
+          message.success('Роботу видалено');
+          initPage();
+        } catch (error) {
+          console.error(error);
+          message.error('Помилка видалення роботи');
+        }
+      }
+    });
+  };
+
   if (loading) return <LoadingSpinner />;
   if (!order) return <div style={{padding: 20, textAlign: 'center'}}>Помилка: Немає даних замовлення</div>;
 
@@ -248,6 +310,30 @@ function OrderDetailPage() {
       dataIndex: 'price_at_moment', 
       key: 'price_at_moment', 
       render: (val) => formatMoney(val) 
+    },
+    {
+      title: 'Дії',
+      key: 'actions',
+      width: 100,
+      render: (_, record) => (
+        <Space size="small">
+          <Button 
+            type="link" 
+            size="small" 
+            icon={<EditOutlined />}
+            onClick={() => handleEditWork(record)}
+            disabled={isDeleted}
+          />
+          <Button 
+            type="link" 
+            size="small" 
+            danger
+            icon={<DeleteOutlined />}
+            onClick={() => handleDeleteWork(record.id)}
+            disabled={isDeleted}
+          />
+        </Space>
+      ),
     },
   ];
 
@@ -520,6 +606,46 @@ function OrderDetailPage() {
                 </Form.Item>
             </Space>
             <Button type="primary" htmlType="submit" loading={modalLoading} block>Списати</Button>
+        </Form>
+      </Modal>
+
+      {/* Модалка редагування роботи */}
+      <Modal 
+        title="Редагувати роботу" 
+        open={isEditWorkModalOpen} 
+        onCancel={() => {
+          setIsEditWorkModalOpen(false);
+          setEditingWork(null);
+          formEditWork.resetFields();
+        }} 
+        footer={null} 
+        destroyOnClose
+      >
+        <Form form={formEditWork} layout="vertical" onFinish={handleSaveEditWork}>
+            <Form.Item name="work" label="Послуга" rules={[{ required: true, message: 'Оберіть послугу' }]}>
+                 <Select 
+                    showSearch 
+                    placeholder="Оберіть послугу" 
+                    optionFilterProp="label" 
+                    options={safeWorksList.map(w => ({ value: w.id, label: w.name }))} 
+                 />
+            </Form.Item>
+            <Form.Item name="mechanic" label="Механік">
+                 <Select 
+                    showSearch 
+                    allowClear
+                    placeholder="Оберіть механіка" 
+                    optionFilterProp="label" 
+                    options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))} 
+                 />
+            </Form.Item>
+            <Form.Item name="hours_spent" label="Витрачено годин" rules={[{ required: true }]}>
+                <InputNumber min={0.1} step={0.5} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item name="description" label="Опис">
+                <Input.TextArea rows={2} placeholder="Додатковий опис (необов'язково)" />
+            </Form.Item>
+            <Button type="primary" htmlType="submit" loading={modalLoading} block>Зберегти зміни</Button>
         </Form>
       </Modal>
     </div>
