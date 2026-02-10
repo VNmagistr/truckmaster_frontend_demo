@@ -61,7 +61,7 @@ function OrderDetailPage() {
   const loadDirectories = async () => {
     try {
         // Функція для завантаження всіх сторінок
-        const fetchAllPages = async (apiCall, pageSize = 100) => {
+        const fetchAllPages = async (apiCall, pageSize = 50) => {
           let allResults = [];
           let page = 1;
           let hasMore = true;
@@ -75,10 +75,10 @@ function OrderDetailPage() {
               allResults = [...allResults, ...results];
               
               // Перевіряємо чи є наступна сторінка
-              hasMore = data.next !== null && results.length === pageSize;
+              hasMore = data.next !== null && results.length > 0;
               page++;
               
-              // Обмеження щоб не зациклитись
+              // Обмеження: 3215 / 50 = ~65 сторінок
               if (page > 100) break;
             } catch (err) {
               console.error('Error fetching page:', page, err);
@@ -86,13 +86,14 @@ function OrderDetailPage() {
             }
           }
           
+          console.log('Total loaded:', allResults.length);
           return allResults;
         };
 
         // Завантажуємо роботи (всі сторінки)
-        const worksPromise = fetchAllPages(worksAPI.getAll, 100);
+        const worksPromise = fetchAllPages(worksAPI.getAll, 50);
         
-        // Механіки та запчастини - зазвичай їх менше
+        // Механіки та запчастини
         const [empResp, partsResp] = await Promise.allSettled([
             employeesAPI.getAll(),
             inventoryAPI.getAll({ page_size: 1000 })
