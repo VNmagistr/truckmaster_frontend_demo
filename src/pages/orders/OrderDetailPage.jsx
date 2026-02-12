@@ -93,25 +93,22 @@ function OrderDetailPage() {
           return allResults;
         };
 
-        // Завантажуємо роботи (всі сторінки)
+        // Завантажуємо роботи та запчастини (всі сторінки)
         const worksPromise = fetchAllPages(worksAPI.getAll, 50);
+        const partsPromise = fetchAllPages(inventoryAPI.getAll, 50);
         
-        // Механіки та запчастини
-        const [empResp, partsResp] = await Promise.allSettled([
-            employeesAPI.getAll(),
-            inventoryAPI.getAll({ page_size: 1000 })
-        ]);
+        // Механіки - зазвичай їх мало
+        const empResp = await employeesAPI.getAll();
 
         const works = await worksPromise;
+        const parts = await partsPromise;
+        
         setWorksList(works);
-
-        const getValue = (result) => {
-             if (result.status === 'fulfilled') return ensureArray(result.value);
-             return [];
-        };
-
-        setEmployeesList(getValue(empResp));
-        setPartsList(getValue(partsResp));
+        setPartsList(parts);
+        setEmployeesList(ensureArray(empResp));
+        
+        console.log('Works loaded:', works.length);
+        console.log('Parts loaded:', parts.length);
         
     } catch (e) {
         console.error("Global directory error", e);
