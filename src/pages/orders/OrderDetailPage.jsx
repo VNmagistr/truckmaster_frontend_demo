@@ -177,13 +177,42 @@ function OrderDetailPage() {
   const handleAddPart = async (values) => {
     setModalLoading(true);
     try {
-      await ordersAPI.addPart(id, values);
-      message.success('Запчастину додано');
+      // Отримуємо поточну роботу
+      const workId = values.service_work;
+      const currentWork = orderWorks.find(w => w.id === workId);
+      
+      if (!currentWork) {
+        message.error('Роботу не знайдено');
+        return;
+      }
+      
+      // Формуємо нову запчастину
+      const newPart = {
+        part: values.part,
+        quantity: values.quantity,
+        unit_price: values.unit_price
+      };
+      
+      // Додаємо до існуючих запчастин роботи
+      const existingParts = currentWork.used_parts || [];
+      const updatedParts = [...existingParts.map(p => ({
+        part: p.part?.id || p.part,
+        quantity: p.quantity,
+        unit_price: p.unit_price
+      })), newPart];
+      
+      // Оновлюємо роботу з новим списком запчастин
+      await ordersAPI.updateWork(workId, {
+        used_parts: updatedParts
+      });
+      
+      message.success('Запчастину списано');
       setIsPartModalOpen(false);
       formPart.resetFields();
       initPage();
     } catch (error) {
-       const errorMsg = error.response?.data?.error || 'Помилка при додаванні запчастини';
+       console.error(error);
+       const errorMsg = error.response?.data?.detail || error.response?.data?.error || 'Помилка при списанні запчастини';
        message.error(errorMsg);
     } finally {
       setModalLoading(false);
@@ -194,7 +223,7 @@ function OrderDetailPage() {
     const safeList = ensureArray(partsList);
     const part = safeList.find(p => p.id === partId);
     if (part) {
-        formPart.setFieldsValue({ price: part.selling_price });
+        formPart.setFieldsValue({ unit_price: part.selling_price || part.price || 0 });
     }
   };
 
@@ -583,8 +612,32 @@ function OrderDetailPage() {
         </Form>
       </Modal>
 
-      <Modal title="Списати запчастину" open={isPartModalOpen} onCancel={() => setIsPartModalOpen(false)} footer={null} destroyOnClose>
+      <Modal title="Списати запчастину" open={isPartModalOpen} onCancel={() => setIsPartModalOpen(false)} footer={null} destroyOnClose width={500}>
         <Form form={formPart} layout="vertical" onFinish={handleAddPart}>
+            {orderWorks.length > 0 ? (
+              <Form.Item 
+                name="service_work" 
+                label="До якої роботи списати?" 
+                rules={[{ required: true, message: 'Оберіть роботу' }]}
+              >
+                <Select 
+                  placeholder="Оберіть роботу"
+                  options={orderWorks.map(w => ({ 
+                    value: w.id, 
+                    label: w.work?.name || w.description || `Робота #${w.id}`
+                  }))}
+                />
+              </Form.Item>
+            ) : (
+              <Alert 
+                message="Спочатку додайте роботу" 
+                description="Щоб списати запчастину, потрібно спочатку додати хоча б одну роботу до замовлення."
+                type="warning" 
+                showIcon 
+                style={{ marginBottom: 16 }}
+              />
+            )}
+            
             <Form.Item name="part" label="Запчастина" rules={[{ required: true, message: 'Оберіть запчастину' }]}>
                 <Select 
                     showSearch 
@@ -593,19 +646,31 @@ function OrderDetailPage() {
                     onChange={onPartSelect}
                     options={safePartsList.map(p => ({ 
                         value: p.id, 
-                        label: `${p.sku_code} - ${p.name} (Склад: ${p.quantity || p.current_stock || 0})` 
+                        label: `${p.sku_code || ''} - ${p.name} (Склад: ${p.quantity || p.current_stock || 0})` 
                     }))}
                 />
             </Form.Item>
-            <Space style={{ width: '100%' }}>
-                <Form.Item name="quantity" label="К-сть" initialValue={1} rules={[{ required: true }]}>
-                    <InputNumber min={1} style={{ width: '100%' }} />
-                </Form.Item>
-                <Form.Item name="price" label="Ціна" rules={[{ required: true }]}>
-                    <InputNumber min={0} style={{ width: '100%' }} />
-                </Form.Item>
-            </Space>
-            <Button type="primary" htmlType="submit" loading={modalLoading} block>Списати</Button>
+            <Row gutter={16}>
+                <Col span={12}>
+                  <Form.Item name="quantity" label="Кількість" initialValue={1} rules={[{ required: true }]}>
+                      <InputNumber min={1} style={{ width: '100%' }} />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="unit_price" label="Ціна за од." rules={[{ required: true }]}>
+                      <InputNumber min={0} style={{ width: '100%' }} addonAfter="грн" />
+                  </Form.Item>
+                </Col>
+            </Row>
+            <Button 
+              type="primary" 
+              htmlType="submit" 
+              loading={modalLoading} 
+              block
+              disabled={orderWorks.length === 0}
+            >
+              Списати
+            </Button>
         </Form>
       </Modal>
 
