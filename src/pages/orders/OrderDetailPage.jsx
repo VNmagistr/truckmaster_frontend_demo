@@ -174,33 +174,13 @@ function OrderDetailPage() {
   const handleAddPart = async (values) => {
     setModalLoading(true);
     try {
-      // Отримуємо поточну роботу
       const workId = values.service_work;
-      const currentWork = orderWorks.find(w => w.id === workId);
       
-      if (!currentWork) {
-        message.error('Роботу не знайдено');
-        return;
-      }
-      
-      // Формуємо нову запчастину
-      const newPart = {
+      // Використовуємо новий ендпоінт add-part
+      await ordersAPI.addPartToWork(workId, {
         part: values.part,
         quantity: values.quantity,
         unit_price: values.unit_price
-      };
-      
-      // Додаємо до існуючих запчастин роботи
-      const existingParts = currentWork.used_parts || [];
-      const updatedParts = [...existingParts.map(p => ({
-        part: p.part?.id || p.part,
-        quantity: p.quantity,
-        unit_price: p.unit_price
-      })), newPart];
-      
-      // Оновлюємо роботу з новим списком запчастин
-      await ordersAPI.updateWork(workId, {
-        used_parts: updatedParts
       });
       
       message.success('Запчастину списано');
@@ -209,7 +189,7 @@ function OrderDetailPage() {
       initPage();
     } catch (error) {
        console.error(error);
-       const errorMsg = error.response?.data?.detail || error.response?.data?.error || 'Помилка при списанні запчастини';
+       const errorMsg = error.response?.data?.error || error.response?.data?.detail || 'Помилка при списанні запчастини';
        message.error(errorMsg);
     } finally {
       setModalLoading(false);
