@@ -108,16 +108,9 @@ export const ordersAPI = {
   updateWork: (workId, data) => instance.patch(`/service-works/${workId}/`, data),
   removeWork: (workId) => instance.delete(`/service-works/${workId}/`),
   
-  // Запчастини додаються через service-works як used_parts
-  addPart: (orderId, data) => instance.post('/service-works/', { 
-    service_order: orderId,
-    work: data.work,
-    used_parts: [{
-      part: data.part,
-      quantity: data.quantity,
-      unit_price: data.price
-    }]
-  }),
+  // Запчастини до роботи
+  addPartToWork: (workId, data) => instance.post(`/service-works/${workId}/add-part/`, data),
+  removePartFromWork: (workId, partId) => instance.delete(`/service-works/${workId}/remove-part/${partId}/`),
 };
 
 export const clientsAPI = { 
