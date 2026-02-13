@@ -13,6 +13,7 @@ instance.interceptors.request.use((config) => {
   return config;
 });
 
+// Interceptor для обробки помилок авторизації
 instance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -26,6 +27,7 @@ instance.interceptors.response.use(
           });
           const newAccessToken = response.data.access;
           localStorage.setItem('access_token', newAccessToken);
+          
           error.config.headers.Authorization = `Bearer ${newAccessToken}`;
           return instance(error.config);
         } catch (refreshError) {
@@ -41,20 +43,10 @@ instance.interceptors.response.use(
   }
 );
 
-export const authAPI = {
-  login: (data) => instance.post('/token/', data),
-};
+// --- API Methods ---
 
-export const userAPI = {
-  // 🔥 ВИПРАВЛЕНО: правильні методи і URL
-  getMe: () => instance.get('/users/me/'),
-  updateMe: (data) => instance.patch('/users/me/', data),
-  changePassword: (data) => instance.post('/users/me/change-password/', data),
-  deleteMe: () => instance.delete('/users/me/'),
-  
-  // Адмінські методи
-  getAll: (params) => instance.get('/users/', { params }),
-  getById: (id) => instance.get(`/users/${id}/`),
+export const authAPI = {
+    login: (credentials) => instance.post('/token/', credentials),
 };
 
 export const ordersAPI = {
@@ -62,13 +54,13 @@ export const ordersAPI = {
   getById: (id) => instance.get(`/orders/${id}/`),
   create: (data) => {
     if (data instanceof FormData) {
-      return instance.post('/orders/', data, { headers: { 'Content-Type': 'multipart/form-data' }});
+        return instance.post('/orders/', data, { headers: { 'Content-Type': 'multipart/form-data' }});
     }
     return instance.post('/orders/', data);
   },
   update: (id, data) => {
     if (data instanceof FormData) {
-      return instance.patch(`/orders/${id}/`, data, { headers: { 'Content-Type': 'multipart/form-data' }});
+        return instance.patch(`/orders/${id}/`, data, { headers: { 'Content-Type': 'multipart/form-data' }});
     }
     return instance.patch(`/orders/${id}/`, data);
   },
@@ -78,14 +70,15 @@ export const ordersAPI = {
   unmarkForDeletion: (id) => instance.post(`/orders/${id}/unmark_for_deletion/`),
   getDashboardStats: () => instance.get('/orders/dashboard_stats/'),
   
+  // Роботи
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
   addPartToWork: (workId, data) => instance.post(`/service-works/${workId}/add-part/`, data),
   removePartFromWork: (workId, partId) => instance.delete(`/service-works/${workId}/remove-part/${partId}/`),
-  removeWork: (workId) => instance.delete(`/service-works/${workId}/`),
   updateWork: (workId, data) => instance.patch(`/service-works/${workId}/`, data),
+  removeWork: (workId) => instance.delete(`/service-works/${workId}/`),
 };
 
-export const clientsAPI = { 
+export const clientsAPI = {
   getAll: (params) => instance.get('/clients/', { params }),
   getById: (id) => instance.get(`/clients/${id}/`),
   create: (data) => instance.post('/clients/', data),
@@ -93,7 +86,7 @@ export const clientsAPI = {
   delete: (id) => instance.delete(`/clients/${id}/`),
 };
 
-export const trucksAPI = { 
+export const trucksAPI = {
   getAll: (params) => instance.get('/trucks/', { params }),
   getById: (id) => instance.get(`/trucks/${id}/`),
   create: (data) => instance.post('/trucks/', data),
@@ -101,20 +94,19 @@ export const trucksAPI = {
   delete: (id) => instance.delete(`/trucks/${id}/`),
 };
 
-export const inventoryAPI = { 
-  getAll: (params) => instance.get('/inventory/products/', { params }),
-  getById: (id) => instance.get(`/inventory/products/${id}/`),
-  create: (data) => instance.post('/inventory/products/', data),
-  update: (id, data) => instance.patch(`/inventory/products/${id}/`, data),
-  delete: (id) => instance.delete(`/inventory/products/${id}/`),
-};
-
-export const worksAPI = { 
+export const worksAPI = {
   getAll: (params) => instance.get('/work-prices/', { params }),
-  getById: (id) => instance.get(`/work-prices/${id}/`),
   create: (data) => instance.post('/work-prices/', data),
   update: (id, data) => instance.patch(`/work-prices/${id}/`, data),
   delete: (id) => instance.delete(`/work-prices/${id}/`),
+};
+
+export const workGroupsAPI = {
+  getAll: (params) => instance.get('/work-groups/', { params }),
+  getById: (id) => instance.get(`/work-groups/${id}/`),
+  create: (data) => instance.post('/work-groups/', data),
+  update: (id, data) => instance.patch(`/work-groups/${id}/`, data),
+  delete: (id) => instance.delete(`/work-groups/${id}/`),
 };
 
 export const employeesAPI = { 
@@ -130,6 +122,25 @@ export const baseModelsAPI = {
 export const maintenanceAPI = {
   getRules: (params) => instance.get('/maintenance-rules/', { params }),
   getRuleById: (id) => instance.get(`/maintenance-rules/${id}/`),
+  createRule: (data) => instance.post('/maintenance-rules/', data),
+  updateRule: (id, data) => instance.patch(`/maintenance-rules/${id}/`, data),
+  deleteRule: (id) => instance.delete(`/maintenance-rules/${id}/`),
+};
+
+export const inventoryAPI = {
+  getAll: (params) => instance.get('/inventory/products/', { params }),
+};
+
+// 🔥 ВИПРАВЛЕНО: userAPI з методами, які викликає фронтенд
+export const userAPI = {
+  getMe: () => instance.get('/users/me/'),
+  updateMe: (data) => instance.patch('/users/me/', data),
+  deleteMe: () => instance.delete('/users/me/'),
+  changePassword: (data) => instance.post('/users/me/change-password/', data),
+  
+  // Адмінські методи
+  getAll: (params) => instance.get('/users/', { params }),
+  getById: (id) => instance.get(`/users/${id}/`),
 };
 
 export default instance;
