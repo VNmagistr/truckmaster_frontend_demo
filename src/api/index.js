@@ -7,14 +7,13 @@ const instance = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// Додаємо токен до кожного запиту
 instance.interceptors.request.use((config) => {
   const token = localStorage.getItem('access_token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 });
 
-// Обробка 401 помилки (оновлення токена)
+// Interceptor для обробки помилок авторизації
 instance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -28,6 +27,7 @@ instance.interceptors.response.use(
           });
           const newAccessToken = response.data.access;
           localStorage.setItem('access_token', newAccessToken);
+          
           error.config.headers.Authorization = `Bearer ${newAccessToken}`;
           return instance(error.config);
         } catch (refreshError) {
@@ -36,8 +36,7 @@ instance.interceptors.response.use(
           window.location.href = '/login';
         }
       } else {
-         // Якщо немає рефреш токена - на логін
-         window.location.href = '/login';
+        window.location.href = '/login';
       }
     }
     return Promise.reject(error);
@@ -48,7 +47,6 @@ instance.interceptors.response.use(
 
 export const authAPI = {
     login: (credentials) => instance.post('/token/', credentials),
-    // ... інші методи аутентифікації
 };
 
 export const ordersAPI = {
@@ -61,10 +59,8 @@ export const ordersAPI = {
   markForDeletion: (id, reason) => instance.post(`/orders/${id}/mark_for_deletion/`, { reason }),
   unmarkForDeletion: (id) => instance.post(`/orders/${id}/unmark_for_deletion/`),
   
-  // Роботи
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
   
-  // Запчастини (через роботи)
   addPartToWork: (workId, data) => instance.post(`/service-works/${workId}/add-part/`, data),
   removePartFromWork: (workId, partId) => instance.delete(`/service-works/${workId}/remove-part/${partId}/`),
 };
@@ -81,19 +77,44 @@ export const trucksAPI = {
 
 export const worksAPI = {
   getAll: (params) => instance.get('/work-prices/', { params }),
+  create: (data) => instance.post('/work-prices/', data),
+  update: (id, data) => instance.patch(`/work-prices/${id}/`, data),
+  delete: (id) => instance.delete(`/work-prices/${id}/`),
 };
 
-export const employeesAPI = {
-  getAll: () => instance.get('/users/', { params: { role: 'mechanic' } }), 
+export const workGroupsAPI = {
+  getAll: (params) => instance.get('/work-groups/', { params }),
+  getById: (id) => instance.get(`/work-groups/${id}/`),
+  create: (data) => instance.post('/work-groups/', data),
+  update: (id, data) => instance.patch(`/work-groups/${id}/`, data),
+  delete: (id) => instance.delete(`/work-groups/${id}/`),
+};
+
+export const employeesAPI = { 
+  getAll: (params) => instance.get('/users/', { params: { ...params, group: 'Механіки' } }),
+  getById: (id) => instance.get(`/users/${id}/`),
+};
+
+export const baseModelsAPI = { 
+  getAll: () => instance.get('/base-models/'),
+  getById: (id) => instance.get(`/base-models/${id}/`),
+};
+
+export const maintenanceAPI = {
+  getRules: (params) => instance.get('/maintenance-rules/', { params }),
+  getRuleById: (id) => instance.get(`/maintenance-rules/${id}/`),
+  createRule: (data) => instance.post('/maintenance-rules/', data),
+  updateRule: (id, data) => instance.patch(`/maintenance-rules/${id}/`, data),
+  deleteRule: (id) => instance.delete(`/maintenance-rules/${id}/`),
 };
 
 export const inventoryAPI = {
   getAll: (params) => instance.get('/inventory/', { params }),
 };
 
-// 🔥 ВИПРАВЛЕНО: userAPI тепер відповідає викликам у ProfilePage.jsx
+// ФІКС 401 ПОМИЛКИ: userAPI з правильними методами і URL
 export const userAPI = {
-  getMe: () => instance.get('/users/me/'), // Було getProfile і /accounts/me/
+  getMe: () => instance.get('/users/me/'),
   updateMe: (data) => instance.patch('/users/me/', data),
   deleteMe: () => instance.delete('/users/me/'),
   changePassword: (data) => instance.post('/users/me/change-password/', data),
