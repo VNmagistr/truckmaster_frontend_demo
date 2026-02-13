@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input } from 'antd';
-import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, CameraOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input, Dropdown } from 'antd';
+import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, CameraOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
@@ -52,18 +52,14 @@ function OrderDetailPage() {
   const ensureArray = (input) => {
       if (!input) return [];
       if (Array.isArray(input)) return input;
-      // Axios response: input.data.results
       if (input.data?.results && Array.isArray(input.data.results)) return input.data.results;
-      // Axios response: input.data (якщо це масив)
       if (input.data && Array.isArray(input.data)) return input.data;
-      // Пряма відповідь: input.results
       if (input.results && Array.isArray(input.results)) return input.results;
       return [];
   };
 
   const loadDirectories = async () => {
     try {
-        // Функція для завантаження всіх сторінок
         const fetchAllPages = async (apiCall, pageSize = 50) => {
           let allResults = [];
           let page = 1;
@@ -76,12 +72,8 @@ function OrderDetailPage() {
               const results = data.results || data || [];
               
               allResults = [...allResults, ...results];
-              
-              // Перевіряємо чи є наступна сторінка
               hasMore = data.next !== null && results.length > 0;
               page++;
-              
-              // Обмеження: 3215 / 50 = ~65 сторінок
               if (page > 100) break;
             } catch (err) {
               console.error('Error fetching page:', page, err);
@@ -93,11 +85,8 @@ function OrderDetailPage() {
           return allResults;
         };
 
-        // Завантажуємо роботи та запчастини (всі сторінки)
         const worksPromise = fetchAllPages(worksAPI.getAll, 50);
         const partsPromise = fetchAllPages(inventoryAPI.getAll, 50);
-        
-        // Механіки - зазвичай їх мало
         const empResp = await employeesAPI.getAll();
 
         const works = await worksPromise;
@@ -115,44 +104,44 @@ function OrderDetailPage() {
     }
   };
 
-  // --- Хелпери ---
-  const getSafeName = (entity, field = 'name') => {
-      if (!entity) return '-';
-      if (typeof entity === 'object') return entity[field] || '-';
-      return entity;
+  const resolveNameInList = (id, list) => {
+    if (!id || !Array.isArray(list)) return null;
+    const item = list.find(el => String(el.id) === String(id));
+    return item ? (item.name || item.username || `${item.first_name || ''} ${item.last_name || ''}`.trim()) : null;
   };
 
-  const getSafeId = (entity) => {
-     if (!entity) return null;
-     if (typeof entity === 'object') return entity.id;
-     return entity;
+  const getSafeId = (obj) => {
+    if (!obj) return null;
+    return typeof obj === 'object' ? obj.id : obj;
   };
 
-  const resolveNameInList = (itemId, list, nameField = 'name') => {
-    if (!itemId) return '-';
-    if (typeof itemId === 'object') return itemId[nameField] || itemId.username || itemId.license_plate || '-';
-    const safeList = ensureArray(list);
-    const found = safeList.find(x => String(x.id) === String(itemId));
-    return found ? (found[nameField] || found.username || found.license_plate) : itemId; 
+  const getSafeName = (obj, fallbackField = 'name') => {
+    if (!obj) return '-';
+    if (typeof obj === 'object') return obj[fallbackField] || obj.name || '-';
+    return obj;
   };
 
-  // Форматування пробігу
+  const getPhotoUrl = (photo) => {
+    if (!photo) return null;
+    if (typeof photo === 'string') return photo;
+    return photo.url || photo.image || null;
+  };
+
   const formatMileage = (mileage) => {
     if (!mileage) return '-';
     return `${Number(mileage).toLocaleString('uk-UA')} км`;
   };
 
-  // Отримання URL фото
-  const getPhotoUrl = (photo) => {
-    if (!photo) return null;
-    if (typeof photo === 'string') {
-      // Якщо це відносний шлях - додаємо базовий URL
-      if (photo.startsWith('/')) {
-        return `${window.location.origin}${photo}`;
-      }
-      return photo;
+  // Зміна статусу замовлення
+  const handleStatusChange = async (newStatus) => {
+    try {
+      await ordersAPI.update(id, { status: newStatus });
+      message.success('Статус змінено');
+      initPage();
+    } catch (error) {
+      console.error(error);
+      message.error('Помилка зміни статусу');
     }
-    return null;
   };
 
   const handleAddWork = async (values) => {
@@ -164,8 +153,8 @@ function OrderDetailPage() {
       formWork.resetFields();
       initPage();
     } catch (error) {
-      console.error(error);
-      message.error('Помилка додавання роботи');
+       const errorMsg = error.response?.data?.error || 'Помилка при додаванні роботи';
+       message.error(errorMsg);
     } finally {
       setModalLoading(false);
     }
@@ -176,7 +165,6 @@ function OrderDetailPage() {
     try {
       const workId = values.service_work;
       
-      // Використовуємо новий ендпоінт add-part
       await ordersAPI.addPartToWork(workId, {
         part: values.part,
         quantity: values.quantity,
@@ -204,7 +192,6 @@ function OrderDetailPage() {
     }
   };
 
-  // Відкрити модалку редагування роботи
   const handleEditWork = (record) => {
     setEditingWork(record);
     formEditWork.setFieldsValue({
@@ -216,7 +203,6 @@ function OrderDetailPage() {
     setIsEditWorkModalOpen(true);
   };
 
-  // Зберегти зміни роботи
   const handleSaveEditWork = async (values) => {
     if (!editingWork) return;
     
@@ -241,7 +227,6 @@ function OrderDetailPage() {
     }
   };
 
-  // Видалити роботу
   const handleDeleteWork = (workId) => {
     Modal.confirm({
       title: 'Видалити роботу?',
@@ -263,6 +248,27 @@ function OrderDetailPage() {
     });
   };
 
+  const handleDeletePart = (workId, partId) => {
+    Modal.confirm({
+      title: 'Видалити запчастину?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Ви впевнені, що хочете видалити цю запчастину?',
+      okText: 'Видалити',
+      okType: 'danger',
+      cancelText: 'Скасувати',
+      onOk: async () => {
+        try {
+          await ordersAPI.removePartFromWork(workId, partId);
+          message.success('Запчастину видалено');
+          initPage();
+        } catch (error) {
+          console.error(error);
+          message.error('Помилка видалення запчастини');
+        }
+      }
+    });
+  };
+
   if (loading) return <LoadingSpinner />;
   if (!order) return <div style={{padding: 20, textAlign: 'center'}}>Помилка: Немає даних замовлення</div>;
 
@@ -271,16 +277,30 @@ function OrderDetailPage() {
   const safePartsList = ensureArray(partsList);
   
   const orderWorks = ensureArray(order.works);
-  const orderParts = ensureArray(order.parts || order.used_parts);
   
-  // Перевірка на видалення
+  // Збираємо всі запчастини з усіх робіт
+  const allUsedParts = orderWorks.flatMap(work => 
+    (work.used_parts || []).map(part => ({
+      ...part,
+      work_id: work.id,
+      work_name: work.work?.name || 'Невідома робота'
+    }))
+  );
+  
   const isDeleted = order.marked_for_deletion;
 
-  // Фото
   const carPhoto = getPhotoUrl(order.car_photo);
   const odometerPhoto = getPhotoUrl(order.odometer_photo);
   const dashboardPhoto = getPhotoUrl(order.dashboard_photo);
   const hasPhotos = carPhoto || odometerPhoto || dashboardPhoto;
+
+  // Статуси для dropdown
+  const statusItems = [
+    { key: 'OPEN', label: 'Відкрито', icon: <ClockCircleOutlined /> },
+    { key: 'IN_PROGRESS', label: 'В роботі', icon: <ToolOutlined /> },
+    { key: 'DONE', label: 'Виконано', icon: <CheckCircleOutlined /> },
+    { key: 'CLOSED', label: 'Закрито', icon: <CheckCircleOutlined /> },
+  ];
 
   const worksColumns = [
     {
@@ -350,7 +370,7 @@ function OrderDetailPage() {
       key: 'part',
       render: (val) => {
           const partObj = typeof val === 'object' ? val : safePartsList.find(p => String(p.id) === String(val));
-          if (!partObj) return typeof val === 'object' ? (val.name || val) : val;
+          if (!partObj) return typeof val === 'object' ? (val?.name || '-') : '-';
           return (
             <div>
                 <div style={{ fontWeight: 500 }}>{partObj.name}</div>
@@ -359,9 +379,44 @@ function OrderDetailPage() {
           );
       },
     },
-    { title: 'Кількість', dataIndex: 'quantity', key: 'quantity' },
-    { title: 'Ціна', dataIndex: 'price', key: 'price', render: (val) => formatMoney(val) },
-    { title: 'Сума', key: 'total', render: (_, record) => formatMoney((record.price || 0) * (record.quantity || 1)) }
+    { 
+      title: 'Кількість', 
+      dataIndex: 'quantity', 
+      key: 'quantity',
+      render: (val) => val || '-'
+    },
+    { 
+      title: 'Ціна', 
+      dataIndex: 'unit_price', 
+      key: 'unit_price', 
+      render: (val) => formatMoney(val) 
+    },
+    { 
+      title: 'Сума', 
+      key: 'total', 
+      render: (_, record) => formatMoney((parseFloat(record.unit_price) || 0) * (parseFloat(record.quantity) || 1)) 
+    },
+    {
+      title: 'Робота',
+      dataIndex: 'work_name',
+      key: 'work_name',
+      render: (val) => <span style={{ fontSize: '12px', color: '#666' }}>{val}</span>
+    },
+    {
+      title: 'Дії',
+      key: 'actions',
+      width: 80,
+      render: (_, record) => (
+        <Button 
+          type="link" 
+          size="small" 
+          danger
+          icon={<DeleteOutlined />}
+          onClick={() => handleDeletePart(record.work_id, record.id)}
+          disabled={isDeleted}
+        />
+      ),
+    },
   ];
 
   const clientId = getSafeId(order.client);
@@ -396,21 +451,30 @@ function OrderDetailPage() {
     },
     {
       key: 'parts',
-      label: `Використані запчастини (${orderParts.length})`,
+      label: `Використані запчастини (${allUsedParts.length})`,
       children: (
         <div>
              <Button 
                 type="dashed" 
                 icon={<ToolOutlined />} 
                 onClick={() => setIsPartModalOpen(true)} 
-                disabled={isDeleted}
+                disabled={isDeleted || orderWorks.length === 0}
                 style={{ marginBottom: 16, width: '100%' }}
             >
                 Списати запчастину
             </Button>
+            {orderWorks.length === 0 && (
+              <Alert 
+                message="Спочатку додайте роботу" 
+                description="Щоб списати запчастину, потрібно спочатку додати хоча б одну роботу до замовлення."
+                type="info" 
+                showIcon 
+                style={{ marginBottom: 16 }}
+              />
+            )}
             <Table 
                 columns={partsColumns} 
-                dataSource={orderParts} 
+                dataSource={allUsedParts} 
                 rowKey={(r) => r.id || Math.random()} 
                 pagination={false} 
                 size="small" 
@@ -491,6 +555,20 @@ function OrderDetailPage() {
         extra={
           <Space>
             <Button icon={<PrinterOutlined />}>Друк</Button>
+            <Dropdown 
+              menu={{ 
+                items: statusItems.map(item => ({
+                  ...item,
+                  onClick: () => handleStatusChange(item.key),
+                  disabled: order.status === item.key
+                }))
+              }}
+              disabled={isDeleted}
+            >
+              <Button>
+                Змінити статус <DownOutlined />
+              </Button>
+            </Dropdown>
             <Button 
                 type="primary" 
                 icon={<EditOutlined />} 
@@ -504,66 +582,82 @@ function OrderDetailPage() {
       />
 
       {isDeleted && (
-          <Alert
-            message="Увага! Це замовлення позначено на видалення"
-            description={`Причина: ${order.deletion_reason || 'Не вказана'}. Редагування та додавання нових позицій заблоковано.`}
-            type="error"
-            showIcon
-            icon={<DeleteOutlined />}
-            style={{ marginBottom: 16 }}
-          />
+        <Alert 
+          message="Це замовлення позначено на видалення" 
+          description={`Причина: ${order.deletion_reason || 'Не вказано'}. Позначив: ${order.marked_for_deletion_by_name || 'Невідомо'}`}
+          type="error" 
+          showIcon 
+          style={{ marginBottom: 16 }}
+        />
       )}
 
       <Card style={{ marginBottom: 16 }}>
-        <Descriptions column={{ xs: 1, sm: 2, md: 3 }} bordered size="small">
-          <Descriptions.Item label="Номер">
-             <strong>{order.order_number || `#${order.id}`}</strong>
-          </Descriptions.Item>
-          
+        <Descriptions bordered column={{ xs: 1, sm: 2, md: 3 }} size="small">
+          <Descriptions.Item label="Номер">{order.order_number || '-'}</Descriptions.Item>
           <Descriptions.Item label="Статус">
-             <StatusTag status={order.status} type="order" />
+            <Dropdown 
+              menu={{ 
+                items: statusItems.map(item => ({
+                  ...item,
+                  onClick: () => handleStatusChange(item.key),
+                  disabled: order.status === item.key
+                }))
+              }}
+              trigger={['click']}
+              disabled={isDeleted}
+            >
+              <span style={{ cursor: isDeleted ? 'not-allowed' : 'pointer' }}>
+                <StatusTag status={order.status} />
+                {!isDeleted && <DownOutlined style={{ marginLeft: 4, fontSize: 10 }} />}
+              </span>
+            </Dropdown>
           </Descriptions.Item>
-          
           <Descriptions.Item label="Сума">
-             <strong style={{ color: '#52c41a' }}>{formatMoney(order.total_cost || 0)}</strong>
+            <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
+              {formatMoney(order.total_cost)}
+            </span>
           </Descriptions.Item>
-          
           <Descriptions.Item label="Клієнт">
             {clientId ? (
-              <Link to={`/clients/${clientId}`}>
-                {getSafeName(order.client, 'name')}
-              </Link>
-            ) : '-'}
+              <Link to={`/clients/${clientId}`}>{getSafeName(order.client)}</Link>
+            ) : getSafeName(order.client)}
           </Descriptions.Item>
-          
           <Descriptions.Item label="Вантажівка">
-             {truckId ? (
-                <Link to={`/trucks/${truckId}`}>
-                  {getSafeName(order.truck, 'license_plate')}
-                </Link>
-             ) : '-'}
+            {truckId ? (
+              <Link to={`/trucks/${truckId}`}>
+                {order.truck?.license_plate || '-'}
+              </Link>
+            ) : (order.truck?.license_plate || '-')}
           </Descriptions.Item>
-          
           <Descriptions.Item label="VIN (останні 7)">
-             {order.truck?.last_seven_vin || '-'}
+            {order.truck?.last_seven_vin || '-'}
           </Descriptions.Item>
-
           <Descriptions.Item label="Пробіг">
-             <strong style={{ color: '#1890ff' }}>{formatMileage(order.current_mileage)}</strong>
+            <span style={{ color: '#1890ff' }}>{formatMileage(order.current_mileage)}</span>
           </Descriptions.Item>
-
           <Descriptions.Item label="Опис проблеми" span={2}>
-             {order.problem_description || '-'}
+            {order.problem_description || '-'}
           </Descriptions.Item>
+          {order.recommendations && (
+            <Descriptions.Item label="Рекомендації" span={3}>
+              <div style={{ 
+                background: '#fffbe6', 
+                padding: '8px 12px', 
+                borderRadius: 4,
+                border: '1px solid #ffe58f'
+              }}>
+                {order.recommendations}
+              </div>
+            </Descriptions.Item>
+          )}
         </Descriptions>
       </Card>
 
       <Card>
-        <Tabs items={tabItems} />
+        <Tabs items={tabItems} defaultActiveKey="works" />
       </Card>
 
-      {/* --- МОДАЛКИ --- */}
-      
+      {/* Модалка додавання роботи */}
       <Modal title="Додати роботу" open={isWorkModalOpen} onCancel={() => setIsWorkModalOpen(false)} footer={null} destroyOnClose>
         <Form form={formWork} layout="vertical" onFinish={handleAddWork}>
             <Form.Item name="work" label="Послуга" rules={[{ required: true, message: 'Оберіть послугу' }]}>
@@ -577,18 +671,20 @@ function OrderDetailPage() {
             <Form.Item name="employee" label="Механік">
                  <Select 
                     showSearch 
+                    allowClear
                     placeholder="Оберіть механіка" 
                     optionFilterProp="label" 
-                    options={safeEmployeesList.map(e => ({ value: e.id, label: e.name || e.username }))} 
+                    options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))} 
                  />
             </Form.Item>
-            <Form.Item name="hours" label="Годин" initialValue={1} rules={[{ required: true }]}>
-                <InputNumber min={0.1} step={0.1} style={{ width: '100%' }} />
+            <Form.Item name="hours" label="Витрачено годин" initialValue={1} rules={[{ required: true }]}>
+                <InputNumber min={0.1} step={0.5} style={{ width: '100%' }} />
             </Form.Item>
             <Button type="primary" htmlType="submit" loading={modalLoading} block>Зберегти</Button>
         </Form>
       </Modal>
 
+      {/* Модалка списання запчастин */}
       <Modal title="Списати запчастину" open={isPartModalOpen} onCancel={() => setIsPartModalOpen(false)} footer={null} destroyOnClose width={500}>
         <Form form={formPart} layout="vertical" onFinish={handleAddPart}>
             {orderWorks.length > 0 ? (

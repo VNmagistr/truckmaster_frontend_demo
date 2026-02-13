@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Form, Input, Button, Card, message, Space, Select, Upload, Alert, Row, Col, Typography, Spin, Divider } from 'antd';
-import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, SearchOutlined, CarOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, message, Space, Select, Upload, Alert, Row, Col, Typography, Divider } from 'antd';
+import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, CarOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ordersAPI, clientsAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import debounce from 'lodash/debounce';
 
 const { Text } = Typography;
+const { TextArea } = Input;
 
 function OrderFormPage() {
   const [form] = Form.useForm();
@@ -17,10 +18,9 @@ function OrderFormPage() {
   const [truckOptions, setTruckOptions] = useState([]); 
   const [searchingTrucks, setSearchingTrucks] = useState(false);
   
-  // Стан для відображення вибраного авто та власника
   const [selectedTruck, setSelectedTruck] = useState(null);
   const [clientLocked, setClientLocked] = useState(false);
-  const [lockedClientName, setLockedClientName] = useState(''); // Зберігаємо ім'я окремо
+  const [lockedClientName, setLockedClientName] = useState('');
   
   const [alerts, setAlerts] = useState([]);
   const [fileList, setFileList] = useState([]);
@@ -29,23 +29,29 @@ function OrderFormPage() {
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
+  // Статуси замовлення
+  const statusOptions = [
+    { value: 'OPEN', label: 'Відкрито' },
+    { value: 'IN_PROGRESS', label: 'В роботі' },
+    { value: 'DONE', label: 'Виконано' },
+    { value: 'CLOSED', label: 'Закрито' },
+    { value: 'CANCELED', label: 'Скасовано' },
+  ];
+
   useEffect(() => {
     const initData = async () => {
       setLoading(true);
       try {
-        // 1. Завантажуємо клієнтів
         const clientsResp = await clientsAPI.getAll({ page_size: 500 }).catch(() => ({ data: [] }));
         const clientsData = clientsResp.data || clientsResp;
         const clientsList = clientsData.results || clientsData || [];
         setClients(clientsList);
 
-        // 2. Якщо редагування - завантажуємо замовлення
         if (isEdit) {
           const orderResp = await ordersAPI.getById(id);
           const orderData = orderResp.data || orderResp;
 
           if (orderData) {
-            // Зберігаємо дані про авто
             if (orderData.truck) {
               const initialTruck = {
                 id: orderData.truck.id,
@@ -58,21 +64,19 @@ function OrderFormPage() {
               setTruckOptions([initialTruck]);
               setSelectedTruck(initialTruck);
               setClientLocked(true);
-              
-              // Зберігаємо ім'я клієнта для відображення
               setLockedClientName(orderData.client?.name || '');
             }
 
-            // Встановлюємо значення форми
             form.setFieldsValue({
+              order_number: orderData.order_number,
               truck: orderData.truck?.id || orderData.truck,
               client: orderData.client?.id || orderData.client,
               current_mileage: orderData.current_mileage,
               problem_description: orderData.problem_description,
+              recommendations: orderData.recommendations,
               status: orderData.status
             });
             
-            // Перевіряємо регламенти
             if (orderData.truck && orderData.current_mileage) {
               checkMaintenance(orderData.truck.id || orderData.truck, orderData.current_mileage);
             }
@@ -89,7 +93,6 @@ function OrderFormPage() {
     initData();
   }, [id, isEdit, form]);
 
-  // Пошук авто по номеру
   const handleSearchTruck = async (value) => {
     if (!value || value.length < 2) {
       setTruckOptions([]);
@@ -110,30 +113,25 @@ function OrderFormPage() {
     }
   };
 
-  // Debounce для пошуку (600мс затримка)
   const debouncedSearch = useMemo(() => debounce(handleSearchTruck, 600), []);
 
-  // Очистка debounce при розмонтуванні
   useEffect(() => {
     return () => {
       debouncedSearch.cancel();
     };
   }, [debouncedSearch]);
 
-  // Обробка вибору авто
   const handleTruckSelect = (truckId, option) => {
     const truckData = option.truck;
     
     if (truckData) {
       setSelectedTruck(truckData);
       
-      // Автоматично підставляємо власника
       if (truckData.client_id) {
         form.setFieldsValue({ client: truckData.client_id });
         setLockedClientName(truckData.client_name || '');
         setClientLocked(true);
       } else {
-        // Якщо авто без власника - дозволяємо вибрати вручну
         form.setFieldsValue({ client: undefined });
         setLockedClientName('');
         setClientLocked(false);
@@ -141,17 +139,14 @@ function OrderFormPage() {
       }
     }
     
-    // Очищаємо попередні alerts
     setAlerts([]);
     
-    // Перевіряємо регламенти якщо є пробіг
     const mileage = form.getFieldValue('current_mileage');
     if (mileage) {
       checkMaintenance(truckId, mileage);
     }
   };
 
-  // Очищення вибору авто
   const handleTruckClear = () => {
     setSelectedTruck(null);
     setClientLocked(false);
@@ -161,13 +156,11 @@ function OrderFormPage() {
     setTruckOptions([]);
   };
 
-  // Розблокування поля клієнта
   const handleUnlockClient = () => {
     setClientLocked(false);
     setLockedClientName('');
   };
 
-  // Перевірка регламентів ТО
   const checkMaintenance = async (truckId, mileage) => {
     if (!truckId || !mileage) return;
     
@@ -187,7 +180,6 @@ function OrderFormPage() {
     }
   };
 
-  // Обробка зміни пробігу
   const handleMileageBlur = (e) => {
     const mileage = e.target.value;
     const truckId = form.getFieldValue('truck');
@@ -220,18 +212,23 @@ function OrderFormPage() {
 
       if (isEdit) {
         await ordersAPI.update(id, formData);
-        message.success('Замовлення оновлено!');
+        message.success('Замовлення оновлено');
       } else {
         await ordersAPI.create(formData);
-        message.success('Замовлення створено!');
+        message.success('Замовлення створено');
       }
       navigate('/orders');
     } catch (error) {
       console.error('Save error:', error);
-      const errorMsg = error.response?.data?.detail || 
-                       error.response?.data?.client?.[0] ||
-                       'Помилка збереження';
-      message.error(errorMsg);
+      const errorDetail = error.response?.data;
+      if (errorDetail) {
+        const messages = Object.entries(errorDetail)
+          .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+          .join('; ');
+        message.error(messages || 'Помилка збереження');
+      } else {
+        message.error('Помилка збереження замовлення');
+      }
     } finally {
       setSaving(false);
     }
@@ -241,56 +238,87 @@ function OrderFormPage() {
 
   return (
     <div>
-      <PageHeader title={isEdit ? `Редагування замовлення #${id}` : 'Нове замовлення'} showBack />
-      
+      <PageHeader
+        title={isEdit ? 'Редагувати замовлення' : 'Нове замовлення'}
+        showBack
+      />
+
       <Row gutter={24}>
         <Col xs={24} lg={16}>
           <Card>
-            <Form form={form} layout="vertical" onFinish={onFinish} initialValues={{ status: 'OPEN' }}>
-              
-              {/* Пошук автомобіля */}
-              <Form.Item
-                name="truck"
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={onFinish}
+              initialValues={{ status: 'OPEN' }}
+            >
+              {/* Номер замовлення та Статус - тільки для редагування */}
+              {isEdit && (
+                <>
+                  <Row gutter={16}>
+                    <Col xs={24} sm={12}>
+                      <Form.Item 
+                        name="order_number" 
+                        label="Номер замовлення"
+                      >
+                        <Input 
+                          size="large"
+                          placeholder="SO-20260213-0001"
+                        />
+                      </Form.Item>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                      <Form.Item 
+                        name="status" 
+                        label="Статус"
+                        rules={[{ required: true, message: 'Оберіть статус' }]}
+                      >
+                        <Select 
+                          size="large"
+                          options={statusOptions}
+                        />
+                      </Form.Item>
+                    </Col>
+                  </Row>
+                  <Divider />
+                </>
+              )}
+
+              {/* Пошук авто */}
+              <Form.Item 
+                name="truck" 
                 label={
                   <Space>
                     <CarOutlined />
-                    <span>Автомобіль</span>
+                    <span>Вантажівка (введіть номер для пошуку)</span>
                   </Space>
                 }
-                rules={[{ required: true, message: 'Оберіть автомобіль' }]}
-                extra="Введіть мінімум 2 символи номерного знаку для пошуку"
+                rules={[{ required: true, message: 'Оберіть вантажівку' }]}
               >
                 <Select
                   showSearch
-                  placeholder="Введіть номер авто (напр. АА1234ВВ)..."
+                  allowClear
+                  placeholder="Введіть номер авто (мін. 2 символи)"
                   filterOption={false}
                   onSearch={debouncedSearch}
                   onSelect={handleTruckSelect}
                   onClear={handleTruckClear}
-                  notFoundContent={
-                    searchingTrucks ? (
-                      <div style={{ textAlign: 'center', padding: '10px' }}>
-                        <Spin size="small" />
-                        <div>Пошук...</div>
-                      </div>
-                    ) : null
-                  }
-                  allowClear
-                  suffixIcon={<SearchOutlined />}
+                  loading={searchingTrucks}
+                  notFoundContent={searchingTrucks ? 'Пошук...' : 'Введіть номер авто'}
                   size="large"
                 >
                   {truckOptions.map(truck => (
                     <Select.Option key={truck.id} value={truck.id} truck={truck}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
-                          <Text strong style={{ fontSize: '15px' }}>{truck.license_plate}</Text>
-                          <Text type="secondary" style={{ marginLeft: 10 }}>
-                            {truck.specific_model_name || truck.model || ''}
+                          <Text strong style={{ fontSize: '14px' }}>{truck.license_plate}</Text>
+                          <br />
+                          <Text type="secondary" style={{ fontSize: '12px' }}>
+                            {truck.specific_model_name || truck.model || 'Модель не вказана'}
                           </Text>
                         </div>
-                        <div>
-                          <Text type="secondary" style={{ fontSize: '13px' }}>
-                            <UserOutlined style={{ marginRight: 4 }} />
+                        <div style={{ textAlign: 'right' }}>
+                          <Text type="secondary" style={{ fontSize: '11px' }}>
                             {truck.client_name || 'Без власника'}
                           </Text>
                         </div>
@@ -350,7 +378,6 @@ function OrderFormPage() {
                 </label>
                 
                 {clientLocked ? (
-                  // Коли заблоковано - показуємо ім'я клієнта як текст
                   <div 
                     style={{ 
                       padding: '8px 12px', 
@@ -377,7 +404,6 @@ function OrderFormPage() {
                     </Button>
                   </div>
                 ) : (
-                  // Коли розблоковано - показуємо Select
                   <Select 
                     showSearch 
                     placeholder="Оберіть власника"
@@ -454,9 +480,26 @@ function OrderFormPage() {
 
               {/* Опис проблеми */}
               <Form.Item name="problem_description" label="Опис проблеми / скарги клієнта">
-                <Input.TextArea 
-                  rows={4} 
+                <TextArea 
+                  rows={3} 
                   placeholder="Опишіть проблему або скарги клієнта..."
+                />
+              </Form.Item>
+
+              {/* Рекомендації */}
+              <Form.Item 
+                name="recommendations" 
+                label={
+                  <Space>
+                    <span>Рекомендації</span>
+                    <Text type="secondary">(після діагностики)</Text>
+                  </Space>
+                }
+              >
+                <TextArea 
+                  rows={3} 
+                  placeholder="Перелік виявлених проблем та рекомендації щодо ремонту..."
+                  style={{ backgroundColor: '#fffbe6' }}
                 />
               </Form.Item>
 
@@ -500,13 +543,30 @@ function OrderFormPage() {
                 <br />
                 <Text type="secondary">Система перевірить регламенти ТО</Text>
               </li>
-              <li>
+              <li style={{ marginBottom: 12 }}>
                 <Text strong>Додайте фото та опис</Text>
                 <br />
                 <Text type="secondary">Фото авто, одометра, панелі</Text>
               </li>
+              <li>
+                <Text strong>Заповніть рекомендації</Text>
+                <br />
+                <Text type="secondary">Після діагностики вкажіть виявлені проблеми</Text>
+              </li>
             </ol>
           </Card>
+
+          {isEdit && (
+            <Card title="Статуси замовлення" size="small" style={{ marginTop: 16 }}>
+              <ul style={{ paddingLeft: 20, margin: 0 }}>
+                <li><Text strong>Відкрито</Text> — нове замовлення</li>
+                <li><Text strong>В роботі</Text> — ведуться роботи</li>
+                <li><Text strong>Виконано</Text> — роботи завершені</li>
+                <li><Text strong>Закрито</Text> — замовлення закрите</li>
+                <li><Text strong>Скасовано</Text> — замовлення скасовано</li>
+              </ul>
+            </Card>
+          )}
         </Col>
       </Row>
     </div>
