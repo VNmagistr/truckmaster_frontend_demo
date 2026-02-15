@@ -178,8 +178,19 @@ export const maintenanceAPI = {
 };
 
 export const inventoryAPI = {
+  // Products
   getAll: (params) => instance.get('/inventory/products/', { params }),
   getById: (id) => instance.get(`/inventory/products/${id}/`),
+  createProduct: (data) => instance.post('/inventory/products/', data),
+  updateProduct: (id, data) => instance.patch(`/inventory/products/${id}/`, data),
+  deleteProduct: (id) => instance.delete(`/inventory/products/${id}/`),
+  
+  // Categories
+  getCategories: (params) => instance.get('/inventory/categories/', { params }),
+  getCategoryById: (id) => instance.get(`/inventory/categories/${id}/`),
+  createCategory: (data) => instance.post('/inventory/categories/', data),
+  updateCategory: (id, data) => instance.patch(`/inventory/categories/${id}/`, data),
+  deleteCategory: (id) => instance.delete(`/inventory/categories/${id}/`),
 };
 
 export const userAPI = {
@@ -198,3 +209,6 @@ export const userAPI = {
 };
 
 export default instance;
+
+
+feat(api): add full inventory API methods for products and categories
