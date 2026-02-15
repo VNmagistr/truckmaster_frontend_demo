@@ -209,6 +209,3 @@ export const userAPI = {
 };
 
 export default instance;
-
-
-feat(api): add full inventory API methods for products and categories
