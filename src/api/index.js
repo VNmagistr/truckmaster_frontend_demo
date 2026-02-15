@@ -178,9 +178,10 @@ export const maintenanceAPI = {
 };
 
 export const inventoryAPI = {
-  // Products
+  // Products - all methods
   getAll: (params) => instance.get('/inventory/products/', { params }),
   getById: (id) => instance.get(`/inventory/products/${id}/`),
+  getProductById: (id) => instance.get(`/inventory/products/${id}/`),
   createProduct: (data) => instance.post('/inventory/products/', data),
   updateProduct: (id, data) => instance.patch(`/inventory/products/${id}/`, data),
   deleteProduct: (id) => instance.delete(`/inventory/products/${id}/`),
@@ -191,6 +192,29 @@ export const inventoryAPI = {
   createCategory: (data) => instance.post('/inventory/categories/', data),
   updateCategory: (id, data) => instance.patch(`/inventory/categories/${id}/`, data),
   deleteCategory: (id) => instance.delete(`/inventory/categories/${id}/`),
+  
+  // Subcategories
+  getSubcategories: (params) => instance.get('/inventory/subcategories/', { params }),
+  getSubcategoryById: (id) => instance.get(`/inventory/subcategories/${id}/`),
+  createSubcategory: (data) => instance.post('/inventory/subcategories/', data),
+  updateSubcategory: (id, data) => instance.patch(`/inventory/subcategories/${id}/`, data),
+  deleteSubcategory: (id) => instance.delete(`/inventory/subcategories/${id}/`),
+  
+  // Warehouses
+  getWarehouses: (params) => instance.get('/inventory/warehouses/', { params }),
+  getWarehouseById: (id) => instance.get(`/inventory/warehouses/${id}/`),
+  createWarehouse: (data) => instance.post('/inventory/warehouses/', data),
+  updateWarehouse: (id, data) => instance.patch(`/inventory/warehouses/${id}/`, data),
+  deleteWarehouse: (id) => instance.delete(`/inventory/warehouses/${id}/`),
+  
+  // Stock
+  getStock: (params) => instance.get('/inventory/stock/', { params }),
+  getStockById: (id) => instance.get(`/inventory/stock/${id}/`),
+  updateStock: (id, data) => instance.patch(`/inventory/stock/${id}/`, data),
+  
+  // Stock Movements
+  getMovements: (params) => instance.get('/inventory/movements/', { params }),
+  createMovement: (data) => instance.post('/inventory/movements/', data),
 };
 
 export const userAPI = {
