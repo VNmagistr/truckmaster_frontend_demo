@@ -210,10 +210,12 @@ export const inventoryAPI = {
   // Stock
   getStock: (params) => instance.get('/inventory/stock/', { params }),
   getStockById: (id) => instance.get(`/inventory/stock/${id}/`),
+  getStockByProduct: (productId) => instance.get('/inventory/stock/', { params: { product: productId } }),
   updateStock: (id, data) => instance.patch(`/inventory/stock/${id}/`, data),
   
   // Stock Movements
   getMovements: (params) => instance.get('/inventory/movements/', { params }),
+  getMovementsByProduct: (productId) => instance.get('/inventory/movements/', { params: { product: productId } }),
   createMovement: (data) => instance.post('/inventory/movements/', data),
 };
 
