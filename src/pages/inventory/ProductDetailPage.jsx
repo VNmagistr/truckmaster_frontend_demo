@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Tag, message, Table, Tabs, Modal, Space } from 'antd';
-import { EditOutlined, WarningOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Button, Tag, message, Table, Tabs, Modal, Space, Alert } from 'antd';
+import { EditOutlined, WarningOutlined, DeleteOutlined, ExclamationCircleOutlined, UndoOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
@@ -52,30 +52,30 @@ function ProductDetailPage() {
     Modal.confirm({
       title: 'Видалити товар?',
       icon: <ExclamationCircleOutlined />,
-      content: `"${product.name}" буде видалено без можливості відновлення.`,
+      content: `"${product.name}" буде позначено на видалення. Відновити можна через список складу.`,
       okText: 'Видалити',
       okType: 'danger',
       cancelText: 'Скасувати',
       onOk: async () => {
         try {
-          await inventoryAPI.deleteProduct(id);
+          await inventoryAPI.markForDeletion(id);
           message.success('Товар видалено');
           navigate('/inventory');
         } catch (error) {
-          const status = error.response?.status;
-          const detail = error.response?.data?.detail;
-          if (status === 405) {
-            message.error('Видалення не підтримується сервером (405)');
-          } else if (status === 403) {
-            message.error('Немає прав для видалення (403)');
-          } else if (detail) {
-            message.error(detail);
-          } else {
-            message.error(`Не вдалося видалити товар (${status ?? 'мережева помилка'})`);
-          }
+          message.error('Не вдалося видалити товар');
         }
       },
     });
+  };
+
+  const handleUnmarkForDeletion = async () => {
+    try {
+      await inventoryAPI.unmarkForDeletion(id);
+      message.success('Товар відновлено');
+      fetchProductData();
+    } catch (error) {
+      message.error('Не вдалося відновити товар');
+    }
   };
 
   const stockColumns = [
@@ -208,23 +208,44 @@ function ProductDetailPage() {
         showBack
         extra={
           <Space>
-            <Button
-              danger
-              icon={<DeleteOutlined />}
-              onClick={handleDelete}
-            >
-              Видалити
-            </Button>
-            <Button
-              type="primary"
-              icon={<EditOutlined />}
-              onClick={() => navigate(`/inventory/${id}/edit`)}
-            >
-              Редагувати
-            </Button>
+            {product.marked_for_deletion ? (
+              <Button
+                icon={<UndoOutlined />}
+                onClick={handleUnmarkForDeletion}
+                style={{ color: '#52c41a', borderColor: '#52c41a' }}
+              >
+                Відновити
+              </Button>
+            ) : (
+              <>
+                <Button
+                  danger
+                  icon={<DeleteOutlined />}
+                  onClick={handleDelete}
+                >
+                  Видалити
+                </Button>
+                <Button
+                  type="primary"
+                  icon={<EditOutlined />}
+                  onClick={() => navigate(`/inventory/${id}/edit`)}
+                >
+                  Редагувати
+                </Button>
+              </>
+            )}
           </Space>
         }
       />
+
+      {product.marked_for_deletion && (
+        <Alert
+          message="Цей товар позначено на видалення"
+          type="error"
+          showIcon
+          style={{ marginBottom: 16 }}
+        />
+      )}
 
       <Card style={{ marginBottom: 16 }}>
         <Descriptions column={{ xs: 1, sm: 2, md: 3 }}>

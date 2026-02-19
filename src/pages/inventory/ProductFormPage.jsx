@@ -137,7 +137,7 @@ function ProductFormPage() {
       onOk: async () => {
         setDeleting(true);
         try {
-          await inventoryAPI.deleteProduct(id);
+          await inventoryAPI.markForDeletion(id);
           message.success('Товар видалено');
           navigate('/inventory');
         } catch (error) {

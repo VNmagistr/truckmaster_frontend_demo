@@ -210,7 +210,8 @@ export const inventoryAPI = {
   getProductById: (id) => instance.get(`/inventory/products/${id}/`),
   createProduct: (data) => instance.post('/inventory/products/', data),
   updateProduct: (id, data) => instance.patch(`/inventory/products/${id}/`, data),
-  deleteProduct: (id) => instance.delete(`/inventory/products/${id}/`),
+  markForDeletion: (id) => instance.post(`/inventory/products/${id}/mark_for_deletion/`),
+  unmarkForDeletion: (id) => instance.post(`/inventory/products/${id}/unmark_for_deletion/`),
 
   // Categories
   getCategories: (params) => instance.get('/inventory/categories/', { params }),
