@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Tag, message, Table, Tabs } from 'antd';
-import { EditOutlined, WarningOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Button, Tag, message, Table, Tabs, Modal, Space } from 'antd';
+import { EditOutlined, WarningOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useParams, useNavigate } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
@@ -46,6 +46,26 @@ function ProductDetailPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleDelete = () => {
+    Modal.confirm({
+      title: 'Видалити товар?',
+      icon: <ExclamationCircleOutlined />,
+      content: `"${product.name}" буде видалено без можливості відновлення.`,
+      okText: 'Видалити',
+      okType: 'danger',
+      cancelText: 'Скасувати',
+      onOk: async () => {
+        try {
+          await inventoryAPI.deleteProduct(id);
+          message.success('Товар видалено');
+          navigate('/inventory');
+        } catch (error) {
+          message.error('Не вдалося видалити товар');
+        }
+      },
+    });
   };
 
   const stockColumns = [
@@ -177,13 +197,22 @@ function ProductDetailPage() {
         subtitle={product.sku_code}
         showBack
         extra={
-          <Button
-            type="primary"
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/inventory/${id}/edit`)}
-          >
-            Редагувати
-          </Button>
+          <Space>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={handleDelete}
+            >
+              Видалити
+            </Button>
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/inventory/${id}/edit`)}
+            >
+              Редагувати
+            </Button>
+          </Space>
         }
       />
 
