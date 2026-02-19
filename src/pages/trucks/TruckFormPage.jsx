@@ -32,7 +32,7 @@ function TruckFormPage() {
           await fetchTruck(loadedClients); 
         }
       } catch (error) {
-        console.error("Initialization error:", error);
+        message.error('Помилка ініціалізації');
       } finally {
         setLoading(false);
       }
@@ -57,7 +57,6 @@ function TruckFormPage() {
       
       return initialClients; // Повертаємо, щоб передати в fetchTruck
     } catch (error) {
-      console.error('Error fetching dictionaries:', error);
       return [];
     }
   };
@@ -84,7 +83,7 @@ function TruckFormPage() {
             // Додаємо його в список, щоб Select міг показати ім'я
             setClients(prev => [...prev, ownerData]);
           } catch (err) {
-            console.error("Failed to fetch missing owner details", err);
+            // власника не знайдено — ігноруємо
           }
         }
       }
@@ -97,7 +96,6 @@ function TruckFormPage() {
       });
 
     } catch (error) {
-      console.error('Error fetching truck:', error);
       message.error('Не вдалося завантажити дані вантажівки');
       navigate('/trucks');
     }
@@ -115,7 +113,6 @@ function TruckFormPage() {
       }
       navigate('/trucks');
     } catch (error) {
-      console.error('Save error:', error);
       if (error.response?.data) {
         const errors = error.response.data;
         Object.keys(errors).forEach(key => {

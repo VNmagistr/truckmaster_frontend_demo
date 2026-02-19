@@ -76,8 +76,7 @@ function DashboardPage() {
       ]);
 
     } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      // message.error('Не вдалося завантажити статистику'); // Можна тимчасово приховати
+      message.error('Не вдалося завантажити статистику');
     } finally {
       setLoading(false);
     }

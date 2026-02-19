@@ -27,7 +27,6 @@ function ClientFormPage() {
       const data = response.data || response;
       form.setFieldsValue(data);
     } catch (error) {
-      console.error('Error fetching client:', error);
       message.error('Не вдалося завантажити дані клієнта');
       navigate('/clients');
     } finally {
@@ -47,7 +46,6 @@ function ClientFormPage() {
       }
       navigate('/clients');
     } catch (error) {
-      console.error('Error saving client:', error);
       if (error.response?.data) {
           const errors = error.response.data;
           // Якщо сервер повернув помилки валідації

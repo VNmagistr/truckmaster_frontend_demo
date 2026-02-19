@@ -48,7 +48,7 @@ function TruckDetailPage() {
                  const models = res.data?.results || res.data || [];
                  const found = models.find(m => m.id === truckData.base_model);
                  if (found) setBaseModelName(found.name);
-             }).catch(err => console.error("Failed to load base model name", err));
+             }).catch(() => {});
         }
       }
 
@@ -61,12 +61,11 @@ function TruckDetailPage() {
           clientsAPI.getById(truckData.client).then(res => {
               const cData = res.data || res;
               setClientName(cData.name);
-          }).catch(err => console.error("Failed to load client name", err));
+          }).catch(() => {});
         }
       }
 
     } catch (error) {
-      console.error('Error fetching truck:', error);
       message.error('Не вдалося завантажити дані вантажівки');
       navigate('/trucks');
     } finally {

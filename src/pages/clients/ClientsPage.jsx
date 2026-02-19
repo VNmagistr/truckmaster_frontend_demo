@@ -58,7 +58,6 @@ function ClientsPage() {
       }));
 
     } catch (error) {
-      console.error('Error fetching clients:', error);
       message.error('Не вдалося завантажити клієнтів');
     } finally {
       setLoading(false);

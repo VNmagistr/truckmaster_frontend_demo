@@ -51,7 +51,6 @@ function TrucksPage() {
         total: data.count || 0,
       }));
     } catch (error) {
-      console.error('Error fetching trucks:', error);
       message.error('Не вдалося завантажити вантажівки');
     } finally {
       setLoading(false);

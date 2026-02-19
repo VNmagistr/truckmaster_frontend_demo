@@ -27,7 +27,6 @@ function ProfilePage() {
       setUser(data);
       formProfile.setFieldsValue(data);
     } catch (error) {
-      console.error(error);
       message.error('Не вдалося завантажити дані профілю');
     } finally {
       setLoading(false);
@@ -42,7 +41,6 @@ function ProfilePage() {
       setUser(data);
       message.success('Профіль оновлено');
     } catch (error) {
-      console.error(error);
       message.error('Помилка оновлення профілю');
     } finally {
       setSaving(false);
@@ -56,7 +54,6 @@ function ProfilePage() {
       message.success('Пароль успішно змінено');
       formPassword.resetFields();
     } catch (error) {
-      console.error(error);
       const errorMsg = error.response?.data?.old_password?.[0] || 'Помилка зміни паролю';
       message.error(errorMsg);
     } finally {
