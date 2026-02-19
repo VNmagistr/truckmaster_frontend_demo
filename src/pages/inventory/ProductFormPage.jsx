@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Card, message, Space, Select, InputNumber, Switch, Row, Col } from 'antd';
-import { SaveOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, message, Space, Select, InputNumber, Switch, Row, Col, Modal } from 'antd';
+import { SaveOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
@@ -19,6 +19,7 @@ function ProductFormPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEdit = Boolean(id);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     fetchCategories().then(() => {
@@ -125,6 +126,29 @@ function ProductFormPage() {
     }
   };
 
+  const handleDelete = () => {
+    Modal.confirm({
+      title: 'Видалити товар?',
+      icon: <ExclamationCircleOutlined />,
+      content: 'Товар буде видалено без можливості відновлення.',
+      okText: 'Видалити',
+      okType: 'danger',
+      cancelText: 'Скасувати',
+      onOk: async () => {
+        setDeleting(true);
+        try {
+          await inventoryAPI.deleteProduct(id);
+          message.success('Товар видалено');
+          navigate('/inventory');
+        } catch (error) {
+          message.error('Не вдалося видалити товар');
+        } finally {
+          setDeleting(false);
+        }
+      },
+    });
+  };
+
   if (loading) return <LoadingSpinner />;
 
   return (
@@ -132,6 +156,16 @@ function ProductFormPage() {
       <PageHeader
         title={isEdit ? 'Редагувати товар' : 'Новий товар'}
         showBack
+        extra={isEdit && (
+          <Button
+            danger
+            icon={<DeleteOutlined />}
+            loading={deleting}
+            onClick={handleDelete}
+          >
+            Видалити
+          </Button>
+        )}
       />
 
       <Card>
