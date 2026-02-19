@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Input, message, Popconfirm, Card } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { trucksAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 
@@ -67,12 +67,15 @@ function TrucksPage() {
     }
   };
 
+  const handleRowClick = (record) => {
+    navigate(`/trucks/${record.id}`);
+  };
+
   const columns = [
     {
       title: 'Номерний знак',
       dataIndex: 'license_plate',
       key: 'license_plate',
-      render: (text, record) => <Link to={`/trucks/${record.id}`}>{text}</Link>,
     },
     {
       title: 'Модель',
@@ -89,13 +92,19 @@ function TrucksPage() {
       title: 'Клієнт',
       dataIndex: ['client', 'name'],
       key: 'client',
-      render: (text, record) => record.client ? <Link to={`/clients/${record.client.id}`}>{record.client.name}</Link> : '-',
+      render: (text, record) => record.client ? (
+        <a
+          onClick={(e) => { e.stopPropagation(); navigate(`/clients/${record.client.id}`); }}
+        >
+          {record.client.name}
+        </a>
+      ) : '-',
     },
     {
       title: 'Дії',
       key: 'actions',
       render: (_, record) => (
-        <Space size="middle">
+        <Space size="middle" onClick={(e) => e.stopPropagation()}>
           <Button icon={<EyeOutlined />} onClick={() => navigate(`/trucks/${record.id}`)} />
           <Button icon={<EditOutlined />} onClick={() => navigate(`/trucks/${record.id}/edit`)} />
           <Popconfirm title="Видалити вантажівку?" onConfirm={() => handleDelete(record.id)}>
@@ -140,8 +149,19 @@ function TrucksPage() {
           }}
           onChange={(newPagination) => setPagination(prev => ({ ...prev, current: newPagination.current }))}
           loading={loading}
+          rowClassName="row-clickable"
+          onRow={(record) => ({
+            onClick: () => handleRowClick(record),
+            style: { cursor: 'pointer' },
+          })}
         />
       </Card>
+
+      <style>{`
+        .row-clickable:hover > td {
+          background-color: #e6f7ff !important;
+        }
+      `}</style>
     </div>
   );
 }

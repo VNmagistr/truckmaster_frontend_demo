@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Input, message, Popconfirm, Card } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { clientsAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import { formatPhone } from '../../utils/formatters';
@@ -74,12 +74,16 @@ function ClientsPage() {
     }
   };
 
+  const handleRowClick = (record) => {
+    navigate(`/clients/${record.id}`);
+  };
+
   const columns = [
     {
       title: 'Ім\'я / Назва',
       dataIndex: 'name',
       key: 'name',
-      render: (text, record) => <Link to={`/clients/${record.id}`}>{text}</Link>,
+      render: (text) => text,
     },
     {
       title: 'Телефон',
@@ -97,7 +101,7 @@ function ClientsPage() {
       title: 'Дії',
       key: 'actions',
       render: (_, record) => (
-        <Space size="middle">
+        <Space size="middle" onClick={(e) => e.stopPropagation()}>
           <Button icon={<EyeOutlined />} onClick={() => navigate(`/clients/${record.id}`)} />
           <Button icon={<EditOutlined />} onClick={() => navigate(`/clients/${record.id}/edit`)} />
           <Popconfirm title="Видалити клієнта?" onConfirm={() => handleDelete(record.id)}>
@@ -137,13 +141,24 @@ function ClientsPage() {
             current: pagination.current,
             pageSize: 20,
             total: pagination.total,
-            showSizeChanger: false, // Можна увімкнути, якщо сервер підтримує динамічний page_size
+            showSizeChanger: false,
             showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`
           }}
           onChange={(newPagination) => setPagination(prev => ({ ...prev, current: newPagination.current }))}
           loading={loading}
+          rowClassName="row-clickable"
+          onRow={(record) => ({
+            onClick: () => handleRowClick(record),
+            style: { cursor: 'pointer' },
+          })}
         />
       </Card>
+
+      <style>{`
+        .row-clickable:hover > td {
+          background-color: #e6f7ff !important;
+        }
+      `}</style>
     </div>
   );
 }
