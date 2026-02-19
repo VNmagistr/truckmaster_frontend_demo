@@ -62,7 +62,17 @@ function ProductDetailPage() {
           message.success('Товар видалено');
           navigate('/inventory');
         } catch (error) {
-          message.error('Не вдалося видалити товар');
+          const status = error.response?.status;
+          const detail = error.response?.data?.detail;
+          if (status === 405) {
+            message.error('Видалення не підтримується сервером (405)');
+          } else if (status === 403) {
+            message.error('Немає прав для видалення (403)');
+          } else if (detail) {
+            message.error(detail);
+          } else {
+            message.error(`Не вдалося видалити товар (${status ?? 'мережева помилка'})`);
+          }
         }
       },
     });
