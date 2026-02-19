@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, message, Card, Tag, Tabs, Select, Popconfirm } from 'antd';
-import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Input, message, Card, Tag, Tabs, Select, Popconfirm, Tooltip } from 'antd';
+import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UndoOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, EmptyState } from '../../components';
@@ -17,6 +17,7 @@ function InventoryPage() {
   const [activeTab, setActiveTab] = useState('all');
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [showDeleted, setShowDeleted] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -26,7 +27,7 @@ function InventoryPage() {
   // Перезавантажуємо при зміні фільтрів або сторінки
   useEffect(() => {
     fetchProducts(pagination.current, searchText);
-  }, [pagination.current, activeTab, selectedCategory]);
+  }, [pagination.current, activeTab, selectedCategory, showDeleted]);
 
   // Debounce для пошуку
   useEffect(() => {
@@ -66,6 +67,8 @@ function InventoryPage() {
         params.category = selectedCategory;
       }
 
+      if (showDeleted) params.show_deleted = true;
+
       const response = await inventoryAPI.getAll(params);
       
       // 🔥 ВИПРАВЛЕННЯ: Правильна розпаковка даних
@@ -87,11 +90,21 @@ function InventoryPage() {
 
   const handleDelete = async (id) => {
     try {
-      await inventoryAPI.delete(id);
+      await inventoryAPI.markForDeletion(id);
       message.success('Товар видалено');
       fetchProducts(pagination.current, searchText);
     } catch (error) {
       message.error('Не вдалося видалити товар');
+    }
+  };
+
+  const handleUnmarkForDeletion = async (id) => {
+    try {
+      await inventoryAPI.unmarkForDeletion(id);
+      message.success('Товар відновлено');
+      fetchProducts(pagination.current, searchText);
+    } catch (error) {
+      message.error('Не вдалося відновити товар');
     }
   };
 
@@ -110,7 +123,14 @@ function InventoryPage() {
       title: 'Назва',
       dataIndex: 'name',
       key: 'name',
-      render: (text, record) => <span style={{ fontWeight: 500 }}>{text}</span>,
+      render: (text, record) => (
+        <span>
+          <span style={{ fontWeight: 500 }}>{text}</span>
+          {record.marked_for_deletion && (
+            <Tag color="error" style={{ marginLeft: 8 }}>Видалено</Tag>
+          )}
+        </span>
+      ),
     },
     {
       title: 'Бренд',
@@ -153,10 +173,22 @@ function InventoryPage() {
       render: (_, record) => (
         <Space size="middle" onClick={(e) => e.stopPropagation()}>
           <Button icon={<EyeOutlined />} onClick={() => navigate(`/inventory/${record.id}`)} />
-          <Button icon={<EditOutlined />} onClick={() => navigate(`/inventory/${record.id}/edit`)} />
-          <Popconfirm title="Видалити товар?" onConfirm={() => handleDelete(record.id)}>
-            <Button icon={<DeleteOutlined />} danger />
-          </Popconfirm>
+          {record.marked_for_deletion ? (
+            <Tooltip title="Відновити товар">
+              <Button
+                icon={<UndoOutlined />}
+                onClick={() => handleUnmarkForDeletion(record.id)}
+                style={{ color: '#52c41a', borderColor: '#52c41a' }}
+              />
+            </Tooltip>
+          ) : (
+            <>
+              <Button icon={<EditOutlined />} onClick={() => navigate(`/inventory/${record.id}/edit`)} />
+              <Popconfirm title="Видалити товар?" onConfirm={() => handleDelete(record.id)}>
+                <Button icon={<DeleteOutlined />} danger />
+              </Popconfirm>
+            </>
+          )}
         </Space>
       ),
     },
@@ -205,6 +237,17 @@ function InventoryPage() {
             </Select>
 
             <Button
+              type={showDeleted ? 'primary' : 'default'}
+              danger={showDeleted}
+              onClick={() => {
+                setShowDeleted(!showDeleted);
+                setPagination(prev => ({ ...prev, current: 1 }));
+              }}
+            >
+              {showDeleted ? 'Приховати видалені' : 'Показати видалені'}
+            </Button>
+
+            <Button
               type="primary"
               icon={<PlusOutlined />}
               onClick={() => navigate('/inventory/new')}
@@ -237,7 +280,9 @@ function InventoryPage() {
             }}
             onChange={(newPag) => setPagination(prev => ({ ...prev, current: newPag.current }))}
             size="middle"
-            rowClassName="row-clickable"
+            rowClassName={(record) =>
+              record.marked_for_deletion ? 'row-marked-for-deletion' : 'row-clickable'
+            }
             onRow={(record) => ({
               onClick: () => handleRowClick(record),
               style: { cursor: 'pointer' },
@@ -255,6 +300,12 @@ function InventoryPage() {
       <style>{`
         .row-clickable:hover > td {
           background-color: #e6f7ff !important;
+        }
+        .row-marked-for-deletion {
+          background-color: #fff2f0 !important;
+        }
+        .row-marked-for-deletion:hover > td {
+          background-color: #ffccc7 !important;
         }
       `}</style>
     </div>
