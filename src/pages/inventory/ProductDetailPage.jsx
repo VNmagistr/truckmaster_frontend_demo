@@ -29,17 +29,16 @@ function ProductDetailPage() {
         const stockData = await inventoryAPI.getStockByProduct(id);
         setStockItems(stockData.results || stockData || []);
       } catch (e) {
-        console.error('Error fetching stock:', e);
+        // залишки не завантажились — не критично
       }
 
       try {
         const movementsData = await inventoryAPI.getMovementsByProduct(id);
         setMovements(movementsData.results || movementsData || []);
       } catch (e) {
-        console.error('Error fetching movements:', e);
+        // рухи не завантажились — не критично
       }
     } catch (error) {
-      console.error('Error fetching product:', error);
       message.error('Не вдалося завантажити дані товару');
       navigate('/inventory');
     } finally {

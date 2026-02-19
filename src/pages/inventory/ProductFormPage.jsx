@@ -44,7 +44,7 @@ function ProductFormPage() {
       setFilteredSubcategories(subList);
 
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      // категорії не завантажились
     }
   };
 
@@ -69,7 +69,6 @@ function ProductFormPage() {
       }
 
     } catch (error) {
-      console.error('Error fetching product:', error);
       message.error('Не вдалося завантажити дані товару');
       navigate('/inventory');
     } finally {
@@ -105,7 +104,6 @@ function ProductFormPage() {
       }
       navigate('/inventory');
     } catch (error) {
-      console.error('Error saving product:', error);
       if (error.response?.data) {
         const errors = error.response.data;
         // Виводимо помилки гарно

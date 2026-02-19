@@ -83,7 +83,6 @@ function OrderFormPage() {
           }
         }
       } catch (error) {
-        console.error('Init error:', error);
         message.error('Помилка завантаження даних');
       } finally {
         setLoading(false);
@@ -106,7 +105,6 @@ function OrderFormPage() {
       const results = data.results || data || [];
       setTruckOptions(results);
     } catch (error) {
-      console.error("Помилка пошуку авто:", error);
       message.error('Помилка пошуку авто');
     } finally {
       setSearchingTrucks(false);
@@ -176,7 +174,7 @@ function OrderFormPage() {
         setAlerts([]);
       }
     } catch (error) {
-      console.error("Помилка перевірки регламентів:", error);
+      // ігноруємо помилку перевірки регламентів — не критично
     }
   };
 
@@ -219,7 +217,6 @@ function OrderFormPage() {
       }
       navigate('/orders');
     } catch (error) {
-      console.error('Save error:', error);
       const errorDetail = error.response?.data;
       if (errorDetail) {
         const messages = Object.entries(errorDetail)

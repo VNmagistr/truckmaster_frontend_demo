@@ -60,7 +60,6 @@ function BotPage() {
         todayMessages: 12,
       });
     } catch (error) {
-      console.error('Error fetching bot data:', error);
       message.error('Не вдалося завантажити дані бота');
     } finally {
       setLoading(false);

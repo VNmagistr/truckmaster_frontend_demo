@@ -1,14 +1,29 @@
 import axios from 'axios';
+import useAuthStore from '../store/authStore';
 
 const baseURL = import.meta.env.VITE_API_URL || 'http://REMOVED/api';
 
 const instance = axios.create({
   baseURL,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 30000, // 30 seconds timeout
+  timeout: 30000,
 });
 
-// Request interceptor - add auth token
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach(prom => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
+// Request interceptor — add auth token
 instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
@@ -17,13 +32,10 @@ instance.interceptors.request.use(
     }
     return config;
   },
-  (error) => {
-    console.error('Request error:', error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Response interceptor - handle auth errors and token refresh
+// Response interceptor — handle auth errors and token refresh
 instance.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -31,42 +43,61 @@ instance.interceptors.response.use(
 
     // Network error (server unavailable)
     if (!error.response) {
-      console.error('Network error - server unavailable');
       return Promise.reject(new Error('Сервер недоступний. Перевірте підключення до мережі.'));
     }
 
-    // Handle 401 Unauthorized - try to refresh token
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      const refreshToken = localStorage.getItem('refresh_token');
-      
-      if (refreshToken) {
-        originalRequest._retry = true;
-        
-        try {
-          const response = await axios.post(`${baseURL}/token/refresh/`, {
-            refresh: refreshToken
-          });
-          
-          const newAccessToken = response.data.access;
-          localStorage.setItem('access_token', newAccessToken);
-          
-          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-          return instance(originalRequest);
-        } catch (refreshError) {
-          console.error('Token refresh failed:', refreshError);
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          window.location.href = '/login';
-          return Promise.reject(refreshError);
-        }
-      } else {
-        window.location.href = '/login';
-      }
+    // Skip token refresh for auth endpoints
+    if (
+      originalRequest.url?.includes('/token/') ||
+      originalRequest.url?.includes('/register/')
+    ) {
+      return Promise.reject(error);
     }
 
-    // Log other errors for debugging
-    if (error.response?.status >= 500) {
-      console.error('Server error:', error.response?.status, error.response?.data);
+    // Handle 401 — try to refresh token
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      // If already refreshing — queue this request
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject });
+        })
+          .then(token => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return instance(originalRequest);
+          })
+          .catch(err => Promise.reject(err));
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      const refreshToken = localStorage.getItem('refresh_token');
+
+      if (!refreshToken) {
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+        return Promise.reject(error);
+      }
+
+      try {
+        const response = await axios.post(`${baseURL}/token/refresh/`, {
+          refresh: refreshToken,
+        });
+
+        const { access } = response.data;
+        useAuthStore.getState().updateAccessToken(access);
+        processQueue(null, access);
+
+        originalRequest.headers.Authorization = `Bearer ${access}`;
+        return instance(originalRequest);
+      } catch (refreshError) {
+        processQueue(refreshError, null);
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
 
     return Promise.reject(error);
@@ -82,13 +113,12 @@ export const authAPI = {
 };
 
 export const ordersAPI = {
-  // CRUD
   getAll: (params) => instance.get('/orders/', { params }),
   getById: (id) => instance.get(`/orders/${id}/`),
   create: (data) => {
     if (data instanceof FormData) {
       return instance.post('/orders/', data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
     }
     return instance.post('/orders/', data);
@@ -96,28 +126,25 @@ export const ordersAPI = {
   update: (id, data) => {
     if (data instanceof FormData) {
       return instance.patch(`/orders/${id}/`, data, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
     }
     return instance.patch(`/orders/${id}/`, data);
   },
 
-  // Custom actions
   searchTruck: (plate) => instance.get('/orders/search-truck/', { params: { plate } }),
   checkMaintenance: (truckId, mileage) => instance.post('/orders/check-maintenance/', {
     truck_id: truckId,
-    current_mileage: mileage
+    current_mileage: mileage,
   }),
   markForDeletion: (id, reason) => instance.post(`/orders/${id}/mark_for_deletion/`, { reason }),
   unmarkForDeletion: (id) => instance.post(`/orders/${id}/unmark_for_deletion/`),
   getDashboardStats: () => instance.get('/orders/dashboard_stats/'),
 
-  // Works management
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
   updateWork: (workId, data) => instance.patch(`/service-works/${workId}/`, data),
   removeWork: (workId) => instance.delete(`/service-works/${workId}/`),
 
-  // Parts management
   addPartToWork: (workId, data) => instance.post(`/service-works/${workId}/add-part/`, data),
   removePartFromWork: (workId, partId) => instance.delete(`/service-works/${workId}/remove-part/${partId}/`),
 };
@@ -169,7 +196,6 @@ export const baseModelsAPI = {
 };
 
 export const maintenanceAPI = {
-  // Rules
   getRules: (params) => instance.get('/maintenance-rules/', { params }),
   getRuleById: (id) => instance.get(`/maintenance-rules/${id}/`),
   createRule: (data) => instance.post('/maintenance-rules/', data),
@@ -178,55 +204,53 @@ export const maintenanceAPI = {
 };
 
 export const inventoryAPI = {
-  // Products - all methods
+  // Products
   getAll: (params) => instance.get('/inventory/products/', { params }),
   getById: (id) => instance.get(`/inventory/products/${id}/`),
   getProductById: (id) => instance.get(`/inventory/products/${id}/`),
   createProduct: (data) => instance.post('/inventory/products/', data),
   updateProduct: (id, data) => instance.patch(`/inventory/products/${id}/`, data),
   deleteProduct: (id) => instance.delete(`/inventory/products/${id}/`),
-  
+
   // Categories
   getCategories: (params) => instance.get('/inventory/categories/', { params }),
   getCategoryById: (id) => instance.get(`/inventory/categories/${id}/`),
   createCategory: (data) => instance.post('/inventory/categories/', data),
   updateCategory: (id, data) => instance.patch(`/inventory/categories/${id}/`, data),
   deleteCategory: (id) => instance.delete(`/inventory/categories/${id}/`),
-  
+
   // Subcategories
   getSubcategories: (params) => instance.get('/inventory/subcategories/', { params }),
   getSubcategoryById: (id) => instance.get(`/inventory/subcategories/${id}/`),
   createSubcategory: (data) => instance.post('/inventory/subcategories/', data),
   updateSubcategory: (id, data) => instance.patch(`/inventory/subcategories/${id}/`, data),
   deleteSubcategory: (id) => instance.delete(`/inventory/subcategories/${id}/`),
-  
+
   // Warehouses
   getWarehouses: (params) => instance.get('/inventory/warehouses/', { params }),
   getWarehouseById: (id) => instance.get(`/inventory/warehouses/${id}/`),
   createWarehouse: (data) => instance.post('/inventory/warehouses/', data),
   updateWarehouse: (id, data) => instance.patch(`/inventory/warehouses/${id}/`, data),
   deleteWarehouse: (id) => instance.delete(`/inventory/warehouses/${id}/`),
-  
+
   // Stock
   getStock: (params) => instance.get('/inventory/stock/', { params }),
   getStockById: (id) => instance.get(`/inventory/stock/${id}/`),
   getStockByProduct: (productId) => instance.get('/inventory/stock/', { params: { product: productId } }),
   updateStock: (id, data) => instance.patch(`/inventory/stock/${id}/`, data),
-  
-  // Stock Movements
+
+  // Movements
   getMovements: (params) => instance.get('/inventory/movements/', { params }),
   getMovementsByProduct: (productId) => instance.get('/inventory/movements/', { params: { product: productId } }),
   createMovement: (data) => instance.post('/inventory/movements/', data),
 };
 
 export const userAPI = {
-  // Current user methods
   getMe: () => instance.get('/users/me/'),
   updateMe: (data) => instance.patch('/users/me/', data),
   deleteMe: () => instance.delete('/users/me/'),
   changePassword: (data) => instance.post('/users/me/change-password/', data),
 
-  // Admin methods
   getAll: (params) => instance.get('/users/', { params }),
   getById: (id) => instance.get(`/users/${id}/`),
   create: (data) => instance.post('/users/', data),

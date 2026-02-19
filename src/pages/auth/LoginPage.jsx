@@ -31,7 +31,6 @@ function LoginPage() {
       message.success('Успішний вхід!');
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      console.error('Login error:', error);
       message.error('Невірний логін або пароль');
     } finally {
       setLoading(false);

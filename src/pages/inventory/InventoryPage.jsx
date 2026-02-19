@@ -44,7 +44,6 @@ function InventoryPage() {
       const data = response.data || response;
       setCategories(data.results || data || []);
     } catch (error) {
-      console.warn('Categories fetch warning:', error);
       // Не показуємо помилку користувачу, бо це не критично
     }
   };
@@ -80,7 +79,6 @@ function InventoryPage() {
       }));
 
     } catch (error) {
-      console.error('Error fetching inventory:', error);
       message.error('Не вдалося завантажити склад');
     } finally {
       setLoading(false);

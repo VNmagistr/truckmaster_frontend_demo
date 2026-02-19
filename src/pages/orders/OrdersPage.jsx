@@ -78,7 +78,6 @@ function OrdersPage() {
         total: data.count || 0,
       }));
     } catch (error) {
-      console.error('Fetch error:', error);
       message.error('Помилка завантаження замовлень');
     } finally {
       setLoading(false);
@@ -121,7 +120,6 @@ function OrdersPage() {
       
       fetchOrders(pagination.current, pagination.pageSize, statusFilter, searchText);
     } catch (error) {
-      console.error('Mark for deletion error:', error);
       const errorMsg = error.response?.data?.detail || 'Не вдалося позначити на видалення';
       message.error(errorMsg);
     } finally {
@@ -140,7 +138,6 @@ function OrdersPage() {
       
       fetchOrders(pagination.current, pagination.pageSize, statusFilter, searchText);
     } catch (error) {
-      console.error('Unmark for deletion error:', error);
       const errorMsg = error.response?.data?.detail || 'Не вдалося скасувати позначення';
       message.error(errorMsg);
     } finally {

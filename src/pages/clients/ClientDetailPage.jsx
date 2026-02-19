@@ -51,7 +51,6 @@ function ClientDetailPage() {
       setOrdersTotal(ordersData.count || (ordersData.results ? ordersData.results.length : ordersData.length) || 0);
 
     } catch (error) {
-      console.error('Error fetching client details:', error);
       message.error('Не вдалося завантажити дані клієнта');
       navigate('/clients');
     } finally {

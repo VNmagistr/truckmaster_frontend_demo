@@ -42,7 +42,6 @@ function OrderDetailPage() {
 
       loadDirectories();
     } catch (error) {
-      console.error('CRITICAL ERROR loading order:', error);
       message.error('Не вдалося завантажити замовлення (можливо, воно видалене)');
     } finally {
       setLoading(false);
@@ -76,12 +75,10 @@ function OrderDetailPage() {
               page++;
               if (page > 100) break;
             } catch (err) {
-              console.error('Error fetching page:', page, err);
               break;
             }
           }
-          
-          console.log('Total loaded:', allResults.length);
+
           return allResults;
         };
 
@@ -95,12 +92,8 @@ function OrderDetailPage() {
         setWorksList(works);
         setPartsList(parts);
         setEmployeesList(ensureArray(empResp));
-        
-        console.log('Works loaded:', works.length);
-        console.log('Parts loaded:', parts.length);
-        
     } catch (e) {
-        console.error("Global directory error", e);
+        message.error('Не вдалося завантажити довідники');
     }
   };
 
@@ -139,7 +132,6 @@ function OrderDetailPage() {
       message.success('Статус змінено');
       initPage();
     } catch (error) {
-      console.error(error);
       message.error('Помилка зміни статусу');
     }
   };
@@ -176,7 +168,6 @@ function OrderDetailPage() {
       formPart.resetFields();
       initPage();
     } catch (error) {
-       console.error(error);
        const errorMsg = error.response?.data?.error || error.response?.data?.detail || 'Помилка при списанні запчастини';
        message.error(errorMsg);
     } finally {
@@ -220,7 +211,6 @@ function OrderDetailPage() {
       formEditWork.resetFields();
       initPage();
     } catch (error) {
-      console.error(error);
       message.error('Помилка оновлення роботи');
     } finally {
       setModalLoading(false);
@@ -241,7 +231,6 @@ function OrderDetailPage() {
           message.success('Роботу видалено');
           initPage();
         } catch (error) {
-          console.error(error);
           message.error('Помилка видалення роботи');
         }
       }
@@ -262,7 +251,6 @@ function OrderDetailPage() {
           message.success('Запчастину видалено');
           initPage();
         } catch (error) {
-          console.error(error);
           message.error('Помилка видалення запчастини');
         }
       }
