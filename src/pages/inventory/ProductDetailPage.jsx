@@ -23,18 +23,20 @@ function ProductDetailPage() {
     setLoading(true);
     try {
       const productData = await inventoryAPI.getProductById(id);
-      setProduct(productData);
+      setProduct(productData.data || productData);
 
       try {
         const stockData = await inventoryAPI.getStockByProduct(id);
-        setStockItems(stockData.results || stockData || []);
+        const stockParsed = stockData.data || stockData;
+        setStockItems(stockParsed.results || stockParsed || []);
       } catch (e) {
         // залишки не завантажились — не критично
       }
 
       try {
         const movementsData = await inventoryAPI.getMovementsByProduct(id);
-        setMovements(movementsData.results || movementsData || []);
+        const movementsParsed = movementsData.data || movementsData;
+        setMovements(movementsParsed.results || movementsParsed || []);
       } catch (e) {
         // рухи не завантажились — не критично
       }
