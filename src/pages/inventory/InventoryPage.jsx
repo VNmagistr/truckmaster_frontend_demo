@@ -95,6 +95,10 @@ function InventoryPage() {
     }
   };
 
+  const handleRowClick = (record) => {
+    navigate(`/inventory/${record.id}`);
+  };
+
   const columns = [
     {
       title: 'Артикул',
@@ -147,7 +151,7 @@ function InventoryPage() {
       title: 'Дії',
       key: 'actions',
       render: (_, record) => (
-        <Space size="middle">
+        <Space size="middle" onClick={(e) => e.stopPropagation()}>
           <Button icon={<EyeOutlined />} onClick={() => navigate(`/inventory/${record.id}`)} />
           <Button icon={<EditOutlined />} onClick={() => navigate(`/inventory/${record.id}/edit`)} />
           <Popconfirm title="Видалити товар?" onConfirm={() => handleDelete(record.id)}>
@@ -233,6 +237,11 @@ function InventoryPage() {
             }}
             onChange={(newPag) => setPagination(prev => ({ ...prev, current: newPag.current }))}
             size="middle"
+            rowClassName="row-clickable"
+            onRow={(record) => ({
+              onClick: () => handleRowClick(record),
+              style: { cursor: 'pointer' },
+            })}
           />
         ) : (
           <EmptyState
@@ -242,6 +251,12 @@ function InventoryPage() {
           />
         )}
       </Card>
+
+      <style>{`
+        .row-clickable:hover > td {
+          background-color: #e6f7ff !important;
+        }
+      `}</style>
     </div>
   );
 }
