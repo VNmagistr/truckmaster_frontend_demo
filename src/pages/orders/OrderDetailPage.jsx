@@ -139,13 +139,20 @@ function OrderDetailPage() {
   const handleAddWork = async (values) => {
     setModalLoading(true);
     try {
-      await ordersAPI.addWork(id, values);
+      await ordersAPI.addWork(id, {
+        service_order: id,
+        work: values.work,
+        mechanic: values.employee || null,
+        hours_spent: values.hours,
+      });
       message.success('Роботу додано');
       setIsWorkModalOpen(false);
       formWork.resetFields();
       initPage();
     } catch (error) {
-       const errorMsg = error.response?.data?.error || 'Помилка при додаванні роботи';
+       console.error('addWork error response:', error.response?.data);
+       const data = error.response?.data;
+       const errorMsg = data?.error || data?.detail || (typeof data === 'object' ? JSON.stringify(data) : null) || 'Помилка при додаванні роботи';
        message.error(errorMsg);
     } finally {
       setModalLoading(false);
