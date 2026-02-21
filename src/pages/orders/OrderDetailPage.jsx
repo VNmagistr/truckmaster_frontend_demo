@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input, Dropdown } from 'antd';
 import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, CameraOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ordersAPI, worksAPI, employeesAPI, inventoryAPI } from '../../api';
+import { ordersAPI, worksAPI, employeesAPI, inventoryAPI, maintenanceAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatMoney } from '../../utils/formatters';
 
@@ -23,6 +23,11 @@ function OrderDetailPage() {
   const [formWork] = Form.useForm();
   const [formPart] = Form.useForm();
   const [formEditWork] = Form.useForm();
+
+  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
+  const [maintenanceRules, setMaintenanceRules] = useState([]);
+  const [maintenanceModalLoading, setMaintenanceModalLoading] = useState(false);
+  const [formMaintenance] = Form.useForm();
   
   const { id } = useParams();
   const navigate = useNavigate();
@@ -244,6 +249,36 @@ function OrderDetailPage() {
     });
   };
 
+  const handleOpenMaintenanceModal = async () => {
+    setIsMaintenanceModalOpen(true);
+    setMaintenanceModalLoading(true);
+    try {
+      const res = await maintenanceAPI.getRules();
+      const data = res.data || res;
+      setMaintenanceRules(data.results || data || []);
+    } catch {
+      message.error('Не вдалося завантажити набори ТО');
+    } finally {
+      setMaintenanceModalLoading(false);
+    }
+  };
+
+  const handleApplyMaintenanceSet = async (values) => {
+    setMaintenanceModalLoading(true);
+    try {
+      await ordersAPI.applyMaintenanceSet(id, { rule_id: values.rule_id });
+      message.success('Набір ТО застосовано');
+      setIsMaintenanceModalOpen(false);
+      formMaintenance.resetFields();
+      initPage();
+    } catch (error) {
+      const detail = error.response?.data?.detail || 'Не вдалося застосувати набір ТО';
+      message.error(detail);
+    } finally {
+      setMaintenanceModalLoading(false);
+    }
+  };
+
   const handleDeletePart = (workId, partId) => {
     Modal.confirm({
       title: 'Видалити запчастину?',
@@ -423,10 +458,19 @@ function OrderDetailPage() {
       label: `Виконані роботи (${orderWorks.length})`,
       children: (
         <div>
-            <Button 
-                type="dashed" 
-                icon={<PlusOutlined />} 
-                onClick={() => setIsWorkModalOpen(true)} 
+            <Button
+                type="dashed"
+                icon={<ToolOutlined />}
+                onClick={handleOpenMaintenanceModal}
+                disabled={isDeleted}
+                style={{ marginBottom: 8, width: '100%' }}
+            >
+                Додати набір для ТО
+            </Button>
+            <Button
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={() => setIsWorkModalOpen(true)}
                 disabled={isDeleted}
                 style={{ marginBottom: 16, width: '100%' }}
             >
@@ -743,33 +787,33 @@ function OrderDetailPage() {
       </Modal>
 
       {/* Модалка редагування роботи */}
-      <Modal 
-        title="Редагувати роботу" 
-        open={isEditWorkModalOpen} 
+      <Modal
+        title="Редагувати роботу"
+        open={isEditWorkModalOpen}
         onCancel={() => {
           setIsEditWorkModalOpen(false);
           setEditingWork(null);
           formEditWork.resetFields();
-        }} 
-        footer={null} 
+        }}
+        footer={null}
         destroyOnClose
       >
         <Form form={formEditWork} layout="vertical" onFinish={handleSaveEditWork}>
             <Form.Item name="work" label="Послуга" rules={[{ required: true, message: 'Оберіть послугу' }]}>
-                 <Select 
-                    showSearch 
-                    placeholder="Оберіть послугу" 
-                    optionFilterProp="label" 
-                    options={safeWorksList.map(w => ({ value: w.id, label: w.name }))} 
+                 <Select
+                    showSearch
+                    placeholder="Оберіть послугу"
+                    optionFilterProp="label"
+                    options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
                  />
             </Form.Item>
             <Form.Item name="mechanic" label="Механік">
-                 <Select 
-                    showSearch 
+                 <Select
+                    showSearch
                     allowClear
-                    placeholder="Оберіть механіка" 
-                    optionFilterProp="label" 
-                    options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))} 
+                    placeholder="Оберіть механіка"
+                    optionFilterProp="label"
+                    options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))}
                  />
             </Form.Item>
             <Form.Item name="hours_spent" label="Витрачено годин" rules={[{ required: true }]}>
@@ -779,6 +823,45 @@ function OrderDetailPage() {
                 <Input.TextArea rows={2} placeholder="Додатковий опис (необов'язково)" />
             </Form.Item>
             <Button type="primary" htmlType="submit" loading={modalLoading} block>Зберегти зміни</Button>
+        </Form>
+      </Modal>
+
+      {/* Модалка набору ТО */}
+      <Modal
+        title="Додати набір для ТО"
+        open={isMaintenanceModalOpen}
+        onCancel={() => { setIsMaintenanceModalOpen(false); formMaintenance.resetFields(); }}
+        footer={null}
+        destroyOnClose
+      >
+        <Form form={formMaintenance} layout="vertical" onFinish={handleApplyMaintenanceSet}>
+          <Form.Item
+            label="Набір ТО"
+            name="rule_id"
+            rules={[{ required: true, message: 'Оберіть набір' }]}
+          >
+            <Select
+              placeholder="Оберіть регламент ТО"
+              loading={maintenanceModalLoading}
+              notFoundContent="Немає доступних наборів"
+            >
+              {maintenanceRules.map(r => (
+                <Select.Option key={r.id} value={r.id}>
+                  {r.rule_name || r.name || `Набір #${r.id}`}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={maintenanceModalLoading}
+              block
+            >
+              Застосувати
+            </Button>
+          </Form.Item>
         </Form>
       </Modal>
     </div>
