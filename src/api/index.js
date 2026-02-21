@@ -150,6 +150,13 @@ export const ordersAPI = {
   applyMaintenanceSet: (orderId, data) => instance.post(`/orders/${orderId}/apply_maintenance_set/`, data),
 };
 
+export const repairPhotosAPI = {
+  upload: (formData) => instance.post('/repair-photos/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
+  delete: (id) => instance.delete(`/repair-photos/${id}/`),
+};
+
 export const clientsAPI = {
   getAll: (params) => instance.get('/clients/', { params }),
   getById: (id) => instance.get(`/clients/${id}/`),
@@ -208,6 +215,8 @@ export const maintenanceAPI = {
   updateKit: (id, data) => instance.patch(`/maintenance-kits/${id}/`, data),
   addKitFilter: (kitId, data) => instance.post(`/maintenance-kits/${kitId}/add-filter/`, data),
   removeKitFilter: (kitId, filterId) => instance.delete(`/maintenance-kits/${kitId}/remove-filter/${filterId}/`),
+
+  getLogs: (truckId) => instance.get('/orders/maintenance-logs/', { params: { truck: truckId } }),
 };
 
 export const inventoryAPI = {

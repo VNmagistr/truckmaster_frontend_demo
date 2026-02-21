@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input, Dropdown } from 'antd';
-import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, CameraOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input, Dropdown, Upload } from 'antd';
+import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ordersAPI, worksAPI, employeesAPI, inventoryAPI, maintenanceAPI } from '../../api';
+import { ordersAPI, worksAPI, employeesAPI, inventoryAPI, maintenanceAPI, repairPhotosAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatMoney } from '../../utils/formatters';
 
@@ -28,7 +28,12 @@ function OrderDetailPage() {
   const [maintenanceRules, setMaintenanceRules] = useState([]);
   const [maintenanceModalLoading, setMaintenanceModalLoading] = useState(false);
   const [formMaintenance] = Form.useForm();
-  
+
+  const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
+  const [photoFileList, setPhotoFileList] = useState([]);
+  const [photoDescription, setPhotoDescription] = useState('');
+  const [photoModalLoading, setPhotoModalLoading] = useState(false);
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -123,6 +128,46 @@ function OrderDetailPage() {
     if (!photo) return null;
     if (typeof photo === 'string') return photo;
     return photo.url || photo.image || null;
+  };
+
+  const handleUploadRepairPhoto = async () => {
+    if (!photoFileList[0]?.originFileObj) return;
+    setPhotoModalLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append('service_order', id);
+      formData.append('image', photoFileList[0].originFileObj);
+      if (photoDescription) formData.append('description', photoDescription);
+      await repairPhotosAPI.upload(formData);
+      message.success('Фото додано');
+      setIsPhotoModalOpen(false);
+      setPhotoFileList([]);
+      setPhotoDescription('');
+      initPage();
+    } catch {
+      message.error('Не вдалося завантажити фото');
+    } finally {
+      setPhotoModalLoading(false);
+    }
+  };
+
+  const handleDeleteRepairPhoto = (photoId) => {
+    Modal.confirm({
+      title: 'Видалити фото?',
+      icon: <ExclamationCircleOutlined />,
+      okText: 'Видалити',
+      okType: 'danger',
+      cancelText: 'Скасувати',
+      onOk: async () => {
+        try {
+          await repairPhotosAPI.delete(photoId);
+          message.success('Фото видалено');
+          initPage();
+        } catch {
+          message.error('Не вдалося видалити фото');
+        }
+      },
+    });
   };
 
   const formatMileage = (mileage) => {
@@ -322,7 +367,7 @@ function OrderDetailPage() {
   const carPhoto = getPhotoUrl(order.car_photo);
   const odometerPhoto = getPhotoUrl(order.odometer_photo);
   const dashboardPhoto = getPhotoUrl(order.dashboard_photo);
-  const hasPhotos = carPhoto || odometerPhoto || dashboardPhoto;
+  const repairPhotos = order.photos || [];
 
   // Статуси для dropdown
   const statusItems = [
@@ -455,7 +500,7 @@ function OrderDetailPage() {
   const tabItems = [
     {
       key: 'works',
-      label: `Виконані роботи (${orderWorks.length})`,
+      label: `Роботи (${orderWorks.length})`,
       children: (
         <div>
             <Button
@@ -490,7 +535,7 @@ function OrderDetailPage() {
     },
     {
       key: 'parts',
-      label: `Використані запчастини (${allUsedParts.length})`,
+      label: `Запчастини (${allUsedParts.length})`,
       children: (
         <div>
              <Button 
@@ -524,62 +569,86 @@ function OrderDetailPage() {
       ),
     },
     {
-      key: 'photos',
-      label: (
-        <span>
-          <CameraOutlined style={{ marginRight: 8 }} />
-          Фото ({[carPhoto, odometerPhoto, dashboardPhoto].filter(Boolean).length})
-        </span>
+      key: 'car-photos',
+      label: `Фото авто (${[carPhoto, odometerPhoto, dashboardPhoto].filter(Boolean).length})`,
+      children: (
+        <Row gutter={[16, 16]}>
+          <Col xs={24} sm={8}>
+            <Card size="small" title="Фото авто" style={{ textAlign: 'center' }}>
+              {carPhoto ? (
+                <Image src={carPhoto} alt="Фото авто" style={{ maxHeight: 200, objectFit: 'contain' }} />
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card size="small" title="Фото одометра" style={{ textAlign: 'center' }}>
+              {odometerPhoto ? (
+                <Image src={odometerPhoto} alt="Фото одометра" style={{ maxHeight: 200, objectFit: 'contain' }} />
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
+              )}
+            </Card>
+          </Col>
+          <Col xs={24} sm={8}>
+            <Card size="small" title="Фото панелі приладів" style={{ textAlign: 'center' }}>
+              {dashboardPhoto ? (
+                <Image src={dashboardPhoto} alt="Фото панелі приладів" style={{ maxHeight: 200, objectFit: 'contain' }} />
+              ) : (
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
+              )}
+            </Card>
+          </Col>
+        </Row>
       ),
+    },
+    {
+      key: 'repair-photos',
+      label: `Фото ремонту (${repairPhotos.length})`,
       children: (
         <div>
-          {hasPhotos ? (
-            <Row gutter={[16, 16]}>
-              <Col xs={24} sm={8}>
-                <Card size="small" title="Фото авто" style={{ textAlign: 'center' }}>
-                  {carPhoto ? (
-                    <Image
-                      src={carPhoto}
-                      alt="Фото авто"
-                      style={{ maxHeight: 200, objectFit: 'contain' }}
-                      placeholder={<div style={{ padding: 20 }}>Завантаження...</div>}
-                    />
-                  ) : (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
-                  )}
-                </Card>
-              </Col>
-              <Col xs={24} sm={8}>
-                <Card size="small" title="Фото одометра" style={{ textAlign: 'center' }}>
-                  {odometerPhoto ? (
-                    <Image
-                      src={odometerPhoto}
-                      alt="Фото одометра"
-                      style={{ maxHeight: 200, objectFit: 'contain' }}
-                      placeholder={<div style={{ padding: 20 }}>Завантаження...</div>}
-                    />
-                  ) : (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
-                  )}
-                </Card>
-              </Col>
-              <Col xs={24} sm={8}>
-                <Card size="small" title="Фото панелі приладів" style={{ textAlign: 'center' }}>
-                  {dashboardPhoto ? (
-                    <Image
-                      src={dashboardPhoto}
-                      alt="Фото панелі приладів"
-                      style={{ maxHeight: 200, objectFit: 'contain' }}
-                      placeholder={<div style={{ padding: 20 }}>Завантаження...</div>}
-                    />
-                  ) : (
-                    <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
-                  )}
-                </Card>
-              </Col>
-            </Row>
+          {!isDeleted && (
+            <div style={{ marginBottom: 16 }}>
+              <Button icon={<PlusOutlined />} onClick={() => setIsPhotoModalOpen(true)}>
+                Додати фото
+              </Button>
+            </div>
+          )}
+          {repairPhotos.length > 0 ? (
+            <Image.PreviewGroup>
+              <Row gutter={[12, 12]}>
+                {repairPhotos.map(photo => (
+                  <Col xs={12} sm={8} md={6} key={photo.id}>
+                    <Card
+                      size="small"
+                      cover={
+                        <Image
+                          src={photo.image}
+                          alt={photo.description || 'Фото ремонту'}
+                          style={{ height: 140, objectFit: 'cover' }}
+                        />
+                      }
+                      actions={!isDeleted ? [
+                        <DeleteOutlined
+                          key="delete"
+                          style={{ color: '#ff4d4f' }}
+                          onClick={() => handleDeleteRepairPhoto(photo.id)}
+                        />,
+                      ] : []}
+                    >
+                      {photo.description && (
+                        <div style={{ fontSize: 12, color: '#666', marginTop: 4 }}>
+                          {photo.description}
+                        </div>
+                      )}
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </Image.PreviewGroup>
           ) : (
-            <Empty description="Фото не завантажено" />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото з ремонту" />
           )}
         </div>
       ),
@@ -863,6 +932,48 @@ function OrderDetailPage() {
             </Button>
           </Form.Item>
         </Form>
+      </Modal>
+
+      {/* Модалка завантаження фото з ремонту */}
+      <Modal
+        title="Додати фото з ремонту"
+        open={isPhotoModalOpen}
+        onCancel={() => { setIsPhotoModalOpen(false); setPhotoFileList([]); setPhotoDescription(''); }}
+        footer={null}
+        destroyOnClose
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Upload
+            listType="picture-card"
+            fileList={photoFileList}
+            onChange={({ fileList }) => setPhotoFileList(fileList)}
+            beforeUpload={() => false}
+            maxCount={1}
+            accept="image/*"
+          >
+            {photoFileList.length === 0 && (
+              <div>
+                <PlusOutlined />
+                <div style={{ marginTop: 8 }}>Вибрати фото</div>
+              </div>
+            )}
+          </Upload>
+        </div>
+        <Input
+          placeholder="Опис фото (необов'язково)"
+          value={photoDescription}
+          onChange={(e) => setPhotoDescription(e.target.value)}
+          style={{ marginBottom: 16 }}
+        />
+        <Button
+          type="primary"
+          loading={photoModalLoading}
+          disabled={photoFileList.length === 0}
+          onClick={handleUploadRepairPhoto}
+          block
+        >
+          Завантажити
+        </Button>
       </Modal>
     </div>
   );
