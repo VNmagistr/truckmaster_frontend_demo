@@ -202,6 +202,12 @@ export const maintenanceAPI = {
   createRule: (data) => instance.post('/maintenance-rules/', data),
   updateRule: (id, data) => instance.patch(`/maintenance-rules/${id}/`, data),
   deleteRule: (id) => instance.delete(`/maintenance-rules/${id}/`),
+
+  getKit: (truckId) => instance.get('/maintenance-kits/', { params: { truck: truckId } }),
+  createKit: (data) => instance.post('/maintenance-kits/', data),
+  updateKit: (id, data) => instance.patch(`/maintenance-kits/${id}/`, data),
+  addKitFilter: (kitId, data) => instance.post(`/maintenance-kits/${kitId}/add-filter/`, data),
+  removeKitFilter: (kitId, filterId) => instance.delete(`/maintenance-kits/${kitId}/remove-filter/${filterId}/`),
 };
 
 export const inventoryAPI = {
