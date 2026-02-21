@@ -19,7 +19,8 @@ function TruckDetailPage() {
 
   const [kit, setKit] = useState(null);
   const [kitLoading, setKitLoading] = useState(false);
-  const [products, setProducts] = useState([]);
+  const [oilProducts, setOilProducts] = useState([]);
+  const [filterProducts, setFilterProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
 
   const [isOilModalOpen, setIsOilModalOpen] = useState(false);
@@ -102,22 +103,36 @@ function TruckDetailPage() {
     }
   };
 
-  const loadProducts = async () => {
-    if (products.length > 0) return;
+  const loadOilProducts = async () => {
+    if (oilProducts.length > 0) return;
     setProductsLoading(true);
     try {
-      const res = await inventoryAPI.getAll({ page_size: 500 });
+      const res = await inventoryAPI.getAll({ page_size: 500, subcategory__category__category_type: 'oil' });
       const data = res.data || res;
-      setProducts(data.results || data || []);
+      setOilProducts(data.results || data || []);
     } catch {
-      message.error('Не вдалося завантажити товари');
+      message.error('Не вдалося завантажити оливи');
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  const loadFilterProducts = async () => {
+    if (filterProducts.length > 0) return;
+    setProductsLoading(true);
+    try {
+      const res = await inventoryAPI.getAll({ page_size: 500, subcategory__category__category_type: 'filter' });
+      const data = res.data || res;
+      setFilterProducts(data.results || data || []);
+    } catch {
+      message.error('Не вдалося завантажити фільтри');
     } finally {
       setProductsLoading(false);
     }
   };
 
   const handleOpenOilModal = async () => {
-    await loadProducts();
+    await loadOilProducts();
     if (kit) {
       formOil.setFieldsValue({
         oil: kit.oil?.id || kit.oil,
@@ -149,7 +164,7 @@ function TruckDetailPage() {
   };
 
   const handleOpenFilterModal = async () => {
-    await loadProducts();
+    await loadFilterProducts();
     setIsFilterModalOpen(true);
   };
 
@@ -411,7 +426,7 @@ function TruckDetailPage() {
               placeholder="Оберіть оливу зі складу"
               loading={productsLoading}
               optionFilterProp="label"
-              options={products.map(p => ({ value: p.id, label: `${p.name}${p.viscosity ? ' ' + p.viscosity : ''}` }))}
+              options={oilProducts.map(p => ({ value: p.id, label: `${p.name}${p.viscosity ? ' ' + p.viscosity : ''}` }))}
             />
           </Form.Item>
           <Form.Item
@@ -447,7 +462,7 @@ function TruckDetailPage() {
               placeholder="Оберіть фільтр зі складу"
               loading={productsLoading}
               optionFilterProp="label"
-              options={products.map(p => ({ value: p.id, label: `${p.sku_code ? p.sku_code + ' — ' : ''}${p.name}` }))}
+              options={filterProducts.map(p => ({ value: p.id, label: `${p.sku_code ? p.sku_code + ' — ' : ''}${p.name}` }))}
             />
           </Form.Item>
           <Form.Item
