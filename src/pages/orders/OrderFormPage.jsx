@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Form, Input, Button, Card, message, Space, Select, Upload, Alert, Row, Col, Typography, Divider } from 'antd';
-import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, CarOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Card, message, Space, Select, Upload, Alert, Row, Col, Typography, Divider, Modal } from 'antd';
+import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, CarOutlined, UserOutlined, CheckCircleOutlined, ToolOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ordersAPI, clientsAPI } from '../../api';
+import { ordersAPI, clientsAPI, maintenanceAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import debounce from 'lodash/debounce';
 
@@ -24,6 +24,11 @@ function OrderFormPage() {
   
   const [alerts, setAlerts] = useState([]);
   const [fileList, setFileList] = useState([]);
+
+  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
+  const [maintenanceRules, setMaintenanceRules] = useState([]);
+  const [maintenanceModalLoading, setMaintenanceModalLoading] = useState(false);
+  const [formMaintenance] = Form.useForm();
   
   const { id } = useParams();
   const navigate = useNavigate();
@@ -175,6 +180,35 @@ function OrderFormPage() {
       }
     } catch (error) {
       // ігноруємо помилку перевірки регламентів — не критично
+    }
+  };
+
+  const handleOpenMaintenanceModal = async () => {
+    setIsMaintenanceModalOpen(true);
+    setMaintenanceModalLoading(true);
+    try {
+      const res = await maintenanceAPI.getRules();
+      const data = res.data || res;
+      setMaintenanceRules(data.results || data || []);
+    } catch {
+      message.error('Не вдалося завантажити набори ТО');
+    } finally {
+      setMaintenanceModalLoading(false);
+    }
+  };
+
+  const handleApplyMaintenanceSet = async (values) => {
+    setMaintenanceModalLoading(true);
+    try {
+      await ordersAPI.applyMaintenanceSet(id, { rule_id: values.rule_id });
+      message.success('Набір ТО застосовано до наряду');
+      setIsMaintenanceModalOpen(false);
+      formMaintenance.resetFields();
+    } catch (error) {
+      const detail = error.response?.data?.detail || 'Не вдалося застосувати набір ТО';
+      message.error(detail);
+    } finally {
+      setMaintenanceModalLoading(false);
     }
   };
 
@@ -442,15 +476,25 @@ function OrderFormPage() {
               {alerts.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
                   {alerts.map((alert, idx) => (
-                    <Alert 
-                      key={idx} 
-                      message={alert.message || alert.rule_name} 
+                    <Alert
+                      key={idx}
+                      message={alert.message || alert.rule_name}
                       type={alert.message?.includes('Прострочено') ? 'error' : 'warning'}
-                      showIcon 
-                      icon={<ExclamationCircleOutlined />} 
-                      style={{ marginBottom: 8 }} 
+                      showIcon
+                      icon={<ExclamationCircleOutlined />}
+                      style={{ marginBottom: 8 }}
                     />
                   ))}
+                  {isEdit && (
+                    <Button
+                      type="primary"
+                      icon={<ToolOutlined />}
+                      onClick={handleOpenMaintenanceModal}
+                      style={{ marginTop: 8 }}
+                    >
+                      Застосувати набір для ТО
+                    </Button>
+                  )}
                 </div>
               )}
 
@@ -566,6 +610,45 @@ function OrderFormPage() {
           )}
         </Col>
       </Row>
+
+      {/* Модалка набору ТО */}
+      <Modal
+        title="Додати набір для ТО"
+        open={isMaintenanceModalOpen}
+        onCancel={() => { setIsMaintenanceModalOpen(false); formMaintenance.resetFields(); }}
+        footer={null}
+        destroyOnClose
+      >
+        <Form form={formMaintenance} layout="vertical" onFinish={handleApplyMaintenanceSet}>
+          <Form.Item
+            label="Набір ТО"
+            name="rule_id"
+            rules={[{ required: true, message: 'Оберіть набір' }]}
+          >
+            <Select
+              placeholder="Оберіть регламент ТО"
+              loading={maintenanceModalLoading}
+              notFoundContent="Немає доступних наборів"
+            >
+              {maintenanceRules.map(r => (
+                <Select.Option key={r.id} value={r.id}>
+                  {r.rule_name || r.name || `Набір #${r.id}`}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+          <Form.Item>
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={maintenanceModalLoading}
+              block
+            >
+              Застосувати
+            </Button>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
