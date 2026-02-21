@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Descriptions, Button, Table, Tag, message, Tabs, Modal, Form, Select, InputNumber, Space, Typography, Spin, Empty } from 'antd';
-import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined, HistoryOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { trucksAPI, ordersAPI, baseModelsAPI, clientsAPI, maintenanceAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
@@ -27,6 +27,10 @@ function TruckDetailPage() {
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [oilSaving, setOilSaving] = useState(false);
   const [filterSaving, setFilterSaving] = useState(false);
+
+  const [logs, setLogs] = useState([]);
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsLoaded, setLogsLoaded] = useState(false);
 
   const [formOil] = Form.useForm();
   const [formFilter] = Form.useForm();
@@ -101,6 +105,25 @@ function TruckDetailPage() {
     } finally {
       setKitLoading(false);
     }
+  };
+
+  const loadLogs = async () => {
+    if (logsLoaded) return;
+    setLogsLoading(true);
+    try {
+      const res = await maintenanceAPI.getLogs(id);
+      const data = res.data || res;
+      setLogs(data.results || data || []);
+      setLogsLoaded(true);
+    } catch {
+      message.error('Не вдалося завантажити історію ТО');
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const handleTabChange = (key) => {
+    if (key === 'history') loadLogs();
   };
 
   const loadOilProducts = async () => {
@@ -267,6 +290,46 @@ function TruckDetailPage() {
       ),
     },
     {
+      key: 'history',
+      label: (
+        <span>
+          <HistoryOutlined />
+          Історія ТО
+        </span>
+      ),
+      children: (
+        <Spin spinning={logsLoading}>
+          <Table
+            columns={[
+              {
+                title: 'Дата',
+                dataIndex: 'date_performed',
+                key: 'date',
+                width: 120,
+                render: (d) => formatDate(d),
+              },
+              {
+                title: 'Вид ТО',
+                dataIndex: 'rule_name',
+                key: 'rule',
+              },
+              {
+                title: 'Пробіг',
+                dataIndex: 'mileage',
+                key: 'mileage',
+                width: 120,
+                render: (v) => v ? `${v.toLocaleString()} км` : '—',
+              },
+            ]}
+            dataSource={logs}
+            rowKey="id"
+            pagination={false}
+            locale={{ emptyText: 'Немає записів ТО' }}
+          />
+        </Spin>
+      ),
+    },
+    {
       key: 'maintenance',
       label: (
         <span>
@@ -426,7 +489,7 @@ function TruckDetailPage() {
       </Card>
 
       <Card>
-        <Tabs items={tabItems} />
+        <Tabs items={tabItems} onChange={handleTabChange} />
       </Card>
 
       {/* Модалка оливи */}
