@@ -353,14 +353,21 @@ function OrderDetailPage() {
   
   const orderWorks = ensureArray(order.works);
   
-  // Збираємо всі запчастини з усіх робіт
-  const allUsedParts = orderWorks.flatMap(work => 
-    (work.used_parts || []).map(part => ({
+  // Збираємо всі запчастини: з робіт + прямі (від набору ТО)
+  const allUsedParts = [
+    ...orderWorks.flatMap(work =>
+      (work.used_parts || []).map(part => ({
+        ...part,
+        work_id: work.id,
+        work_name: work.work?.name || work.description || 'Невідома робота',
+      }))
+    ),
+    ...(order.direct_parts || []).map(part => ({
       ...part,
-      work_id: work.id,
-      work_name: work.work?.name || 'Невідома робота'
-    }))
-  );
+      work_id: null,
+      work_name: 'ТО (набір)',
+    })),
+  ];
   
   const isDeleted = order.marked_for_deletion;
 
@@ -481,16 +488,16 @@ function OrderDetailPage() {
       title: 'Дії',
       key: 'actions',
       width: 80,
-      render: (_, record) => (
-        <Button 
-          type="link" 
-          size="small" 
+      render: (_, record) => record.work_id ? (
+        <Button
+          type="link"
+          size="small"
           danger
           icon={<DeleteOutlined />}
           onClick={() => handleDeletePart(record.work_id, record.id)}
           disabled={isDeleted}
         />
-      ),
+      ) : null,
     },
   ];
 
