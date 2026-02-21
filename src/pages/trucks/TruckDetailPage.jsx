@@ -137,6 +137,7 @@ function TruckDetailPage() {
       formOil.setFieldsValue({
         oil: kit.oil?.id || kit.oil,
         oil_quantity: parseFloat(kit.oil_quantity) || 1,
+        oil_change_interval_km: kit.oil_change_interval_km || null,
       });
     }
     setIsOilModalOpen(true);
@@ -145,11 +146,16 @@ function TruckDetailPage() {
   const handleSaveOil = async (values) => {
     setOilSaving(true);
     try {
+      const payload = {
+        oil: values.oil,
+        oil_quantity: values.oil_quantity,
+        oil_change_interval_km: values.oil_change_interval_km || null,
+      };
       if (kit) {
-        await maintenanceAPI.updateKit(kit.id, { oil: values.oil, oil_quantity: values.oil_quantity });
+        await maintenanceAPI.updateKit(kit.id, payload);
         message.success('Оливу оновлено');
       } else {
-        await maintenanceAPI.createKit({ truck: id, oil: values.oil, oil_quantity: values.oil_quantity });
+        await maintenanceAPI.createKit({ truck: id, ...payload });
         message.success('Комплект ТО створено');
       }
       setIsOilModalOpen(false);
@@ -171,7 +177,11 @@ function TruckDetailPage() {
   const handleAddFilter = async (values) => {
     setFilterSaving(true);
     try {
-      await maintenanceAPI.addKitFilter(kit.id, { part: values.part, quantity: values.quantity });
+      await maintenanceAPI.addKitFilter(kit.id, {
+        part: values.part,
+        quantity: values.quantity,
+        change_interval_km: values.change_interval_km || null,
+      });
       message.success('Фільтр додано');
       setIsFilterModalOpen(false);
       formFilter.resetFields();
@@ -283,6 +293,12 @@ function TruckDetailPage() {
                   <Text strong>{kit.oil?.name || '-'}</Text>
                   <Text type="secondary">—</Text>
                   <Text>{kit.oil_quantity} л</Text>
+                  {kit.oil_change_interval_km && (
+                    <>
+                      <Text type="secondary">—</Text>
+                      <Text type="secondary">кожні {kit.oil_change_interval_km.toLocaleString()} км</Text>
+                    </>
+                  )}
                 </Space>
               </Card>
 
@@ -312,6 +328,12 @@ function TruckDetailPage() {
                         title: 'К-сть',
                         dataIndex: 'quantity',
                         width: 80,
+                      },
+                      {
+                        title: 'Інтервал',
+                        dataIndex: 'change_interval_km',
+                        width: 120,
+                        render: (val) => val ? `${val.toLocaleString()} км` : '—',
                       },
                       {
                         title: '',
@@ -437,6 +459,12 @@ function TruckDetailPage() {
           >
             <InputNumber min={0.1} step={0.5} style={{ width: '100%' }} addonAfter="л" />
           </Form.Item>
+          <Form.Item
+            label="Інтервал заміни оливи"
+            name="oil_change_interval_km"
+          >
+            <InputNumber min={1000} step={1000} style={{ width: '100%' }} addonAfter="км" placeholder="20000" />
+          </Form.Item>
           <Button type="primary" htmlType="submit" loading={oilSaving} block>
             {kit ? 'Зберегти' : 'Створити комплект'}
           </Button>
@@ -472,6 +500,12 @@ function TruckDetailPage() {
             rules={[{ required: true, message: 'Вкажіть кількість' }]}
           >
             <InputNumber min={1} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            label="Інтервал заміни фільтра"
+            name="change_interval_km"
+          >
+            <InputNumber min={1000} step={1000} style={{ width: '100%' }} addonAfter="км" placeholder="20000" />
           </Form.Item>
           <Button type="primary" htmlType="submit" loading={filterSaving} block>
             Додати
