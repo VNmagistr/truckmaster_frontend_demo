@@ -22,8 +22,8 @@ function ProductFormPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetchCategories().then(() => {
-        if (isEdit) fetchProduct();
+    fetchCategories().then((allSubcategories) => {
+      if (isEdit) fetchProduct(allSubcategories);
     });
   }, [id]);
 
@@ -34,7 +34,6 @@ function ProductFormPage() {
         inventoryAPI.getSubcategories().catch(() => []),
       ]);
 
-      // Безпечна розпаковка даних
       const catData = categoriesRes.data || categoriesRes;
       const catList = Array.isArray(catData) ? catData : (catData.results || []);
       setCategories(catList);
@@ -44,32 +43,35 @@ function ProductFormPage() {
       setSubcategories(subList);
       setFilteredSubcategories(subList);
 
-    } catch (error) {
-      // категорії не завантажились
+      return subList;
+    } catch {
+      return [];
     }
   };
 
-  const fetchProduct = async () => {
+  // allSubcategories передається явно, щоб уникнути stale closure на стані
+  const fetchProduct = async (allSubcategories) => {
     setLoading(true);
     try {
       const response = await inventoryAPI.getProductById(id);
       const data = response.data || response;
-      
-      form.setFieldsValue({
-        ...data,
-        subcategory: data.subcategory?.id || data.subcategory,
-      });
-      
-      // Фільтруємо підкатегорії, якщо у товару є категорія
-      if (data.subcategory && typeof data.subcategory === 'object' && data.subcategory.category) {
-         handleCategoryChange(data.subcategory.category);
-      } else if (data.category) { // Якщо категорія прийшла окремим полем
-         handleCategoryChange(data.category);
-         // Встановлюємо віртуальне поле для відображення в селекті
-         form.setFieldsValue({ category_filter: data.category });
+
+      const subcategoryId = typeof data.subcategory === 'object'
+        ? data.subcategory?.id
+        : data.subcategory;
+
+      form.setFieldsValue({ ...data, subcategory: subcategoryId });
+
+      // Знаходимо підкатегорію в списку, щоб дістати її category (parent ID)
+      if (subcategoryId && allSubcategories.length > 0) {
+        const found = allSubcategories.find(s => s.id === subcategoryId);
+        if (found) {
+          form.setFieldsValue({ category_filter: found.category });
+          setFilteredSubcategories(allSubcategories.filter(s => s.category === found.category));
+        }
       }
 
-    } catch (error) {
+    } catch {
       message.error('Не вдалося завантажити дані товару');
       navigate('/inventory');
     } finally {
@@ -78,12 +80,9 @@ function ProductFormPage() {
   };
 
   const handleCategoryChange = (categoryId) => {
-    // При зміні категорії очищаємо підкатегорію, щоб не лишилось некоректне значення
     form.setFieldsValue({ subcategory: null });
-    
     if (categoryId) {
-      const filtered = subcategories.filter(sub => sub.category === categoryId);
-      setFilteredSubcategories(filtered);
+      setFilteredSubcategories(subcategories.filter(s => s.category === categoryId));
     } else {
       setFilteredSubcategories(subcategories);
     }
