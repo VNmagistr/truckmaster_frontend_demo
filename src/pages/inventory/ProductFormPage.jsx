@@ -13,8 +13,8 @@ function ProductFormPage() {
   
   // Ініціалізуємо як масиви
   const [categories, setCategories] = useState([]);
-  const [subcategories, setSubcategories] = useState([]);
   const [filteredSubcategories, setFilteredSubcategories] = useState([]);
+  const [subcategoriesLoading, setSubcategoriesLoading] = useState(false);
   
   const { id } = useParams();
   const navigate = useNavigate();
@@ -22,35 +22,35 @@ function ProductFormPage() {
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    fetchCategories().then((allSubcategories) => {
-      if (isEdit) fetchProduct(allSubcategories);
-    });
+    fetchCategories();
+    if (isEdit) fetchProduct();
   }, [id]);
 
   const fetchCategories = async () => {
     try {
-      const [categoriesRes, subcategoriesRes] = await Promise.all([
-        inventoryAPI.getCategories().catch(() => []),
-        inventoryAPI.getSubcategories().catch(() => []),
-      ]);
-
+      const categoriesRes = await inventoryAPI.getCategories();
       const catData = categoriesRes.data || categoriesRes;
       const catList = Array.isArray(catData) ? catData : (catData.results || []);
       setCategories(catList);
-
-      const subData = subcategoriesRes.data || subcategoriesRes;
-      const subList = Array.isArray(subData) ? subData : (subData.results || []);
-      setSubcategories(subList);
-      setFilteredSubcategories(subList);
-
-      return subList;
     } catch {
-      return [];
+      // не критично
     }
   };
 
-  // allSubcategories передається явно, щоб уникнути stale closure на стані
-  const fetchProduct = async (allSubcategories) => {
+  const fetchSubcategoriesByCategory = async (categoryId) => {
+    setSubcategoriesLoading(true);
+    try {
+      const res = await inventoryAPI.getSubcategories({ category: categoryId, page_size: 1000 });
+      const data = res.data || res;
+      setFilteredSubcategories(Array.isArray(data) ? data : (data.results || []));
+    } catch {
+      setFilteredSubcategories([]);
+    } finally {
+      setSubcategoriesLoading(false);
+    }
+  };
+
+  const fetchProduct = async () => {
     setLoading(true);
     try {
       const response = await inventoryAPI.getProductById(id);
@@ -62,12 +62,13 @@ function ProductFormPage() {
 
       form.setFieldsValue({ ...data, subcategory: subcategoryId });
 
-      // Знаходимо підкатегорію в списку, щоб дістати її category (parent ID)
-      if (subcategoryId && allSubcategories.length > 0) {
-        const found = allSubcategories.find(s => s.id === subcategoryId);
-        if (found) {
-          form.setFieldsValue({ category_filter: found.category });
-          setFilteredSubcategories(allSubcategories.filter(s => s.category === found.category));
+      // Завантажуємо підкатегорію з сервера, щоб отримати батьківську категорію
+      if (subcategoryId) {
+        const subRes = await inventoryAPI.getSubcategoryById(subcategoryId);
+        const subData = subRes.data || subRes;
+        if (subData?.category) {
+          form.setFieldsValue({ category_filter: subData.category });
+          await fetchSubcategoriesByCategory(subData.category);
         }
       }
 
@@ -82,9 +83,9 @@ function ProductFormPage() {
   const handleCategoryChange = (categoryId) => {
     form.setFieldsValue({ subcategory: null });
     if (categoryId) {
-      setFilteredSubcategories(subcategories.filter(s => s.category === categoryId));
+      fetchSubcategoriesByCategory(categoryId);
     } else {
-      setFilteredSubcategories(subcategories);
+      setFilteredSubcategories([]);
     }
   };
 
@@ -237,7 +238,7 @@ function ProductFormPage() {
                 name="subcategory"
                 label="Підкатегорія"
               >
-                <Select placeholder="Оберіть підкатегорію" allowClear>
+                <Select placeholder="Оберіть підкатегорію" allowClear loading={subcategoriesLoading}>
                   {filteredSubcategories.map(sub => (
                     <Select.Option key={sub.id} value={sub.id}>
                       {sub.name}
