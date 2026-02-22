@@ -389,11 +389,11 @@ function OrderDetailPage() {
       title: 'Робота',
       dataIndex: 'work',
       key: 'work',
-      render: (val) => {
+      render: (val, record) => {
         if (typeof val === 'object' && val !== null) {
-          return val.name || '-';
+          return val.name || record.description || '-';
         }
-        return resolveNameInList(val, safeWorksList) || '-';
+        return resolveNameInList(val, safeWorksList) || record.description || '-';
       },
     },
     {
@@ -407,11 +407,11 @@ function OrderDetailPage() {
         return resolveNameInList(val, safeEmployeesList) || '-';
       },
     },
-    { 
-      title: 'Годин', 
-      dataIndex: 'hours_spent', 
+    {
+      title: 'Годин',
+      dataIndex: 'hours_spent',
       key: 'hours_spent',
-      render: (val) => val || '-'
+      render: (val) => (val != null && val !== '') ? val : '-'
     },
     { 
       title: 'Вартість', 
