@@ -115,9 +115,9 @@ function InventoryPage() {
   const columns = [
     {
       title: 'Артикул',
-      dataIndex: 'article_number', // Якщо на бекенді sku_code, поміняй на 'sku_code'
-      key: 'article_number',
-      render: (text, record) => record.sku_code || text || '-', // Фолбек
+      dataIndex: 'sku_code',
+      key: 'sku_code',
+      render: (text) => text || '-',
     },
     {
       title: 'Назва',
@@ -160,8 +160,8 @@ function InventoryPage() {
       },
     },
     {
-      title: 'Ціна закуп.',
-      dataIndex: 'selling_price', // або cost_price
+      title: 'Ціна продажу',
+      dataIndex: 'selling_price',
       key: 'price',
       render: (price) => formatMoney(price),
     },
