@@ -463,10 +463,10 @@ function TruckDetailPage() {
             {baseModelName || '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Повний VIN">
-            <code>{truck.full_vin}</code>
+            {truck.full_vin ? <code>{truck.full_vin}</code> : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Останні 7 VIN">
-            <code>{truck.last_seven_vin}</code>
+            {truck.last_seven_vin ? <code>{truck.last_seven_vin}</code> : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Євростандарт">
             {truck.euro_standard ? (
