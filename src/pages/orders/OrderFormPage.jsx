@@ -245,11 +245,13 @@ function OrderFormPage() {
       if (isEdit) {
         await ordersAPI.update(id, formData);
         message.success('Замовлення оновлено');
+        navigate('/orders');
       } else {
-        await ordersAPI.create(formData);
+        const res = await ordersAPI.create(formData);
+        const created = res.data || res;
         message.success('Замовлення створено');
+        navigate(`/orders/${created.id}`);
       }
-      navigate('/orders');
     } catch (error) {
       const errorDetail = error.response?.data;
       if (errorDetail) {
