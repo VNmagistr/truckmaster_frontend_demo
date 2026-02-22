@@ -139,12 +139,10 @@ function InventoryPage() {
     },
     {
       title: 'Категорія',
-      dataIndex: ['category', 'name'],
       key: 'category',
-      render: (text, record) => {
-         // Обробка вкладеного об'єкта або ID
-         const catName = record.category?.name || record.subcategory?.name || '-';
-         return <Tag>{catName}</Tag>;
+      render: (_, record) => {
+        const catName = record.subcategory_name || record.category_name || record.subcategory?.name || record.category?.name || '-';
+        return <Tag>{catName}</Tag>;
       },
     },
     {
