@@ -103,6 +103,7 @@ FormPage визначає режим через `const isEdit = Boolean(id)`.
 - **Статуси**: `<StatusTag status={status} type="order" />`
 - **Пошук**: debounce 600ms, скидання пагінації на 1 при зміні пошуку
 - **Пагінація**: `page_size: 20`, `ordering: '-created_at'` за замовчуванням
+- **Nullable поля**: завжди рендерити з fallback: `value || '-'`, `vin ? \`...${vin}\` : '-'`
 
 ## Константи
 
@@ -112,6 +113,39 @@ import { ORDER_STATUSES, EURO_STANDARDS, UNITS, CATEGORY_TYPES } from '../../uti
 ORDER_STATUSES.OPEN → { value: 'OPEN', label: 'Відкрито', color: 'blue' }
 UNITS.pcs → { value: 'pcs', label: 'шт' }
 ```
+
+## Формат даних з API — ключові особливості
+
+### Вантажівки (`/trucks/`)
+
+**List** (`GET /trucks/`) повертає `TruckListSerializer`:
+```json
+{
+  "id": 1,
+  "license_plate": "ВС1657ОМ",
+  "specific_model_name": "70C17",
+  "last_seven_vin": "5056457",
+  "base_model": "70C17",
+  "client": { "id": 42, "name": "Цвігун Роман Ярославович" },
+  "client_id": 42,
+  "marked_for_deletion": false
+}
+```
+`client` — завжди вкладений об'єкт `{id, name}` або `null`. Використовуй `record.client?.id`, `record.client?.name`.
+
+**Detail** (`GET /trucks/:id/`) повертає `TruckDetailSerializer` (`fields = '__all__'`):
+- `client` — числовий ID (не об'єкт!)
+- `base_model` — числовий ID
+- Фронтенд TruckDetailPage окремо підтягує client і base_model по ID
+
+### Клієнти (`/clients/`)
+- `phone` — може бути `null` (не всі клієнти мають телефон)
+- `telegram_chat_id` — nullable, показує підключення боту
+
+### Замовлення (`/orders/`)
+- `truck` — вкладений об'єкт з `license_plate` у списку
+- `ServiceWork.work` — FK→WorkPrice, може бути `null` (ручний запис без прив'язки)
+- `UsedPart.service_work = null` — "прямі запчастини" ТО-набору (direct_parts)
 
 ## Env
 
@@ -128,3 +162,5 @@ UNITS.pcs → { value: 'pcs', label: 'шт' }
 - **Немає тестів** — жодного test-файлу в проекті
 - **React Query** — підключено в залежностях, але сторінки використовують `useState` + `useEffect` для даних
 - **`manualChunks: undefined`** у vite.config.js — навмисно, вирішує баг з `createContext` при chunking
+- **TruckDetailPage** — отримує `base_model` як ID і робить `baseModelsAPI.getAll()` щоб знайти назву (неоптимально, але працює)
+- **TruckFormPage** — список клієнтів обмежено 50; якщо власник не в першій сторінці — є окремий fallback-запит по ID
