@@ -337,25 +337,30 @@ function OrderFormPage() {
                   loading={searchingTrucks}
                   notFoundContent={searchingTrucks ? 'Пошук...' : 'Введіть номер авто'}
                   size="large"
+                  optionLabelProp="label"
                 >
-                  {truckOptions.map(truck => (
-                    <Select.Option key={truck.id} value={truck.id} truck={truck}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <Text strong style={{ fontSize: '14px' }}>{truck.license_plate}</Text>
-                          <br />
-                          <Text type="secondary" style={{ fontSize: '12px' }}>
-                            {truck.specific_model_name || truck.model || 'Модель не вказана'}
-                          </Text>
+                  {truckOptions.map(truck => {
+                    const model = truck.specific_model_name || truck.model || 'Модель не вказана';
+                    const shortLabel = `${truck.license_plate} — ${model}`;
+                    return (
+                      <Select.Option key={truck.id} value={truck.id} truck={truck} label={shortLabel}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <Text strong style={{ fontSize: '14px' }}>{truck.license_plate}</Text>
+                            <br />
+                            <Text type="secondary" style={{ fontSize: '12px' }}>
+                              {model}
+                            </Text>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <Text type="secondary" style={{ fontSize: '11px' }}>
+                              {truck.client_name || 'Без власника'}
+                            </Text>
+                          </div>
                         </div>
-                        <div style={{ textAlign: 'right' }}>
-                          <Text type="secondary" style={{ fontSize: '11px' }}>
-                            {truck.client_name || 'Без власника'}
-                          </Text>
-                        </div>
-                      </div>
-                    </Select.Option>
-                  ))}
+                      </Select.Option>
+                    );
+                  })}
                 </Select>
               </Form.Item>
 
