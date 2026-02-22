@@ -76,7 +76,7 @@ function ClientDetailPage() {
       title: 'VIN',
       dataIndex: 'last_seven_vin',
       key: 'vin',
-      render: (vin) => `...${vin}`,
+      render: (vin) => vin ? `...${vin}` : '-',
     },
     {
       title: 'Євростандарт',
