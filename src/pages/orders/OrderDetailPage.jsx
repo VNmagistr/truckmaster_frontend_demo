@@ -875,7 +875,7 @@ function OrderDetailPage() {
             <Form.Item name="part" label="Запчастина" rules={[{ required: true, message: 'Оберіть запчастину' }]}>
                 <Select
                     showSearch
-                    placeholder="Пошук (Назва або Артикул)"
+                    placeholder="Назва або 4 останні цифри артикулу"
                     filterOption={false}
                     onSearch={handlePartsSearch}
                     loading={partsSearchLoading}
