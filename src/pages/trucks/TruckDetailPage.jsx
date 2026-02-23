@@ -284,6 +284,7 @@ function TruckDetailPage() {
           dataSource={orders}
           rowKey="id"
           pagination={false}
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: 'Немає замовлень' }}
           footer={() => orders.length >= 20 ? <div style={{textAlign: 'center', color: '#999'}}>Показано останні 20</div> : null}
         />
@@ -324,6 +325,7 @@ function TruckDetailPage() {
             dataSource={logs}
             rowKey="id"
             pagination={false}
+            scroll={{ x: 'max-content' }}
             locale={{ emptyText: 'Немає записів ТО' }}
           />
         </Spin>
@@ -381,6 +383,7 @@ function TruckDetailPage() {
                     rowKey="id"
                     pagination={false}
                     size="small"
+                    scroll={{ x: 'max-content' }}
                     columns={[
                       {
                         title: 'Запчастина',

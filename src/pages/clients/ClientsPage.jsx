@@ -137,6 +137,7 @@ function ClientsPage() {
           columns={columns}
           dataSource={clients}
           rowKey="id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: pagination.current,
             pageSize: 20,
