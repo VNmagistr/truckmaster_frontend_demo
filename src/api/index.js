@@ -148,6 +148,7 @@ export const ordersAPI = {
   addPartToWork: (workId, data) => instance.post(`/service-works/${workId}/add-part/`, data),
   removePartFromWork: (workId, partId) => instance.delete(`/service-works/${workId}/remove-part/${partId}/`),
   applyMaintenanceSet: (orderId, data) => instance.post(`/orders/${orderId}/apply_maintenance_set/`, data),
+  applyKit: (workId) => instance.post(`/service-works/${workId}/apply-kit/`),
 };
 
 export const repairPhotosAPI = {

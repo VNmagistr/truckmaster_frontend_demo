@@ -16,6 +16,11 @@ function OrderDetailPage() {
   const [editingWork, setEditingWork] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
 
+  const [isKitModalOpen, setIsKitModalOpen] = useState(false);
+  const [kitData, setKitData] = useState(null);
+  const [kitLoading, setKitLoading] = useState(false);
+  const [kitWorkId, setKitWorkId] = useState(null);
+
   const [worksList, setWorksList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
   const [partsList, setPartsList] = useState([]);
@@ -173,6 +178,43 @@ function OrderDetailPage() {
   const formatMileage = (mileage) => {
     if (!mileage) return '-';
     return `${Number(mileage).toLocaleString('uk-UA')} км`;
+  };
+
+  const handleOpenKitModal = async () => {
+    const truckId = order?.truck?.id || order?.truck;
+    if (!truckId) return message.warning('Авто не визначено');
+    setKitLoading(true);
+    setIsKitModalOpen(true);
+    try {
+      const res = await maintenanceAPI.getKit(truckId);
+      const data = res.data || res;
+      const list = Array.isArray(data) ? data : (data.results || []);
+      setKitData(list.length > 0 ? list[0] : null);
+    } catch {
+      message.error('Не вдалося завантажити набір ТО');
+      setIsKitModalOpen(false);
+    } finally {
+      setKitLoading(false);
+    }
+  };
+
+  const handleAddKit = async () => {
+    if (!kitWorkId) return message.warning('Оберіть роботу');
+    setModalLoading(true);
+    try {
+      const res = await ordersAPI.applyKit(kitWorkId);
+      const data = res.data || res;
+      message.success(`Набір ТО додано: ${data.count} позиції`);
+      setIsKitModalOpen(false);
+      setKitWorkId(null);
+      setKitData(null);
+      initPage();
+    } catch (error) {
+      const msg = error.response?.data?.error || error.response?.data?.detail || 'Помилка при додаванні набору';
+      message.error(msg);
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   // Зміна статусу замовлення
@@ -545,14 +587,23 @@ function OrderDetailPage() {
       label: `Запчастини (${allUsedParts.length})`,
       children: (
         <div>
-             <Button 
-                type="dashed" 
-                icon={<ToolOutlined />} 
-                onClick={() => setIsPartModalOpen(true)} 
+             <Button
+                type="dashed"
+                icon={<ToolOutlined />}
+                onClick={() => setIsPartModalOpen(true)}
+                disabled={isDeleted || orderWorks.length === 0}
+                style={{ marginBottom: 8, width: '100%' }}
+            >
+                Списати запчастину
+            </Button>
+            <Button
+                type="dashed"
+                icon={<PlusOutlined />}
+                onClick={handleOpenKitModal}
                 disabled={isDeleted || orderWorks.length === 0}
                 style={{ marginBottom: 16, width: '100%' }}
             >
-                Списати запчастину
+                Додати набір ТО
             </Button>
             {orderWorks.length === 0 && (
               <Alert 
@@ -860,6 +911,78 @@ function OrderDetailPage() {
               Списати
             </Button>
         </Form>
+      </Modal>
+
+      {/* Модалка набору ТО */}
+      <Modal
+        title="Набір ТО для авто"
+        open={isKitModalOpen}
+        onCancel={() => { setIsKitModalOpen(false); setKitWorkId(null); setKitData(null); }}
+        footer={null}
+        destroyOnClose
+        width={520}
+      >
+        <Form layout="vertical">
+          <Form.Item label="До якої роботи списати?" required>
+            <Select
+              placeholder="Оберіть роботу"
+              value={kitWorkId}
+              onChange={setKitWorkId}
+              options={orderWorks.map(w => ({ value: w.id, label: w.work?.name || w.description || `Робота #${w.id}` }))}
+            />
+          </Form.Item>
+        </Form>
+
+        {kitLoading ? (
+          <LoadingSpinner />
+        ) : kitData === null ? (
+          <Alert
+            message="Набір ТО не знайдено"
+            description="Для цього авто ще не збережено набір ТО. Додайте оливу та фільтри вручну — вони збережуться автоматично."
+            type="warning"
+            showIcon
+            style={{ marginBottom: 16 }}
+          />
+        ) : (
+          <Table
+            dataSource={[
+              ...(kitData.oil ? [{
+                key: 'oil',
+                name: kitData.oil.name,
+                sku: kitData.oil.sku_code,
+                quantity: kitData.oil_quantity,
+                type: 'Олива',
+              }] : []),
+              ...(kitData.filters || []).map(f => ({
+                key: `filter-${f.id}`,
+                name: f.part?.name,
+                sku: f.part?.sku_code,
+                quantity: f.quantity,
+                type: f.filter_type?.name || 'Фільтр',
+              })),
+            ]}
+            pagination={false}
+            size="small"
+            locale={{ emptyText: 'Набір порожній' }}
+            columns={[
+              { title: 'Назва', dataIndex: 'name', key: 'name' },
+              { title: 'Артикул', dataIndex: 'sku', key: 'sku', width: 100 },
+              { title: 'Тип', dataIndex: 'type', key: 'type', width: 100 },
+              { title: 'К-сть', dataIndex: 'quantity', key: 'quantity', width: 70 },
+            ]}
+          />
+        )}
+
+        <Button
+          type="primary"
+          block
+          style={{ marginTop: 16 }}
+          loading={modalLoading}
+          disabled={!kitWorkId || kitData === null}
+          onClick={handleAddKit}
+        >
+          Списати весь набір
+        </Button>
       </Modal>
 
       {/* Модалка редагування роботи */}
