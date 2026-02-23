@@ -152,25 +152,67 @@ function OrdersPage() {
     navigate(`/orders/${record.id}/edit`);
   };
 
+  const formatDayHeader = (dayStr) => {
+    const [year, month, day] = dayStr.split('-');
+    const monthNames = ['січня','лютого','березня','квітня','травня','червня',
+      'липня','серпня','вересня','жовтня','листопада','грудня'];
+    return `${parseInt(day)} ${monthNames[parseInt(month) - 1]} ${year}`;
+  };
+
+  const ordersWord = (n) =>
+    (n % 100 >= 11 && n % 100 <= 19) || n % 10 >= 5 || n % 10 === 0
+      ? 'замовлень' : 'замовлення';
+
+  const buildTableData = (list) => {
+    const result = [];
+    let currentDay = null;
+    list.forEach(order => {
+      const day = order.created_at ? order.created_at.split('T')[0] : 'unknown';
+      if (day !== currentDay) {
+        currentDay = day;
+        const dayCount = list.filter(o => (o.created_at || '').split('T')[0] === day).length;
+        result.push({ _isSeparator: true, _day: day, _dayCount: dayCount, id: `sep_${day}` });
+      }
+      result.push(order);
+    });
+    return result;
+  };
+
   const columns = [
     {
       title: 'Номер',
       dataIndex: 'order_number',
       key: 'order_number',
-      render: (text, record) => (
-        <Space direction="vertical" size={0}>
-          <Text strong style={{ color: '#1890ff', cursor: 'pointer' }}>
-            {text}
-          </Text>
-          {record.marked_for_deletion && (
-            <Tag color="error" style={{ marginTop: 4 }}>На видалення</Tag>
-          )}
-        </Space>
-      )
+      onCell: (record) => record._isSeparator ? { colSpan: 99, style: { padding: 0 } } : {},
+      render: (text, record) => {
+        if (record._isSeparator) {
+          return (
+            <div style={{ padding: '7px 16px', backgroundColor: '#f5f5f5', borderLeft: '3px solid #d9d9d9' }}>
+              <Text strong style={{ fontSize: 13, color: '#434343' }}>
+                {formatDayHeader(record._day)}
+              </Text>
+              <Text type="secondary" style={{ marginLeft: 12, fontSize: 12 }}>
+                {record._dayCount} {ordersWord(record._dayCount)}
+              </Text>
+            </div>
+          );
+        }
+        return (
+          <Space direction="vertical" size={0}>
+            <Text strong style={{ color: '#1890ff', cursor: 'pointer' }}>
+              {text}
+            </Text>
+            {record.marked_for_deletion && (
+              <Tag color="error" style={{ marginTop: 4 }}>На видалення</Tag>
+            )}
+          </Space>
+        );
+      }
     },
     {
       title: 'Авто',
       key: 'truck',
+      onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (_, record) => (
         <div>
           <div style={{ fontWeight: 500 }}>{record.truck?.license_plate || '-'}</div>
@@ -184,12 +226,14 @@ function OrdersPage() {
       title: 'Клієнт',
       dataIndex: ['client', 'name'],
       key: 'client',
+      onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (text) => text || '-',
     },
     {
       title: 'Статус',
       dataIndex: 'status',
       key: 'status',
+      onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (status) => {
         const statusConfig = Object.values(ORDER_STATUSES).find(s => s.value === status);
         return <Tag color={statusConfig?.color || 'default'}>{statusConfig?.label || status}</Tag>;
@@ -199,18 +243,21 @@ function OrdersPage() {
       title: 'Сума',
       dataIndex: 'total_cost',
       key: 'total_cost',
+      onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (val) => val ? `${parseFloat(val).toFixed(2)} грн` : '0.00 грн',
     },
     {
       title: 'Створено',
       dataIndex: 'created_at',
       key: 'created_at',
+      onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (date) => formatDate(date),
     },
     {
       title: 'Дії',
       key: 'actions',
       width: 120,
+      onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (_, record) => (
         <Space size="small" onClick={(e) => e.stopPropagation()}>
           {!record.marked_for_deletion ? (
@@ -254,6 +301,7 @@ function OrdersPage() {
       dataIndex: 'deletion_reason',
       key: 'deletion_reason',
       width: 200,
+      onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (text, record) => (
         <div>
           <Text type="secondary" style={{ fontSize: '12px' }}>
@@ -325,7 +373,7 @@ function OrdersPage() {
       <Card>
         <Table
           columns={columns}
-          dataSource={orders}
+          dataSource={buildTableData(orders)}
           rowKey="id"
           loading={loading}
           scroll={{ x: 'max-content' }}
@@ -333,15 +381,18 @@ function OrdersPage() {
             current: pagination.current,
             pageSize: pagination.pageSize,
             total: pagination.total,
-            showSizeChanger: true, 
+            showSizeChanger: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`
           }}
           onChange={handleTableChange}
-          rowClassName={(record) => record.marked_for_deletion ? 'row-marked-for-deletion' : 'row-clickable'}
-          onRow={(record) => ({
-            onClick: () => handleRowClick(record),
-            style: { cursor: 'pointer' }
-          })}
+          rowClassName={(record) => {
+            if (record._isSeparator) return 'row-date-separator';
+            return record.marked_for_deletion ? 'row-marked-for-deletion' : 'row-clickable';
+          }}
+          onRow={(record) => {
+            if (record._isSeparator) return {};
+            return { onClick: () => handleRowClick(record), style: { cursor: 'pointer' } };
+          }}
         />
       </Card>
 
@@ -397,6 +448,13 @@ function OrdersPage() {
         }
         .row-clickable:hover > td {
           background-color: #e6f7ff !important;
+        }
+        .row-date-separator > td {
+          padding: 0 !important;
+          background-color: #fafafa !important;
+        }
+        .row-date-separator:hover > td {
+          background-color: #fafafa !important;
         }
       `}</style>
     </div>
