@@ -139,6 +139,7 @@ function ClientDetailPage() {
           dataSource={trucks}
           rowKey="id"
           pagination={false}
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: 'Немає вантажівок' }}
         />
       ),
@@ -157,9 +158,10 @@ function ClientDetailPage() {
           columns={ordersColumns}
           dataSource={orders}
           rowKey="id"
+          scroll={{ x: 'max-content' }}
           // Показуємо, що це не всі дані (можна додати повноцінну пагінацію пізніше)
           footer={() => ordersTotal > 20 ? <div style={{textAlign: 'center', color: '#999'}}>Показано останні 20 замовлень</div> : null}
-          pagination={false} 
+          pagination={false}
           locale={{ emptyText: 'Немає замовлень' }}
         />
       ),

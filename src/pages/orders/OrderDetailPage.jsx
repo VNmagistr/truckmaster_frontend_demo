@@ -585,13 +585,14 @@ function OrderDetailPage() {
             >
                 Додати роботу
             </Button>
-            <Table 
-                columns={worksColumns} 
-                dataSource={orderWorks} 
-                rowKey={(r) => r.id || Math.random()} 
-                pagination={false} 
-                size="small" 
-                bordered 
+            <Table
+                columns={worksColumns}
+                dataSource={orderWorks}
+                rowKey={(r) => r.id || Math.random()}
+                pagination={false}
+                size="small"
+                bordered
+                scroll={{ x: 'max-content' }}
                 locale={{ emptyText: 'Роботи не додано' }}
             />
         </div>
@@ -629,13 +630,14 @@ function OrderDetailPage() {
                 style={{ marginBottom: 16 }}
               />
             )}
-            <Table 
-                columns={partsColumns} 
-                dataSource={allUsedParts} 
-                rowKey={(r) => r.id || Math.random()} 
-                pagination={false} 
-                size="small" 
-                bordered 
+            <Table
+                columns={partsColumns}
+                dataSource={allUsedParts}
+                rowKey={(r) => r.id || Math.random()}
+                pagination={false}
+                size="small"
+                bordered
+                scroll={{ x: 'max-content' }}
                 locale={{ emptyText: 'Запчастини не використано' }}
             />
         </div>
@@ -734,10 +736,10 @@ function OrderDetailPage() {
         title={`Замовлення ${order.order_number || `#${order.id}`}`}
         showBack
         extra={
-          <Space>
+          <Space wrap>
             <Button icon={<PrinterOutlined />}>Друк</Button>
-            <Dropdown 
-              menu={{ 
+            <Dropdown
+              menu={{
                 items: statusItems.map(item => ({
                   ...item,
                   onClick: () => handleStatusChange(item.key),
@@ -750,9 +752,9 @@ function OrderDetailPage() {
                 Змінити статус <DownOutlined />
               </Button>
             </Dropdown>
-            <Button 
-                type="primary" 
-                icon={<EditOutlined />} 
+            <Button
+                type="primary"
+                icon={<EditOutlined />}
                 onClick={() => navigate(`/orders/${id}/edit`)}
                 disabled={isDeleted}
             >
@@ -846,6 +848,7 @@ function OrderDetailPage() {
           rowKey="key"
           pagination={false}
           size="small"
+          scroll={{ x: 600 }}
           columns={[
             {
               title: 'Вид роботи',

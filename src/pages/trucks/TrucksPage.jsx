@@ -141,6 +141,7 @@ function TrucksPage() {
           columns={columns}
           dataSource={trucks}
           rowKey="id"
+          scroll={{ x: 'max-content' }}
           pagination={{
             current: pagination.current,
             pageSize: 20,

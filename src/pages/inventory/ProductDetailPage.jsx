@@ -181,6 +181,7 @@ function ProductDetailPage() {
           dataSource={stockItems}
           rowKey="id"
           pagination={false}
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: 'Немає даних по складах' }}
         />
       ),
@@ -194,6 +195,7 @@ function ProductDetailPage() {
           dataSource={movements}
           rowKey="id"
           pagination={{ pageSize: 10 }}
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: 'Немає історії руху' }}
         />
       ),
@@ -207,7 +209,7 @@ function ProductDetailPage() {
         subtitle={product.sku_code}
         showBack
         extra={
-          <Space>
+          <Space wrap>
             {product.marked_for_deletion ? (
               <Button
                 icon={<UndoOutlined />}
