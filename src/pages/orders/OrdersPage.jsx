@@ -215,8 +215,8 @@ function OrdersPage() {
       onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (_, record) => (
         <div>
-          <div style={{ fontWeight: 500 }}>{record.truck?.license_plate || '-'}</div>
-          <div style={{ fontSize: '12px', color: '#888' }}>
+          <div style={{ fontWeight: 600, fontSize: '15px' }}>{record.truck?.license_plate || '-'}</div>
+          <div style={{ fontSize: '13px', color: '#888' }}>
             {record.truck?.specific_model_name || record.truck?.model || ''}
           </div>
         </div>
@@ -227,7 +227,7 @@ function OrdersPage() {
       dataIndex: ['client', 'name'],
       key: 'client',
       onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
-      render: (text) => text || '-',
+      render: (text) => <Text strong>{text || '-'}</Text>,
     },
     {
       title: 'Статус',
@@ -372,6 +372,7 @@ function OrdersPage() {
 
       <Card>
         <Table
+          className="orders-table"
           columns={columns}
           dataSource={buildTableData(orders)}
           rowKey="id"
@@ -455,6 +456,12 @@ function OrdersPage() {
         }
         .row-date-separator:hover > td {
           background-color: #fafafa !important;
+        }
+        .orders-table .ant-table-cell {
+          font-size: 15px;
+        }
+        .orders-table .ant-table-thead .ant-table-cell {
+          font-size: 13px;
         }
       `}</style>
     </div>
