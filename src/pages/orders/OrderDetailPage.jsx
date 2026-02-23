@@ -41,6 +41,9 @@ function OrderDetailPage() {
   const [photoDescription, setPhotoDescription] = useState('');
   const [photoModalLoading, setPhotoModalLoading] = useState(false);
 
+  const [countdown, setCountdown] = useState(null);
+  const [countdownLoading, setCountdownLoading] = useState(false);
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -58,6 +61,7 @@ function OrderDetailPage() {
       setOrder(data);
 
       loadDirectories();
+      loadCountdown();
     } catch (error) {
       message.error('Не вдалося завантажити замовлення (можливо, воно видалене)');
     } finally {
@@ -190,6 +194,20 @@ function OrderDetailPage() {
       setIsKitModalOpen(false);
     } finally {
       setKitLoading(false);
+    }
+  };
+
+  const loadCountdown = async () => {
+    if (!id) return;
+    setCountdownLoading(true);
+    try {
+      const res = await ordersAPI.getMaintenanceCountdown(id);
+      const data = res.data || res;
+      setCountdown(data);
+    } catch {
+      // silent — block просто покаже прочерки
+    } finally {
+      setCountdownLoading(false);
     }
   };
 
@@ -814,6 +832,53 @@ function OrderDetailPage() {
             </Descriptions.Item>
           )}
         </Descriptions>
+      </Card>
+
+      {/* Відлік регламентних робіт */}
+      <Card
+        title="Регламентні роботи"
+        size="small"
+        loading={countdownLoading}
+        style={{ marginBottom: 16 }}
+      >
+        <Table
+          dataSource={countdown?.items || []}
+          rowKey="key"
+          pagination={false}
+          size="small"
+          columns={[
+            {
+              title: 'Вид роботи',
+              dataIndex: 'label',
+              key: 'label',
+            },
+            {
+              title: 'Інтервал',
+              dataIndex: 'interval',
+              key: 'interval',
+              width: 120,
+              render: (val) => val ? `${val.toLocaleString('uk-UA')} км` : '—',
+            },
+            {
+              title: 'Остання заміна',
+              dataIndex: 'last_km',
+              key: 'last_km',
+              width: 140,
+              render: (val) => val ? `${val.toLocaleString('uk-UA')} км` : '—',
+            },
+            {
+              title: 'Залишилось',
+              dataIndex: 'remaining',
+              key: 'remaining',
+              width: 130,
+              render: (val) => {
+                if (val === null || val === undefined) return <span style={{ color: '#999' }}>Н/Д</span>;
+                const color = val < 0 ? '#f5222d' : val < 5000 ? '#fa8c16' : '#52c41a';
+                return <span style={{ color, fontWeight: 600 }}>{val.toLocaleString('uk-UA')} км</span>;
+              },
+            },
+          ]}
+        />
       </Card>
 
       <Card>

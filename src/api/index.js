@@ -149,6 +149,7 @@ export const ordersAPI = {
   removePartFromWork: (workId, partId) => instance.delete(`/service-works/${workId}/remove-part/${partId}/`),
   applyMaintenanceSet: (orderId, data) => instance.post(`/orders/${orderId}/apply_maintenance_set/`, data),
   applyKit: (workId) => instance.post(`/service-works/${workId}/apply-kit/`),
+  getMaintenanceCountdown: (orderId) => instance.get(`/orders/${orderId}/maintenance-countdown/`),
 };
 
 export const repairPhotosAPI = {
@@ -218,6 +219,20 @@ export const maintenanceAPI = {
   removeKitFilter: (kitId, filterId) => instance.delete(`/maintenance-kits/${kitId}/remove-filter/${filterId}/`),
 
   getLogs: (truckId) => instance.get('/orders/maintenance-logs/', { params: { truck: truckId } }),
+
+  getIntervals: (truckId) => instance.get('/maintenance-intervals/', { params: { truck: truckId } }),
+  saveIntervals: (truckId, data) => {
+    // Try update first, fall back to create
+    return instance.get('/maintenance-intervals/', { params: { truck: truckId } })
+      .then(res => {
+        const d = res.data || res;
+        const list = Array.isArray(d) ? d : (d.results || []);
+        if (list.length > 0) {
+          return instance.patch(`/maintenance-intervals/${list[0].id}/`, data);
+        }
+        return instance.post('/maintenance-intervals/', { truck: truckId, ...data });
+      });
+  },
 };
 
 export const inventoryAPI = {
