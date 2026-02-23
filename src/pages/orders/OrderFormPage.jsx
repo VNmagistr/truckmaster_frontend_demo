@@ -224,6 +224,29 @@ function OrderFormPage() {
     }
   };
 
+  const compressImage = (file) => new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      let { width, height } = img;
+      const maxDim = 1920;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else { width = Math.round(width * maxDim / height); height = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => resolve(new File([blob], file.name, { type: 'image/jpeg' })),
+        'image/jpeg', 0.82
+      );
+    };
+    img.src = url;
+  });
+
   const handleMileageBlur = (e) => {
     const mileage = e.target.value;
     const truckId = form.getFieldValue('truck');
@@ -245,13 +268,13 @@ function OrderFormPage() {
       });
 
       const carFile = carPhotoList.find(f => f.originFileObj);
-      if (carFile) formData.append('car_photo', carFile.originFileObj);
+      if (carFile) formData.append('car_photo', await compressImage(carFile.originFileObj));
 
       const odometerFile = odometerPhotoList.find(f => f.originFileObj);
-      if (odometerFile) formData.append('odometer_photo', odometerFile.originFileObj);
+      if (odometerFile) formData.append('odometer_photo', await compressImage(odometerFile.originFileObj));
 
       const dashboardFile = dashboardPhotoList.find(f => f.originFileObj);
-      if (dashboardFile) formData.append('dashboard_photo', dashboardFile.originFileObj);
+      if (dashboardFile) formData.append('dashboard_photo', await compressImage(dashboardFile.originFileObj));
 
       if (isEdit) {
         await ordersAPI.update(id, formData);
@@ -264,8 +287,11 @@ function OrderFormPage() {
         navigate(`/orders/${created.id}`);
       }
     } catch (error) {
+      const status = error.response?.status;
       const errorDetail = error.response?.data;
-      if (errorDetail) {
+      if (status === 413) {
+        message.error('Файл занадто великий. Спробуйте фото меншого розміру.');
+      } else if (errorDetail && typeof errorDetail === 'object') {
         const messages = Object.entries(errorDetail)
           .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
           .join('; ');
