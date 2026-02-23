@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input, Dropdown, Upload } from 'antd';
 import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -24,6 +24,8 @@ function OrderDetailPage() {
   const [worksList, setWorksList] = useState([]);
   const [employeesList, setEmployeesList] = useState([]);
   const [partsList, setPartsList] = useState([]);
+  const [partsSearchLoading, setPartsSearchLoading] = useState(false);
+  const partsSearchTimer = useRef(null);
 
   const [formWork] = Form.useForm();
   const [formPart] = Form.useForm();
@@ -74,42 +76,34 @@ function OrderDetailPage() {
 
   const loadDirectories = async () => {
     try {
-        const fetchAllPages = async (apiCall, pageSize = 50) => {
-          let allResults = [];
-          let page = 1;
-          let hasMore = true;
-          
-          while (hasMore) {
-            try {
-              const response = await apiCall({ page, page_size: pageSize });
-              const data = response.data || response;
-              const results = data.results || data || [];
-              
-              allResults = [...allResults, ...results];
-              hasMore = data.next !== null && results.length > 0;
-              page++;
-              if (page > 100) break;
-            } catch (err) {
-              break;
-            }
-          }
-
-          return allResults;
-        };
-
-        const worksPromise = fetchAllPages(worksAPI.getAll, 50);
-        const partsPromise = fetchAllPages(inventoryAPI.getAll, 50);
-        const empResp = await employeesAPI.getAll();
-
-        const works = await worksPromise;
-        const parts = await partsPromise;
-        
-        setWorksList(works);
-        setPartsList(parts);
+        const [worksResp, empResp] = await Promise.all([
+            worksAPI.getAll({ page_size: 500 }),
+            employeesAPI.getAll(),
+        ]);
+        const worksData = worksResp.data || worksResp;
+        setWorksList(worksData.results || worksData || []);
         setEmployeesList(ensureArray(empResp));
     } catch (e) {
         message.error('Не вдалося завантажити довідники');
     }
+  };
+
+  const fetchParts = async (query = '') => {
+    setPartsSearchLoading(true);
+    try {
+        const res = await inventoryAPI.getAll({ search: query, page_size: 20 });
+        const data = res.data || res;
+        setPartsList(data.results || []);
+    } catch {
+        // ignore
+    } finally {
+        setPartsSearchLoading(false);
+    }
+  };
+
+  const handlePartsSearch = (query) => {
+    clearTimeout(partsSearchTimer.current);
+    partsSearchTimer.current = setTimeout(() => fetchParts(query), 400);
   };
 
   const resolveNameInList = (id, list) => {
@@ -492,13 +486,13 @@ function OrderDetailPage() {
       title: 'Запчастина',
       dataIndex: 'part',
       key: 'part',
-      render: (val) => {
-          const partObj = typeof val === 'object' ? val : safePartsList.find(p => String(p.id) === String(val));
-          if (!partObj) return typeof val === 'object' ? (val?.name || '-') : '-';
+      render: (val, record) => {
+          const name = record.part_name || (typeof val === 'object' ? val?.name : null) || '-';
+          const sku = record.part_sku || (typeof val === 'object' ? val?.sku_code : null) || '';
           return (
             <div>
-                <div style={{ fontWeight: 500 }}>{partObj.name}</div>
-                <div style={{ fontSize: '11px', color: '#888' }}>{partObj.sku_code || ''}</div>
+                <div style={{ fontWeight: 500 }}>{name}</div>
+                <div style={{ fontSize: '11px', color: '#888' }}>{sku}</div>
             </div>
           );
       },
@@ -590,7 +584,7 @@ function OrderDetailPage() {
              <Button
                 type="dashed"
                 icon={<ToolOutlined />}
-                onClick={() => setIsPartModalOpen(true)}
+                onClick={() => { setIsPartModalOpen(true); fetchParts(); }}
                 disabled={isDeleted || orderWorks.length === 0}
                 style={{ marginBottom: 8, width: '100%' }}
             >
@@ -878,14 +872,16 @@ function OrderDetailPage() {
             )}
             
             <Form.Item name="part" label="Запчастина" rules={[{ required: true, message: 'Оберіть запчастину' }]}>
-                <Select 
-                    showSearch 
+                <Select
+                    showSearch
                     placeholder="Пошук (Назва або Артикул)"
-                    optionFilterProp="label"
+                    filterOption={false}
+                    onSearch={handlePartsSearch}
+                    loading={partsSearchLoading}
                     onChange={onPartSelect}
-                    options={safePartsList.map(p => ({ 
-                        value: p.id, 
-                        label: `${p.sku_code || ''} - ${p.name} (Склад: ${p.quantity || p.current_stock || 0})` 
+                    options={safePartsList.map(p => ({
+                        value: p.id,
+                        label: `${p.sku_code || ''} — ${p.name} (${p.current_stock || 0} ${p.unit || 'шт'})`,
                     }))}
                 />
             </Form.Item>
