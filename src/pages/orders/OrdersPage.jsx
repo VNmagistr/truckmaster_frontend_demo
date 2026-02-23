@@ -328,7 +328,8 @@ function OrdersPage() {
           dataSource={orders}
           rowKey="id"
           loading={loading}
-          pagination={{ 
+          scroll={{ x: 'max-content' }}
+          pagination={{
             current: pagination.current,
             pageSize: pagination.pageSize,
             total: pagination.total,

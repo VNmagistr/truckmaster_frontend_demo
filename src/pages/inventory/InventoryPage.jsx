@@ -270,6 +270,7 @@ function InventoryPage() {
             columns={columns}
             dataSource={products}
             rowKey="id"
+            scroll={{ x: 'max-content' }}
             pagination={{
               current: pagination.current,
               pageSize: pagination.pageSize,

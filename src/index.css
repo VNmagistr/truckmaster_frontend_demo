@@ -111,9 +111,29 @@ a:hover {
   .ant-layout-header {
     display: none !important;
   }
-  
+
   .ant-layout-content {
     margin: 0 !important;
     padding: 0 !important;
   }
+}
+
+/* Mobile стилі */
+@media (max-width: 768px) {
+  /* Модалки — майже fullscreen */
+  .ant-modal { max-width: calc(100vw - 16px) !important; margin: 8px auto !important; }
+  .ant-modal-content { border-radius: 8px !important; }
+
+  /* Таблиці — горизонтальний скрол */
+  .ant-table-wrapper { overflow-x: auto; }
+
+  /* Зменшити відступи в картках */
+  .ant-card-body { padding: 12px !important; }
+
+  /* Кнопки в toolbar — переносити */
+  .ant-space-item { flex-shrink: 0; }
+
+  /* Tabs — горизонтальний скрол навігації */
+  .ant-tabs-nav { overflow-x: auto; }
+  .ant-tabs-nav-wrap { flex: none !important; }
 }
