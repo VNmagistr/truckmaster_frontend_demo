@@ -484,19 +484,21 @@ function OrderDetailPage() {
 
   const partsColumns = [
     {
-      title: 'Запчастина',
-      dataIndex: 'part',
-      key: 'part',
-      render: (val, record) => {
-          const name = record.part_name || (typeof val === 'object' ? val?.name : null) || '-';
-          const sku = record.part_sku || (typeof val === 'object' ? val?.sku_code : null) || '';
-          return (
-            <div>
-                <div style={{ fontWeight: 500 }}>{name}</div>
-                <div style={{ fontSize: '11px', color: '#888' }}>{sku}</div>
-            </div>
-          );
-      },
+      title: 'Артикул',
+      key: 'part_sku',
+      width: 110,
+      render: (_, record) => record.part_sku || '-',
+    },
+    {
+      title: 'Назва',
+      key: 'part_name',
+      render: (_, record) => record.part_name || '-',
+    },
+    {
+      title: 'Бренд',
+      key: 'part_brand',
+      width: 120,
+      render: (_, record) => record.part_brand || '-',
     },
     { 
       title: 'Кількість', 
