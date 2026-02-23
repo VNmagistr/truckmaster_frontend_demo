@@ -24,6 +24,7 @@ function TrucksPage() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
+        if (searchText.length > 0 && searchText.length < 4) return;
         setPagination(prev => ({ ...prev, current: 1 }));
         fetchTrucks(1, searchText);
     }, 600);

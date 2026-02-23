@@ -46,6 +46,7 @@ function OrdersPage() {
   // Debounce для пошуку
   useEffect(() => {
     const timer = setTimeout(() => {
+      if (searchText.length > 0 && searchText.length < 4) return;
       fetchOrders(1, pagination.pageSize, statusFilter, searchText);
     }, 600);
     return () => clearTimeout(timer);

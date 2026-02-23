@@ -32,7 +32,8 @@ function InventoryPage() {
   // Debounce для пошуку
   useEffect(() => {
     const timer = setTimeout(() => {
-        setPagination(prev => ({ ...prev, current: 1 })); // Скидаємо на 1 сторінку
+        if (searchText.length > 0 && searchText.length < 4) return;
+        setPagination(prev => ({ ...prev, current: 1 }));
         fetchProducts(1, searchText);
     }, 600);
     return () => clearTimeout(timer);
