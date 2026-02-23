@@ -353,7 +353,7 @@ function TruckDetailPage() {
                 style={{ marginBottom: 16 }}
               >
                 <Space>
-                  <Text strong>{kit.oil?.name || '-'}</Text>
+                  <Text strong>{kit.oil_name ? `[${kit.oil_sku}] ${kit.oil_name}` : '-'}</Text>
                   <Text type="secondary">—</Text>
                   <Text>{kit.oil_quantity} л</Text>
                   {kit.oil_change_interval_km && (
@@ -384,8 +384,10 @@ function TruckDetailPage() {
                     columns={[
                       {
                         title: 'Запчастина',
-                        dataIndex: 'part',
-                        render: (val) => val?.name || '-',
+                        key: 'part',
+                        render: (_, record) => record.part_name
+                          ? `[${record.part_sku}] ${record.part_name}`
+                          : '-',
                       },
                       {
                         title: 'К-сть',
