@@ -214,7 +214,7 @@ function InventoryPage() {
         extra={
           <Space>
             <Input
-              placeholder="Пошук (Назва, Артикул)..."
+              placeholder="Назва або 4 останні цифри артикулу..."
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
               onChange={e => setSearchText(e.target.value)}
               style={{ width: 220 }}
