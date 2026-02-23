@@ -955,8 +955,8 @@ function OrderDetailPage() {
               }] : []),
               ...(kitData.filters || []).map(f => ({
                 key: `filter-${f.id}`,
-                name: f.part?.name,
-                sku: f.part?.sku_code,
+                name: f.part_name,
+                sku: f.part_sku,
                 quantity: f.quantity,
                 type: f.filter_type?.name || 'Фільтр',
               })),
