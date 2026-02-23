@@ -23,7 +23,9 @@ function OrderFormPage() {
   const [lockedClientName, setLockedClientName] = useState('');
   
   const [alerts, setAlerts] = useState([]);
-  const [fileList, setFileList] = useState([]);
+  const [carPhotoList, setCarPhotoList] = useState([]);
+  const [odometerPhotoList, setOdometerPhotoList] = useState([]);
+  const [dashboardPhotoList, setDashboardPhotoList] = useState([]);
 
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
   const [maintenanceRules, setMaintenanceRules] = useState([]);
@@ -84,6 +86,16 @@ function OrderFormPage() {
             
             if (orderData.truck && orderData.current_mileage) {
               checkMaintenance(orderData.truck.id || orderData.truck, orderData.current_mileage);
+            }
+
+            if (orderData.car_photo) {
+              setCarPhotoList([{ uid: 'car', name: 'car_photo', status: 'done', url: orderData.car_photo }]);
+            }
+            if (orderData.odometer_photo) {
+              setOdometerPhotoList([{ uid: 'odometer', name: 'odometer_photo', status: 'done', url: orderData.odometer_photo }]);
+            }
+            if (orderData.dashboard_photo) {
+              setDashboardPhotoList([{ uid: 'dashboard', name: 'dashboard_photo', status: 'done', url: orderData.dashboard_photo }]);
             }
           }
         }
@@ -221,8 +233,6 @@ function OrderFormPage() {
     }
   };
 
-  const handleFileChange = ({ fileList: newFileList }) => setFileList(newFileList);
-
   const onFinish = async (values) => {
     setSaving(true);
     try {
@@ -234,13 +244,14 @@ function OrderFormPage() {
         }
       });
 
-      fileList.forEach((file, index) => {
-        if (file.originFileObj) {
-          if (index === 0) formData.append('car_photo', file.originFileObj);
-          else if (index === 1) formData.append('odometer_photo', file.originFileObj);
-          else if (index === 2) formData.append('dashboard_photo', file.originFileObj);
-        }
-      });
+      const carFile = carPhotoList.find(f => f.originFileObj);
+      if (carFile) formData.append('car_photo', carFile.originFileObj);
+
+      const odometerFile = odometerPhotoList.find(f => f.originFileObj);
+      if (odometerFile) formData.append('odometer_photo', odometerFile.originFileObj);
+
+      const dashboardFile = dashboardPhotoList.find(f => f.originFileObj);
+      if (dashboardFile) formData.append('dashboard_photo', dashboardFile.originFileObj);
 
       if (isEdit) {
         await ordersAPI.update(id, formData);
@@ -508,22 +519,39 @@ function OrderFormPage() {
               <Divider />
 
               {/* Фото */}
-              <Form.Item label="Фотофіксація (авто, одометр, панель приладів)">
-                <Upload 
-                  listType="picture-card" 
-                  fileList={fileList} 
-                  onChange={handleFileChange} 
-                  beforeUpload={() => false} 
-                  maxCount={3}
-                >
-                  {fileList.length < 3 && (
-                    <div>
-                      <UploadOutlined />
-                      <div style={{ marginTop: 8 }}>Додати фото</div>
-                    </div>
-                  )}
-                </Upload>
-                <Text type="secondary">Максимум 3 фото: авто, одометр, панель приладів</Text>
+              <Form.Item label="Фотофіксація">
+                <Row gutter={[12, 12]}>
+                  <Col xs={24} sm={8}>
+                    <div style={{ marginBottom: 4 }}><Text type="secondary">Фото авто</Text></div>
+                    <Upload listType="picture-card" fileList={carPhotoList}
+                      onChange={({ fileList }) => setCarPhotoList(fileList)}
+                      beforeUpload={() => false} maxCount={1} accept="image/*">
+                      {carPhotoList.length === 0 && (
+                        <div><UploadOutlined /><div style={{ marginTop: 8 }}>Авто</div></div>
+                      )}
+                    </Upload>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <div style={{ marginBottom: 4 }}><Text type="secondary">Фото одометра</Text></div>
+                    <Upload listType="picture-card" fileList={odometerPhotoList}
+                      onChange={({ fileList }) => setOdometerPhotoList(fileList)}
+                      beforeUpload={() => false} maxCount={1} accept="image/*">
+                      {odometerPhotoList.length === 0 && (
+                        <div><UploadOutlined /><div style={{ marginTop: 8 }}>Одометр</div></div>
+                      )}
+                    </Upload>
+                  </Col>
+                  <Col xs={24} sm={8}>
+                    <div style={{ marginBottom: 4 }}><Text type="secondary">Фото панелі</Text></div>
+                    <Upload listType="picture-card" fileList={dashboardPhotoList}
+                      onChange={({ fileList }) => setDashboardPhotoList(fileList)}
+                      beforeUpload={() => false} maxCount={1} accept="image/*">
+                      {dashboardPhotoList.length === 0 && (
+                        <div><UploadOutlined /><div style={{ marginTop: 8 }}>Панель</div></div>
+                      )}
+                    </Upload>
+                  </Col>
+                </Row>
               </Form.Item>
 
               {/* Опис проблеми */}
