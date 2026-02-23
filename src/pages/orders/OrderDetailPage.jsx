@@ -948,8 +948,8 @@ function OrderDetailPage() {
             dataSource={[
               ...(kitData.oil ? [{
                 key: 'oil',
-                name: kitData.oil.name,
-                sku: kitData.oil.sku_code,
+                name: kitData.oil_name,
+                sku: kitData.oil_sku,
                 quantity: kitData.oil_quantity,
                 type: 'Олива',
               }] : []),
