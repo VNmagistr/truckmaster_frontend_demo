@@ -103,6 +103,7 @@ function OrderDetailPage() {
 
   const handlePartsSearch = (query) => {
     clearTimeout(partsSearchTimer.current);
+    if (query.length > 0 && query.length < 4) return;
     partsSearchTimer.current = setTimeout(() => fetchParts(query), 400);
   };
 

@@ -98,7 +98,7 @@ function OrderFormPage() {
   }, [id, isEdit, form]);
 
   const handleSearchTruck = async (value) => {
-    if (!value || value.length < 2) {
+    if (!value || value.length < 4) {
       setTruckOptions([]);
       return;
     }

@@ -28,10 +28,10 @@ function ClientsPage() {
   // Завантаження при зміні пошуку (з затримкою/debounce)
   useEffect(() => {
     const timer = setTimeout(() => {
-        // При пошуку завжди скидаємо на 1-шу сторінку
-        setPagination(prev => ({ ...prev, current: 1 })); 
+        if (searchText.length > 0 && searchText.length < 4) return;
+        setPagination(prev => ({ ...prev, current: 1 }));
         fetchClients(1, searchText);
-    }, 600); // Чекаємо 600мс після останнього натискання клавіші
+    }, 600);
     return () => clearTimeout(timer);
   }, [searchText]);
 
