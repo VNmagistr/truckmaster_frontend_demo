@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip, Typography, Divider } from 'antd';
+import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip, Typography, Divider, Pagination } from 'antd';
 import {
   SearchOutlined,
   PlusOutlined,
@@ -91,14 +91,6 @@ function OrdersPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleTableChange = (newPagination) => {
-    setPagination(prev => ({
-      ...prev,
-      current: newPagination.current,
-      pageSize: newPagination.pageSize,
-    }));
   };
 
   // Клік по рядку - перехід до деталей
@@ -410,14 +402,7 @@ function OrdersPage() {
           rowKey="id"
           loading={loading}
           scroll={{ x: 'max-content' }}
-          pagination={{
-            current: pagination.current,
-            pageSize: pagination.pageSize,
-            total: pagination.total,
-            showSizeChanger: true,
-            showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`
-          }}
-          onChange={handleTableChange}
+          pagination={false}
           rowClassName={(record) => {
             if (record._isSeparator) return 'row-date-separator';
             return record.marked_for_deletion ? 'row-marked-for-deletion' : 'row-clickable';
@@ -427,6 +412,19 @@ function OrdersPage() {
             return { onClick: () => handleRowClick(record), style: { cursor: 'pointer' } };
           }}
         />
+        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+          <Pagination
+            current={pagination.current}
+            pageSize={pagination.pageSize}
+            total={pagination.total}
+            showSizeChanger
+            pageSizeOptions={['10', '20', '50', '100']}
+            showTotal={(total, range) => `${range[0]}-${range[1]} з ${total}`}
+            onChange={(page, pageSize) => {
+              setPagination(prev => ({ ...prev, current: page, pageSize }));
+            }}
+          />
+        </div>
       </Card>
 
       {/* Модальне вікно для підтвердження видалення */}
