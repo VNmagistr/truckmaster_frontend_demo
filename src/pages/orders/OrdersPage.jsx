@@ -334,10 +334,10 @@ function OrdersPage() {
             {stats && (
               <>
                 {[
-                  { label: 'День', value: stats.today },
-                  { label: 'Тиждень', value: stats.week },
-                  { label: 'Місяць', value: stats.month },
-                  { label: 'Рік', value: stats.year },
+                  { label: 'Всього за день', value: stats.today },
+                  { label: 'Всього за тиждень', value: stats.week },
+                  { label: 'Всього за місяць', value: stats.month },
+                  { label: 'Всього за рік', value: stats.year },
                 ].map(({ label, value }) => (
                   <div key={label} style={{
                     border: '1px solid #d9d9d9',
