@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Descriptions, Button, Table, Tag, message, Tabs, Modal, Form, Select, InputNumber, Space, Typography, Spin, Empty } from 'antd';
-import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined, HistoryOutlined } from '@ant-design/icons';
+import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined, HistoryOutlined, DashboardOutlined } from '@ant-design/icons';
+
+const INTERVAL_TYPES = [
+  { key: 'engine_oil',    label: 'Олива двигуна' },
+  { key: 'gearbox_oil',   label: 'Олива КПП/АКПП' },
+  { key: 'rear_axle_oil', label: 'Олива заднього моста' },
+  { key: 'belts',         label: 'Ремені/ролики' },
+  { key: 'chains',        label: 'Ланцюги' },
+];
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { trucksAPI, ordersAPI, baseModelsAPI, clientsAPI, maintenanceAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
@@ -34,6 +42,12 @@ function TruckDetailPage() {
 
   const [formOil] = Form.useForm();
   const [formFilter] = Form.useForm();
+  const [formIntervals] = Form.useForm();
+
+  const [intervals, setIntervals] = useState(null);
+  const [intervalsLoading, setIntervalsLoading] = useState(false);
+  const [intervalsLoaded, setIntervalsLoaded] = useState(false);
+  const [intervalsSaving, setIntervalsSaving] = useState(false);
 
   const { id } = useParams();
   const navigate = useNavigate();
@@ -122,8 +136,47 @@ function TruckDetailPage() {
     }
   };
 
+  const loadIntervals = async () => {
+    if (intervalsLoaded) return;
+    setIntervalsLoading(true);
+    try {
+      const res = await maintenanceAPI.getIntervals(id);
+      const data = res.data || res;
+      const list = Array.isArray(data) ? data : (data.results || []);
+      const rec = list.length > 0 ? list[0] : null;
+      setIntervals(rec);
+      if (rec) {
+        const values = {};
+        INTERVAL_TYPES.forEach(({ key }) => {
+          values[`${key}_interval`] = rec[`${key}_interval`] ?? null;
+          values[`${key}_last_km`]  = rec[`${key}_last_km`]  ?? null;
+        });
+        formIntervals.setFieldsValue(values);
+      }
+      setIntervalsLoaded(true);
+    } catch {
+      message.error('Не вдалося завантажити інтервали');
+    } finally {
+      setIntervalsLoading(false);
+    }
+  };
+
+  const handleSaveIntervals = async (values) => {
+    setIntervalsSaving(true);
+    try {
+      await maintenanceAPI.saveIntervals(id, values);
+      message.success('Інтервали збережено');
+      setIntervalsLoaded(false); // скинути кеш щоб наступне відкриття перезавантажило
+    } catch {
+      message.error('Помилка збереження інтервалів');
+    } finally {
+      setIntervalsSaving(false);
+    }
+  };
+
   const handleTabChange = (key) => {
     if (key === 'history') loadLogs();
+    if (key === 'intervals') loadIntervals();
   };
 
   const loadOilProducts = async () => {
@@ -434,6 +487,74 @@ function TruckDetailPage() {
               </Button>
             </Empty>
           )}
+        </Spin>
+      ),
+    },
+    {
+      key: 'intervals',
+      label: (
+        <span>
+          <DashboardOutlined />
+          Інтервали регламенту
+        </span>
+      ),
+      children: (
+        <Spin spinning={intervalsLoading}>
+          <Form form={formIntervals} layout="vertical" onFinish={handleSaveIntervals}>
+            <Table
+              dataSource={INTERVAL_TYPES}
+              rowKey="key"
+              pagination={false}
+              size="small"
+              scroll={{ x: 500 }}
+              columns={[
+                {
+                  title: 'Вид роботи',
+                  dataIndex: 'label',
+                  key: 'label',
+                },
+                {
+                  title: 'Інтервал (км)',
+                  key: 'interval',
+                  width: 180,
+                  render: (_, record) => (
+                    <Form.Item name={`${record.key}_interval`} noStyle>
+                      <InputNumber
+                        min={0}
+                        step={1000}
+                        style={{ width: '100%' }}
+                        addonAfter="км"
+                        placeholder="напр. 15000"
+                      />
+                    </Form.Item>
+                  ),
+                },
+                {
+                  title: 'Пробіг останньої заміни (км)',
+                  key: 'last_km',
+                  width: 220,
+                  render: (_, record) => (
+                    <Form.Item name={`${record.key}_last_km`} noStyle>
+                      <InputNumber
+                        min={0}
+                        style={{ width: '100%' }}
+                        addonAfter="км"
+                        placeholder="напр. 450000"
+                      />
+                    </Form.Item>
+                  ),
+                },
+              ]}
+            />
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={intervalsSaving}
+              style={{ marginTop: 16 }}
+            >
+              Зберегти інтервали
+            </Button>
+          </Form>
         </Spin>
       ),
     },
