@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip, Typography } from 'antd';
-import { 
-  SearchOutlined, 
-  PlusOutlined, 
-  EditOutlined, 
-  DeleteOutlined, 
+import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip, Typography, Divider } from 'antd';
+import {
+  SearchOutlined,
+  PlusOutlined,
+  EditOutlined,
+  DeleteOutlined,
   ExclamationCircleOutlined,
-  UndoOutlined 
+  UndoOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { ordersAPI } from '../../api';
@@ -30,6 +30,8 @@ function OrdersPage() {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
   const [showDeleted, setShowDeleted] = useState(false);
+
+  const [stats, setStats] = useState(null);
   
   // Стан для модального вікна видалення
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -42,6 +44,12 @@ function OrdersPage() {
   useEffect(() => {
     fetchOrders(pagination.current, pagination.pageSize, statusFilter, searchText);
   }, [pagination.current, pagination.pageSize, statusFilter, showDeleted]);
+
+  useEffect(() => {
+    ordersAPI.getStats()
+      .then(res => setStats(res.data || res))
+      .catch(() => {});
+  }, []);
 
   // Debounce для пошуку
   useEffect(() => {
@@ -319,10 +327,34 @@ function OrdersPage() {
 
   return (
     <div>
-      <PageHeader 
-        title="Наряди-замовлення" 
+      <PageHeader
+        title="Наряди-замовлення"
         extra={
-          <Space wrap>
+          <Space wrap align="center">
+            {stats && (
+              <>
+                {[
+                  { label: 'День', value: stats.today },
+                  { label: 'Тиждень', value: stats.week },
+                  { label: 'Місяць', value: stats.month },
+                  { label: 'Рік', value: stats.year },
+                ].map(({ label, value }) => (
+                  <div key={label} style={{
+                    border: '1px solid #d9d9d9',
+                    borderRadius: 6,
+                    padding: '2px 14px',
+                    textAlign: 'center',
+                    minWidth: 68,
+                    lineHeight: 1.3,
+                    background: '#fff',
+                  }}>
+                    <div style={{ fontSize: 18, fontWeight: 600, color: '#1677ff' }}>{value ?? '—'}</div>
+                    <div style={{ fontSize: 11, color: '#888' }}>{label}</div>
+                  </div>
+                ))}
+                <Divider type="vertical" style={{ height: 32, margin: '0 4px' }} />
+              </>
+            )}
             <Input
               placeholder="Пошук (номер, авто, клієнт)"
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
