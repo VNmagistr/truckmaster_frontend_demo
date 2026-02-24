@@ -229,27 +229,34 @@ function OrderFormPage() {
     const url = URL.createObjectURL(file);
     img.onload = () => {
       URL.revokeObjectURL(url);
-      let { width, height } = img;
-      const maxDim = 1280;
-      if (width > maxDim || height > maxDim) {
-        if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
-        else { width = Math.round(width * maxDim / height); height = maxDim; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-      try {
-        // toDataURL є синхронним на відміну від toBlob — надійно працює на всіх мобільних браузерах
+      (() => {
+        let { width, height } = img;
+        const maxDim = 1280;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
+          else { width = Math.round(width * maxDim / height); height = maxDim; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(file); return; }
+        ctx.drawImage(img, 0, 0, width, height);
         const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
-        const binary = atob(dataUrl.split(',')[1]);
-        const arr = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
-        const blob = new Blob([arr], { type: 'image/jpeg' });
-        resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
-      } catch {
-        resolve(file);
-      }
+        // Перевірка що canvas не повернув порожній результат
+        if (!dataUrl || dataUrl === 'data:,' || dataUrl.length < 100) {
+          resolve(file);
+          return;
+        }
+        // fetch надійніший за ручний atob на мобільних браузерах
+        fetch(dataUrl)
+          .then(r => r.blob())
+          .then(blob => {
+            if (blob.size < 1000) { resolve(file); return; }
+            resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+          })
+          .catch(() => resolve(file));
+      })();
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
