@@ -140,6 +140,7 @@ export const ordersAPI = {
   markForDeletion: (id, reason) => instance.post(`/orders/${id}/mark_for_deletion/`, { reason }),
   unmarkForDeletion: (id) => instance.post(`/orders/${id}/unmark_for_deletion/`),
   getDashboardStats: () => instance.get('/orders/dashboard_stats/'),
+  getStats: () => instance.get('/orders/stats/'),
 
   addWork: (orderId, data) => instance.post(`/orders/${orderId}/add_work/`, data),
   updateWork: (workId, data) => instance.patch(`/service-works/${workId}/`, data),
