@@ -230,7 +230,7 @@ function OrderFormPage() {
     img.onload = () => {
       URL.revokeObjectURL(url);
       let { width, height } = img;
-      const maxDim = 1600;
+      const maxDim = 1280;
       if (width > maxDim || height > maxDim) {
         if (width > height) { height = Math.round(height * maxDim / width); width = maxDim; }
         else { width = Math.round(width * maxDim / height); height = maxDim; }
@@ -241,7 +241,7 @@ function OrderFormPage() {
       canvas.getContext('2d').drawImage(img, 0, 0, width, height);
       try {
         // toDataURL є синхронним на відміну від toBlob — надійно працює на всіх мобільних браузерах
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.78);
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.72);
         const binary = atob(dataUrl.split(',')[1]);
         const arr = new Uint8Array(binary.length);
         for (let i = 0; i < binary.length; i++) arr[i] = binary.charCodeAt(i);
