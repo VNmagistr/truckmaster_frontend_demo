@@ -285,14 +285,25 @@ function OrderFormPage() {
         }
       });
 
+      const MAX_SIZE = 8 * 1024 * 1024; // 8MB
+
       const carFile = carPhotoList.find(f => f.originFileObj);
-      if (carFile) formData.append('car_photo', await compressImage(carFile.originFileObj));
+      if (carFile) {
+        if (carFile.originFileObj.size > MAX_SIZE) { message.error('Фото авто занадто велике (макс. 8MB)'); setSaving(false); return; }
+        formData.append('car_photo', carFile.originFileObj);
+      }
 
       const odometerFile = odometerPhotoList.find(f => f.originFileObj);
-      if (odometerFile) formData.append('odometer_photo', await compressImage(odometerFile.originFileObj));
+      if (odometerFile) {
+        if (odometerFile.originFileObj.size > MAX_SIZE) { message.error('Фото одометра занадто велике (макс. 8MB)'); setSaving(false); return; }
+        formData.append('odometer_photo', odometerFile.originFileObj);
+      }
 
       const dashboardFile = dashboardPhotoList.find(f => f.originFileObj);
-      if (dashboardFile) formData.append('dashboard_photo', await compressImage(dashboardFile.originFileObj));
+      if (dashboardFile) {
+        if (dashboardFile.originFileObj.size > MAX_SIZE) { message.error('Фото панелі занадто велике (макс. 8MB)'); setSaving(false); return; }
+        formData.append('dashboard_photo', dashboardFile.originFileObj);
+      }
 
       if (isEdit) {
         await ordersAPI.update(id, formData);
