@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Form, Input, Button, Card, message, Space, Select, Upload, Alert, Row, Col, Typography, Divider, Modal } from 'antd';
+import { Form, Input, Button, Card, message, Space, Select, Upload, Alert, Row, Col, Typography, Divider, Modal, DatePicker } from 'antd';
 import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, CarOutlined, UserOutlined, CheckCircleOutlined, ToolOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ordersAPI, clientsAPI, maintenanceAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import debounce from 'lodash/debounce';
+import dayjs from 'dayjs';
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -81,7 +82,8 @@ function OrderFormPage() {
               current_mileage: orderData.current_mileage,
               problem_description: orderData.problem_description,
               recommendations: orderData.recommendations,
-              status: orderData.status
+              status: orderData.status,
+              created_at: orderData.created_at ? dayjs(orderData.created_at) : null,
             });
             
             if (orderData.truck && orderData.current_mileage) {
@@ -278,7 +280,12 @@ function OrderFormPage() {
     setSaving(true);
     try {
       const formData = new FormData();
-      
+
+      // created_at приходить як dayjs-об'єкт — конвертуємо в ISO
+      if (values.created_at) {
+        values.created_at = values.created_at.toISOString();
+      }
+
       Object.keys(values).forEach(key => {
         if (values[key] !== undefined && values[key] !== null) {
           formData.append(key, values[key]);
@@ -356,23 +363,23 @@ function OrderFormPage() {
                 <>
                   <Row gutter={16}>
                     <Col xs={24} sm={12}>
-                      <Form.Item 
-                        name="order_number" 
+                      <Form.Item
+                        name="order_number"
                         label="Номер замовлення"
                       >
-                        <Input 
+                        <Input
                           size="large"
                           placeholder="SO-20260213-0001"
                         />
                       </Form.Item>
                     </Col>
                     <Col xs={24} sm={12}>
-                      <Form.Item 
-                        name="status" 
+                      <Form.Item
+                        name="status"
                         label="Статус"
                         rules={[{ required: true, message: 'Оберіть статус' }]}
                       >
-                        <Select 
+                        <Select
                           size="large"
                           options={statusOptions}
                         />
@@ -382,6 +389,17 @@ function OrderFormPage() {
                   <Divider />
                 </>
               )}
+
+              {/* Дата створення */}
+              <Form.Item name="created_at" label="Дата створення">
+                <DatePicker
+                  showTime={{ format: 'HH:mm' }}
+                  format="DD.MM.YYYY HH:mm"
+                  size="large"
+                  style={{ width: '100%' }}
+                  placeholder="Сьогодні за замовчуванням"
+                />
+              </Form.Item>
 
               {/* Пошук авто */}
               <Form.Item 
