@@ -215,8 +215,8 @@ function OrderDetailPage() {
       const res = await ordersAPI.getStatusHistory(id);
       const data = res.data || res;
       setStatusHistory(Array.isArray(data) ? data : (data.results || []));
-    } catch {
-      // silent
+    } catch (error) {
+      message.error('Не вдалося завантажити історію статусів');
     } finally {
       setStatusHistoryLoading(false);
     }
