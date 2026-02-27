@@ -151,6 +151,7 @@ export const ordersAPI = {
   applyMaintenanceSet: (orderId, data) => instance.post(`/orders/${orderId}/apply_maintenance_set/`, data),
   applyKit: (workId) => instance.post(`/service-works/${workId}/apply-kit/`),
   getMaintenanceCountdown: (orderId) => instance.get(`/orders/${orderId}/maintenance-countdown/`),
+  getStatusHistory: (id) => instance.get(`/orders/${id}/status-history/`),
 };
 
 export const repairPhotosAPI = {
