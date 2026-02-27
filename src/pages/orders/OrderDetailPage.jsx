@@ -4,7 +4,7 @@ import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlin
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI, maintenanceAPI, repairPhotosAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
-import { formatMoney } from '../../utils/formatters';
+import { formatMoney, formatDateTime } from '../../utils/formatters';
 
 function OrderDetailPage() {
   const [order, setOrder] = useState(null);
@@ -52,6 +52,9 @@ function OrderDetailPage() {
   const [problemValue, setProblemValue] = useState('');
   const [savingProblem, setSavingProblem] = useState(false);
 
+  const [statusHistory, setStatusHistory] = useState([]);
+  const [statusHistoryLoading, setStatusHistoryLoading] = useState(false);
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -70,6 +73,7 @@ function OrderDetailPage() {
 
       loadDirectories();
       loadCountdown();
+      loadStatusHistory();
     } catch (error) {
       message.error('Не вдалося завантажити замовлення (можливо, воно видалене)');
     } finally {
@@ -202,6 +206,19 @@ function OrderDetailPage() {
       setIsKitModalOpen(false);
     } finally {
       setKitLoading(false);
+    }
+  };
+
+  const loadStatusHistory = async () => {
+    setStatusHistoryLoading(true);
+    try {
+      const res = await ordersAPI.getStatusHistory(id);
+      const data = res.data || res;
+      setStatusHistory(Array.isArray(data) ? data : (data.results || []));
+    } catch {
+      // silent
+    } finally {
+      setStatusHistoryLoading(false);
     }
   };
 
@@ -714,6 +731,49 @@ function OrderDetailPage() {
             </Card>
           </Col>
         </Row>
+      ),
+    },
+    {
+      key: 'status-history',
+      label: `Історія статусів (${statusHistory.length})`,
+      children: (
+        <Table
+          dataSource={statusHistory}
+          rowKey="id"
+          pagination={false}
+          size="small"
+          loading={statusHistoryLoading}
+          locale={{ emptyText: 'Немає змін статусу' }}
+          columns={[
+            {
+              title: 'Дата і час',
+              dataIndex: 'changed_at',
+              key: 'changed_at',
+              width: 160,
+              render: (val) => val ? formatDateTime(val) : '-',
+            },
+            {
+              title: 'Зі статусу',
+              dataIndex: 'from_status',
+              key: 'from_status',
+              width: 140,
+              render: (val) => val ? <StatusTag status={val} /> : <span style={{ color: '#999' }}>—</span>,
+            },
+            {
+              title: 'На статус',
+              dataIndex: 'to_status',
+              key: 'to_status',
+              width: 140,
+              render: (val) => <StatusTag status={val} />,
+            },
+            {
+              title: 'Хто змінив',
+              dataIndex: 'changed_by_name',
+              key: 'changed_by_name',
+              render: (val) => val || '-',
+            },
+          ]}
+        />
       ),
     },
     {
