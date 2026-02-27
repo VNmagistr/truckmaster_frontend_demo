@@ -629,9 +629,30 @@ function OrderFormPage() {
 
               {/* Опис проблеми */}
               <Form.Item name="problem_description" label="Опис проблеми / скарги клієнта">
-                <TextArea 
-                  rows={3} 
+                <TextArea
+                  rows={3}
                   placeholder="Опишіть проблему або скарги клієнта..."
+                  onFocus={() => {
+                    const val = form.getFieldValue('problem_description');
+                    if (!val || val.trim() === '') {
+                      form.setFieldValue('problem_description', '- ');
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const textarea = e.target;
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      const value = textarea.value;
+                      const newValue = value.substring(0, start) + '\n- ' + value.substring(end);
+                      form.setFieldValue('problem_description', newValue);
+                      setTimeout(() => {
+                        textarea.selectionStart = start + 3;
+                        textarea.selectionEnd = start + 3;
+                      }, 0);
+                    }
+                  }}
                 />
               </Form.Item>
 
@@ -645,10 +666,31 @@ function OrderFormPage() {
                   </Space>
                 }
               >
-                <TextArea 
-                  rows={3} 
+                <TextArea
+                  rows={3}
                   placeholder="Перелік виявлених проблем та рекомендації щодо ремонту..."
                   style={{ backgroundColor: '#fffbe6' }}
+                  onFocus={() => {
+                    const val = form.getFieldValue('recommendations');
+                    if (!val || val.trim() === '') {
+                      form.setFieldValue('recommendations', '- ');
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const textarea = e.target;
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      const value = textarea.value;
+                      const newValue = value.substring(0, start) + '\n- ' + value.substring(end);
+                      form.setFieldValue('recommendations', newValue);
+                      setTimeout(() => {
+                        textarea.selectionStart = start + 3;
+                        textarea.selectionEnd = start + 3;
+                      }, 0);
+                    }
+                  }}
                 />
               </Form.Item>
 
