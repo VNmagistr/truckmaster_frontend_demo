@@ -44,6 +44,14 @@ function OrderDetailPage() {
   const [countdown, setCountdown] = useState(null);
   const [countdownLoading, setCountdownLoading] = useState(false);
 
+  const [editingRecommendations, setEditingRecommendations] = useState(false);
+  const [recommendationsValue, setRecommendationsValue] = useState('');
+  const [savingRecommendations, setSavingRecommendations] = useState(false);
+
+  const [editingProblem, setEditingProblem] = useState(false);
+  const [problemValue, setProblemValue] = useState('');
+  const [savingProblem, setSavingProblem] = useState(false);
+
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -227,6 +235,36 @@ function OrderDetailPage() {
       message.error(msg);
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  // Збереження опису проблеми
+  const handleSaveProblem = async () => {
+    setSavingProblem(true);
+    try {
+      await ordersAPI.update(id, { problem_description: problemValue });
+      setOrder(prev => ({ ...prev, problem_description: problemValue }));
+      setEditingProblem(false);
+      message.success('Опис проблеми збережено');
+    } catch (error) {
+      message.error('Помилка збереження опису проблеми');
+    } finally {
+      setSavingProblem(false);
+    }
+  };
+
+  // Збереження рекомендацій
+  const handleSaveRecommendations = async () => {
+    setSavingRecommendations(true);
+    try {
+      await ordersAPI.update(id, { recommendations: recommendationsValue });
+      setOrder(prev => ({ ...prev, recommendations: recommendationsValue }));
+      setEditingRecommendations(false);
+      message.success('Рекомендації збережено');
+    } catch (error) {
+      message.error('Помилка збереження рекомендацій');
+    } finally {
+      setSavingRecommendations(false);
     }
   };
 
@@ -819,20 +857,119 @@ function OrderDetailPage() {
             <span style={{ color: '#1890ff' }}>{formatMileage(order.current_mileage)}</span>
           </Descriptions.Item>
           <Descriptions.Item label="Опис проблеми" span={2}>
-            {order.problem_description || '-'}
-          </Descriptions.Item>
-          {order.recommendations && (
-            <Descriptions.Item label="Рекомендації" span={3}>
-              <div style={{ 
-                background: '#fffbe6', 
-                padding: '8px 12px', 
-                borderRadius: 4,
-                border: '1px solid #ffe58f'
-              }}>
-                {order.recommendations}
+            {editingProblem ? (
+              <div>
+                <Input.TextArea
+                  autoFocus
+                  rows={4}
+                  value={problemValue}
+                  style={{ marginBottom: 8 }}
+                  onChange={(e) => setProblemValue(e.target.value)}
+                  onFocus={() => {
+                    if (!problemValue || problemValue.trim() === '') {
+                      setProblemValue('- ');
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const textarea = e.target;
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      const value = textarea.value;
+                      const newValue = value.substring(0, start) + '\n- ' + value.substring(end);
+                      setProblemValue(newValue);
+                      setTimeout(() => {
+                        textarea.selectionStart = start + 3;
+                        textarea.selectionEnd = start + 3;
+                      }, 0);
+                    }
+                  }}
+                />
+                <Space>
+                  <Button type="primary" size="small" loading={savingProblem} onClick={handleSaveProblem}>Зберегти</Button>
+                  <Button size="small" onClick={() => setEditingProblem(false)}>Скасувати</Button>
+                </Space>
               </div>
-            </Descriptions.Item>
-          )}
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{ flex: 1, whiteSpace: 'pre-wrap' }}>
+                  {order.problem_description || <span style={{ color: '#bfbfbf' }}>—</span>}
+                </div>
+                {!isDeleted && (
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setProblemValue(order.problem_description || '');
+                      setEditingProblem(true);
+                    }}
+                  />
+                )}
+              </div>
+            )}
+          </Descriptions.Item>
+          <Descriptions.Item label="Рекомендації" span={3}>
+            {editingRecommendations ? (
+              <div>
+                <Input.TextArea
+                  autoFocus
+                  rows={4}
+                  value={recommendationsValue}
+                  style={{ backgroundColor: '#fffbe6', marginBottom: 8 }}
+                  onChange={(e) => setRecommendationsValue(e.target.value)}
+                  onFocus={() => {
+                    if (!recommendationsValue || recommendationsValue.trim() === '') {
+                      setRecommendationsValue('- ');
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const textarea = e.target;
+                      const start = textarea.selectionStart;
+                      const end = textarea.selectionEnd;
+                      const value = textarea.value;
+                      const newValue = value.substring(0, start) + '\n- ' + value.substring(end);
+                      setRecommendationsValue(newValue);
+                      setTimeout(() => {
+                        textarea.selectionStart = start + 3;
+                        textarea.selectionEnd = start + 3;
+                      }, 0);
+                    }
+                  }}
+                />
+                <Space>
+                  <Button type="primary" size="small" loading={savingRecommendations} onClick={handleSaveRecommendations}>Зберегти</Button>
+                  <Button size="small" onClick={() => setEditingRecommendations(false)}>Скасувати</Button>
+                </Space>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                <div style={{
+                  flex: 1,
+                  background: '#fffbe6',
+                  padding: '8px 12px',
+                  borderRadius: 4,
+                  border: '1px solid #ffe58f',
+                  minHeight: 32,
+                  whiteSpace: 'pre-wrap',
+                }}>
+                  {order.recommendations || <span style={{ color: '#bfbfbf' }}>—</span>}
+                </div>
+                {!isDeleted && (
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setRecommendationsValue(order.recommendations || '');
+                      setEditingRecommendations(true);
+                    }}
+                  />
+                )}
+              </div>
+            )}
+          </Descriptions.Item>
         </Descriptions>
       </Card>
 
