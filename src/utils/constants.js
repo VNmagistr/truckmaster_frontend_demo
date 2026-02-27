@@ -2,6 +2,7 @@
 export const ORDER_STATUSES = {
   OPEN: { value: 'OPEN', label: 'Відкрито', color: 'blue' },
   IN_PROGRESS: { value: 'IN_PROGRESS', label: 'В роботі', color: 'orange' },
+  DONE: { value: 'DONE', label: 'Виконано', color: 'cyan' },
   CLOSED: { value: 'CLOSED', label: 'Закрито', color: 'green' },
   CANCELED: { value: 'CANCELED', label: 'Скасовано', color: 'red' },
 };
