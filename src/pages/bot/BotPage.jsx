@@ -15,15 +15,17 @@ import { formatDateTime, formatPhone } from '../../utils/formatters';
 
 const ROLE_OPTIONS = [
   { value: 'guest',  label: 'Гість' },
+  { value: 'driver', label: 'Водій' },
   { value: 'owner',  label: 'Власник' },
-  { value: 'admin',  label: 'Адмін' },
+  { value: 'admin',  label: 'Адміністратор' },
 ];
 
 const roleTag = (role) => {
   const map = {
-    guest: { color: 'default', label: 'Гість' },
-    owner: { color: 'blue',    label: 'Власник' },
-    admin: { color: 'gold',    label: 'Адмін' },
+    guest:  { color: 'default', label: 'Гість' },
+    driver: { color: 'cyan',    label: 'Водій' },
+    owner:  { color: 'blue',    label: 'Власник' },
+    admin:  { color: 'gold',    label: 'Адміністратор' },
   };
   const { color, label } = map[role] || { color: 'default', label: role };
   return <Tag color={color}>{label}</Tag>;
@@ -222,8 +224,9 @@ function BotPage() {
             icon={<UserOutlined />}
             style={{
               backgroundColor:
-                r.role === 'admin' ? '#faad14' :
-                r.role === 'owner' ? '#1890ff' : '#aaa',
+                r.role === 'admin'  ? '#faad14' :
+                r.role === 'owner'  ? '#1890ff' :
+                r.role === 'driver' ? '#13c2c2' : '#aaa',
             }}
           />
           <div>
@@ -358,43 +361,21 @@ function BotPage() {
       <PageHeader title="Telegram бот" />
 
       {/* ── Статистика ─────────────────────────────────────────────────────── */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-        <Col xs={12} sm={6}>
-          <Card loading={statsLoading}>
-            <Statistic title="Всього користувачів" value={stats.total} prefix={<TeamOutlined />} />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card loading={statsLoading}>
-            <Statistic
-              title="Власники"
-              value={stats.by_role?.owner || 0}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: '#1890ff' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card loading={statsLoading}>
-            <Statistic
-              title="Гості"
-              value={stats.by_role?.guest || 0}
-              prefix={<RobotOutlined />}
-              valueStyle={{ color: '#888' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={12} sm={6}>
-          <Card loading={statsLoading}>
-            <Statistic
-              title="Заблоковані"
-              value={stats.blocked || 0}
-              prefix={<StopOutlined />}
-              valueStyle={{ color: stats.blocked > 0 ? '#ff4d4f' : undefined }}
-            />
-          </Card>
-        </Col>
-      </Row>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+        {[
+          { title: 'Всього',      value: stats.total,               icon: <TeamOutlined />,  color: undefined },
+          { title: 'Власники',    value: stats.by_role?.owner  || 0, icon: <UserOutlined />,  color: '#1890ff' },
+          { title: 'Водії',       value: stats.by_role?.driver || 0, icon: <TeamOutlined />,  color: '#13c2c2' },
+          { title: 'Гості',       value: stats.by_role?.guest  || 0, icon: <RobotOutlined />, color: '#888' },
+          { title: 'Заблоковані', value: stats.blocked         || 0, icon: <StopOutlined />,  color: stats.blocked > 0 ? '#ff4d4f' : undefined },
+        ].map(({ title, value, icon, color }) => (
+          <div key={title} style={{ flex: '1 1 160px', minWidth: 140 }}>
+            <Card loading={statsLoading}>
+              <Statistic title={title} value={value} prefix={icon} valueStyle={color ? { color } : undefined} />
+            </Card>
+          </div>
+        ))}
+      </div>
 
       {/* ── Вкладки ────────────────────────────────────────────────────────── */}
       <Tabs
