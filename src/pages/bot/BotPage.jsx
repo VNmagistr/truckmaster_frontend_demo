@@ -9,7 +9,7 @@ import {
   EditOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import { botAPI, clientsAPI } from '../../api';
+import { botAPI, clientsAPI, trucksAPI } from '../../api';
 import { PageHeader } from '../../components';
 import { formatDateTime, formatPhone } from '../../utils/formatters';
 
@@ -56,6 +56,14 @@ function BotPage() {
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [createForm]                          = Form.useForm();
   const [creating, setCreating]               = useState(false);
+  const [createRole, setCreateRole]           = useState('guest');
+
+  // ── Поточна роль у формі редагування ─────────────────────────────────────
+  const [editRole, setEditRole]               = useState('guest');
+
+  // ── Вантажівки для select водія ───────────────────────────────────────────
+  const [trucks, setTrucks]                   = useState([]);
+  const [trucksLoading, setTrucksLoading]     = useState(false);
 
   // ── Вкладка "Журнал" ─────────────────────────────────────────────────────
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -131,7 +139,7 @@ function BotPage() {
     if (activeTab === 'messages') fetchMessages(1);
   }, [activeTab, roleFilter, statusFilter, directionFilter]);
 
-  // ── Клієнти для select у модалці ──────────────────────────────────────────
+  // ── Клієнти для select власника ───────────────────────────────────────────
   const loadClients = async () => {
     setClientsLoading(true);
     try {
@@ -143,22 +151,48 @@ function BotPage() {
     }
   };
 
+  // ── Вантажівки для select водія ───────────────────────────────────────────
+  const loadTrucks = async () => {
+    setTrucksLoading(true);
+    try {
+      const res  = await trucksAPI.getAll({ page_size: 1000 });
+      const data = res.data || res;
+      setTrucks(data.results || []);
+    } finally {
+      setTrucksLoading(false);
+    }
+  };
+
+  // Завантажуємо список клієнтів або вантажівок залежно від ролі
+  const ensureDataForRole = (role) => {
+    if (role === 'owner'  && clients.length === 0) loadClients();
+    if (role === 'driver' && trucks.length  === 0) loadTrucks();
+  };
+
   const openEditModal = (user) => {
     setEditingUser(user);
+    setEditRole(user.role);
     editForm.setFieldsValue({
-      role:       user.role,
-      client:     user.client || null,
-      is_active:  user.is_active,
-      is_blocked: user.is_blocked,
+      role:            user.role,
+      client:          user.client          || null,
+      assigned_trucks: user.assigned_trucks || [],
+      is_active:       user.is_active,
+      is_blocked:      user.is_blocked,
     });
     setEditModalOpen(true);
-    if (clients.length === 0) loadClients();
+    ensureDataForRole(user.role);
   };
 
   const handleEditSave = async () => {
     setSaving(true);
     try {
       const values = await editForm.validateFields();
+      // Очищаємо поле прив'язки що не відповідає ролі
+      if (values.role === 'driver') {
+        values.client = null;
+      } else {
+        values.assigned_trucks = [];
+      }
       await botAPI.updateUser(editingUser.id, values);
       message.success('Збережено');
       setEditModalOpen(false);
@@ -173,16 +207,21 @@ function BotPage() {
 
   const openCreateModal = () => {
     createForm.resetFields();
+    setCreateRole('guest');
     setCreateModalOpen(true);
-    if (clients.length === 0) loadClients();
   };
 
   const handleCreateSave = async () => {
     setCreating(true);
     try {
       const values = await createForm.validateFields();
-      // username без символу @
       if (values.username) values.username = values.username.replace(/^@/, '');
+      // Очищаємо поле прив'язки що не відповідає ролі
+      if (values.role === 'driver') {
+        values.client = null;
+      } else {
+        values.assigned_trucks = [];
+      }
       await botAPI.createUser(values);
       message.success('Користувача додано');
       setCreateModalOpen(false);
@@ -192,7 +231,7 @@ function BotPage() {
       if (err?.response?.data?.telegram_id) {
         message.error('Користувач з таким Telegram ID вже існує');
       } else if (err?.errorFields) {
-        // помилка валідації форми — не показуємо message, antd вже підсвічує поля
+        // валідація форми — antd підсвічує поля автоматично
       } else {
         message.error('Не вдалося створити користувача');
       }
@@ -548,19 +587,49 @@ function BotPage() {
           </Form.Item>
 
           <Form.Item name="role" label="Роль" rules={[{ required: true }]}>
-            <Select options={ROLE_OPTIONS} />
-          </Form.Item>
-
-          <Form.Item name="client" label="Прив'язати до клієнта">
             <Select
-              showSearch
-              allowClear
-              loading={clientsLoading}
-              placeholder="Оберіть клієнта зі списку"
-              optionFilterProp="label"
-              options={clients.map((c) => ({ value: c.id, label: c.name }))}
+              options={ROLE_OPTIONS}
+              onChange={(v) => { setCreateRole(v); ensureDataForRole(v); }}
             />
           </Form.Item>
+
+          {createRole === 'owner' && (
+            <Form.Item
+              name="client"
+              label="Власник (клієнт)"
+              rules={[{ required: true, message: 'Оберіть клієнта для ролі Власник' }]}
+            >
+              <Select
+                showSearch
+                allowClear
+                loading={clientsLoading}
+                placeholder="Оберіть клієнта зі списку"
+                optionFilterProp="label"
+                options={clients.map((c) => ({ value: c.id, label: c.name }))}
+              />
+            </Form.Item>
+          )}
+
+          {createRole === 'driver' && (
+            <Form.Item
+              name="assigned_trucks"
+              label="Автомобілі водія"
+              rules={[{ required: true, message: 'Оберіть хоча б один автомобіль' }]}
+            >
+              <Select
+                mode="multiple"
+                showSearch
+                allowClear
+                loading={trucksLoading}
+                placeholder="Оберіть автомобіль(і)"
+                optionFilterProp="label"
+                options={trucks.map((t) => ({
+                  value: t.id,
+                  label: `${t.license_plate}${t.specific_model_name ? ` — ${t.specific_model_name}` : ''}${t.client?.name ? ` (${t.client.name})` : ''}`,
+                }))}
+              />
+            </Form.Item>
+          )}
 
           <Row gutter={24}>
             <Col span={12}>
@@ -605,19 +674,49 @@ function BotPage() {
 
         <Form form={editForm} layout="vertical">
           <Form.Item name="role" label="Роль" rules={[{ required: true, message: 'Оберіть роль' }]}>
-            <Select options={ROLE_OPTIONS} />
-          </Form.Item>
-
-          <Form.Item name="client" label="Прив'язати до клієнта">
             <Select
-              showSearch
-              allowClear
-              loading={clientsLoading}
-              placeholder="Оберіть клієнта зі списку"
-              optionFilterProp="label"
-              options={clients.map((c) => ({ value: c.id, label: c.name }))}
+              options={ROLE_OPTIONS}
+              onChange={(v) => { setEditRole(v); ensureDataForRole(v); }}
             />
           </Form.Item>
+
+          {editRole === 'owner' && (
+            <Form.Item
+              name="client"
+              label="Власник (клієнт)"
+              rules={[{ required: true, message: 'Оберіть клієнта для ролі Власник' }]}
+            >
+              <Select
+                showSearch
+                allowClear
+                loading={clientsLoading}
+                placeholder="Оберіть клієнта зі списку"
+                optionFilterProp="label"
+                options={clients.map((c) => ({ value: c.id, label: c.name }))}
+              />
+            </Form.Item>
+          )}
+
+          {editRole === 'driver' && (
+            <Form.Item
+              name="assigned_trucks"
+              label="Автомобілі водія"
+              rules={[{ required: true, message: 'Оберіть хоча б один автомобіль' }]}
+            >
+              <Select
+                mode="multiple"
+                showSearch
+                allowClear
+                loading={trucksLoading}
+                placeholder="Оберіть автомобіль(і)"
+                optionFilterProp="label"
+                options={trucks.map((t) => ({
+                  value: t.id,
+                  label: `${t.license_plate}${t.specific_model_name ? ` — ${t.specific_model_name}` : ''}${t.client?.name ? ` (${t.client.name})` : ''}`,
+                }))}
+              />
+            </Form.Item>
+          )}
 
           <Row gutter={24}>
             <Col span={12}>
