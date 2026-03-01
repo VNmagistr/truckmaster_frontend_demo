@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Layout, Menu, Button, Dropdown, Avatar, theme, Grid, Drawer } from 'antd';
+import { Layout, Menu, Button, Dropdown, Avatar, theme, Grid, Drawer, Tooltip } from 'antd';
 import {
   DashboardOutlined,
   UserOutlined,
@@ -12,46 +12,13 @@ import {
   LogoutOutlined,
   SettingOutlined,
   MenuOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import useUIStore from '../store/uiStore';
 
 const { Header, Sider, Content } = Layout;
-
-// Основне меню (ліва колонка)
-const menuItems = [
-  {
-    key: '/dashboard',
-    icon: <DashboardOutlined />,
-    label: 'Головна',
-  },
-  {
-    key: '/clients',
-    icon: <UserOutlined />,
-    label: 'Клієнти',
-  },
-  {
-    key: '/trucks',
-    icon: <CarOutlined />,
-    label: 'Вантажівки',
-  },
-  {
-    key: '/orders',
-    icon: <FileTextOutlined />,
-    label: 'Замовлення',
-  },
-  {
-    key: '/inventory',
-    icon: <AppstoreOutlined />,
-    label: 'Склад',
-  },
-  {
-    key: '/bot',
-    icon: <RobotOutlined />,
-    label: 'Telegram бот',
-  },
-];
 
 function MainLayout() {
   const navigate = useNavigate();
@@ -71,6 +38,35 @@ function MainLayout() {
     navigate(key);
     if (isMobile) setDrawerOpen(false);
   };
+
+  // Лейбл з кнопкою швидкого додавання (+)
+  const quickAddLabel = (text, newPath) => (
+    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      <span>{text}</span>
+      <Tooltip title={`Додати`} placement="right" mouseEnterDelay={0.5}>
+        <PlusOutlined
+          style={{ fontSize: 11, opacity: 0.55, padding: '2px 2px 2px 6px' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(newPath);
+            if (isMobile) setDrawerOpen(false);
+          }}
+        />
+      </Tooltip>
+    </span>
+  );
+
+  const menuItems = [
+    { key: '/dashboard', icon: <DashboardOutlined />, label: 'Головна' },
+    { key: '/clients',   icon: <UserOutlined />,      label: quickAddLabel('Клієнти',    '/clients/new') },
+    { key: '/trucks',    icon: <CarOutlined />,        label: quickAddLabel('Вантажівки', '/trucks/new') },
+    { key: '/orders',    icon: <FileTextOutlined />,   label: quickAddLabel('Замовлення', '/orders/new') },
+    { key: '/inventory', icon: <AppstoreOutlined />,   label: quickAddLabel('Склад',      '/inventory/new') },
+    { key: '/bot',       icon: <RobotOutlined />,      label: 'Telegram бот' },
+  ];
+
+  // Підсвічування пункту меню для вкладених маршрутів (/clients/new, /clients/123/edit тощо)
+  const selectedKey = '/' + location.pathname.split('/')[1];
 
   // Клік по меню користувача (верхній правий кут)
   const handleUserMenuClick = ({ key }) => {
@@ -137,7 +133,7 @@ function MainLayout() {
           <Menu
             theme="dark"
             mode="inline"
-            selectedKeys={[location.pathname]}
+            selectedKeys={[selectedKey]}
             items={menuItems}
             onClick={handleMenuClick}
           />
@@ -169,7 +165,7 @@ function MainLayout() {
           <Menu
             theme="dark"
             mode="inline"
-            selectedKeys={[location.pathname]}
+            selectedKeys={[selectedKey]}
             items={menuItems}
             onClick={handleMenuClick}
             style={{ borderRight: 0 }}
