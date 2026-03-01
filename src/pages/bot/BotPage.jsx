@@ -7,6 +7,7 @@ import {
   RobotOutlined, UserOutlined, TeamOutlined, StopOutlined,
   MessageOutlined, ArrowDownOutlined, ArrowUpOutlined,
   EditOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import { botAPI, clientsAPI } from '../../api';
 import { PageHeader } from '../../components';
@@ -42,12 +43,17 @@ function BotPage() {
   const [statusFilter, setStatusFilter]     = useState('');
 
   // ── Модальне вікно редагування ───────────────────────────────────────────
-  const [editModalOpen, setEditModalOpen]   = useState(false);
-  const [editingUser, setEditingUser]       = useState(null);
-  const [editForm]                          = Form.useForm();
-  const [clients, setClients]               = useState([]);
-  const [clientsLoading, setClientsLoading] = useState(false);
-  const [saving, setSaving]                 = useState(false);
+  const [editModalOpen, setEditModalOpen]     = useState(false);
+  const [editingUser, setEditingUser]         = useState(null);
+  const [editForm]                            = Form.useForm();
+  const [clients, setClients]                 = useState([]);
+  const [clientsLoading, setClientsLoading]   = useState(false);
+  const [saving, setSaving]                   = useState(false);
+
+  // ── Модальне вікно створення ──────────────────────────────────────────────
+  const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [createForm]                          = Form.useForm();
+  const [creating, setCreating]               = useState(false);
 
   // ── Вкладка "Журнал" ─────────────────────────────────────────────────────
   const [messagesLoading, setMessagesLoading] = useState(false);
@@ -160,6 +166,36 @@ function BotPage() {
       message.error('Помилка збереження');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openCreateModal = () => {
+    createForm.resetFields();
+    setCreateModalOpen(true);
+    if (clients.length === 0) loadClients();
+  };
+
+  const handleCreateSave = async () => {
+    setCreating(true);
+    try {
+      const values = await createForm.validateFields();
+      // username без символу @
+      if (values.username) values.username = values.username.replace(/^@/, '');
+      await botAPI.createUser(values);
+      message.success('Користувача додано');
+      setCreateModalOpen(false);
+      fetchUsers(1);
+      fetchStats();
+    } catch (err) {
+      if (err?.response?.data?.telegram_id) {
+        message.error('Користувач з таким Telegram ID вже існує');
+      } else if (err?.errorFields) {
+        // помилка валідації форми — не показуємо message, antd вже підсвічує поля
+      } else {
+        message.error('Не вдалося створити користувача');
+      }
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -401,6 +437,9 @@ function BotPage() {
                   <Button icon={<ReloadOutlined />} onClick={() => fetchUsers(1)}>
                     Оновити
                   </Button>
+                  <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
+                    Додати користувача
+                  </Button>
                 </Space>
 
                 <Table
@@ -473,6 +512,89 @@ function BotPage() {
           },
         ]}
       />
+
+      {/* ── Модалка створення користувача ──────────────────────────────────── */}
+      <Modal
+        title="Додати користувача бота"
+        open={createModalOpen}
+        onOk={handleCreateSave}
+        onCancel={() => setCreateModalOpen(false)}
+        okText="Додати"
+        cancelText="Скасувати"
+        confirmLoading={creating}
+        width={520}
+        destroyOnClose
+      >
+        <Form form={createForm} layout="vertical" style={{ marginTop: 8 }}
+          initialValues={{ role: 'guest', is_active: true, is_blocked: false }}
+        >
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="telegram_id"
+                label="Telegram ID"
+                rules={[
+                  { required: true, message: 'Обов\'язкове поле' },
+                  { pattern: /^\d+$/, message: 'Тільки цифри' },
+                ]}
+                extra="Числовий ID з Telegram (не username)"
+              >
+                <Input placeholder="123456789" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="username" label="Username">
+                <Input placeholder="ivan_ivanov" prefix="@" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item name="first_name" label="Ім'я">
+                <Input placeholder="Іван" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="last_name" label="Прізвище">
+                <Input placeholder="Іваненко" />
+              </Form.Item>
+            </Col>
+          </Row>
+
+          <Form.Item name="phone_number" label="Номер телефону">
+            <Input placeholder="+380501234567" />
+          </Form.Item>
+
+          <Form.Item name="role" label="Роль" rules={[{ required: true }]}>
+            <Select options={ROLE_OPTIONS} />
+          </Form.Item>
+
+          <Form.Item name="client" label="Прив'язати до клієнта">
+            <Select
+              showSearch
+              allowClear
+              loading={clientsLoading}
+              placeholder="Оберіть клієнта зі списку"
+              optionFilterProp="label"
+              options={clients.map((c) => ({ value: c.id, label: c.name }))}
+            />
+          </Form.Item>
+
+          <Row gutter={24}>
+            <Col span={12}>
+              <Form.Item name="is_active" label="Активний" valuePropName="checked">
+                <Switch defaultChecked />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="is_blocked" label="Заблокований" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
 
       {/* ── Модалка редагування користувача ────────────────────────────────── */}
       <Modal

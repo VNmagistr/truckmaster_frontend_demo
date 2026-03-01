@@ -301,6 +301,7 @@ export const botAPI = {
   // BotUsers
   getUsers: (params) => instance.get('/bot/users/', { params }),
   getUserById: (id) => instance.get(`/bot/users/${id}/`),
+  createUser: (data) => instance.post('/bot/users/', data),
   updateUser: (id, data) => instance.patch(`/bot/users/${id}/`, data),
   deleteUser: (id) => instance.delete(`/bot/users/${id}/`),
 
