@@ -294,4 +294,23 @@ export const userAPI = {
   delete: (id) => instance.delete(`/users/${id}/`),
 };
 
+export const botAPI = {
+  // Statistics
+  getStatistics: () => instance.get('/bot/users/statistics/'),
+
+  // BotUsers
+  getUsers: (params) => instance.get('/bot/users/', { params }),
+  getUserById: (id) => instance.get(`/bot/users/${id}/`),
+  updateUser: (id, data) => instance.patch(`/bot/users/${id}/`, data),
+  deleteUser: (id) => instance.delete(`/bot/users/${id}/`),
+
+  // Message logs (read-only)
+  getMessages: (params) => instance.get('/bot/messages/', { params }),
+  getRecentMessages: () => instance.get('/bot/messages/recent/'),
+
+  // Reminder settings
+  getReminders: (params) => instance.get('/bot/reminders/', { params }),
+  updateReminder: (id, data) => instance.patch(`/bot/reminders/${id}/`, data),
+};
+
 export default instance;

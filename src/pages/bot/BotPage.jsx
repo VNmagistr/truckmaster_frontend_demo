@@ -1,290 +1,535 @@
-import React, { useState, useEffect } from 'react';
-import { Card, Table, Tag, message, Tabs, Statistic, Row, Col, Input, DatePicker } from 'antd';
-import { RobotOutlined, MessageOutlined, UserOutlined, CheckCircleOutlined } from '@ant-design/icons';
-import { PageHeader, LoadingSpinner } from '../../components';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Row, Col, Card, Statistic, Table, Tag, Button, Space, Input,
+  Select, Modal, Form, Switch, Tabs, message, Tooltip, Avatar,
+} from 'antd';
+import {
+  RobotOutlined, UserOutlined, TeamOutlined, StopOutlined,
+  MessageOutlined, ArrowDownOutlined, ArrowUpOutlined,
+  EditOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined,
+} from '@ant-design/icons';
+import { botAPI, clientsAPI } from '../../api';
+import { PageHeader } from '../../components';
 import { formatDateTime, formatPhone } from '../../utils/formatters';
-import dayjs from 'dayjs';
+
+const ROLE_OPTIONS = [
+  { value: 'guest',  label: 'Гість' },
+  { value: 'owner',  label: 'Власник' },
+  { value: 'admin',  label: 'Адмін' },
+];
+
+const roleTag = (role) => {
+  const map = {
+    guest: { color: 'default', label: 'Гість' },
+    owner: { color: 'blue',    label: 'Власник' },
+    admin: { color: 'gold',    label: 'Адмін' },
+  };
+  const { color, label } = map[role] || { color: 'default', label: role };
+  return <Tag color={color}>{label}</Tag>;
+};
 
 function BotPage() {
-  const [loading, setLoading] = useState(true);
-  const [logs, setLogs] = useState([]);
-  const [stats, setStats] = useState({
-    totalMessages: 0,
-    uniqueUsers: 0,
-    linkedClients: 0,
-    todayMessages: 0,
-  });
-  const [pagination, setPagination] = useState({
-    current: 1,
-    pageSize: 20,
-    total: 0,
-  });
-  const [searchText, setSearchText] = useState('');
-  const [dateFilter, setDateFilter] = useState(null);
+  const [statsLoading, setStatsLoading]     = useState(true);
+  const [stats, setStats]                   = useState({ total: 0, by_role: {}, active: 0, blocked: 0 });
+
+  // ── Вкладка "Користувачі" ────────────────────────────────────────────────
+  const [usersLoading, setUsersLoading]     = useState(false);
+  const [users, setUsers]                   = useState([]);
+  const [usersTotal, setUsersTotal]         = useState(0);
+  const [usersPage, setUsersPage]           = useState(1);
+  const [userSearch, setUserSearch]         = useState('');
+  const [roleFilter, setRoleFilter]         = useState('');
+  const [statusFilter, setStatusFilter]     = useState('');
+
+  // ── Модальне вікно редагування ───────────────────────────────────────────
+  const [editModalOpen, setEditModalOpen]   = useState(false);
+  const [editingUser, setEditingUser]       = useState(null);
+  const [editForm]                          = Form.useForm();
+  const [clients, setClients]               = useState([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [saving, setSaving]                 = useState(false);
+
+  // ── Вкладка "Журнал" ─────────────────────────────────────────────────────
+  const [messagesLoading, setMessagesLoading] = useState(false);
+  const [messagesList, setMessagesList]       = useState([]);
+  const [messagesTotal, setMessagesTotal]     = useState(0);
+  const [messagesPage, setMessagesPage]       = useState(1);
+  const [messageSearch, setMessageSearch]     = useState('');
+  const [directionFilter, setDirectionFilter] = useState('');
+
+  const [activeTab, setActiveTab] = useState('users');
+
+  // ── Статистика ────────────────────────────────────────────────────────────
+  const fetchStats = useCallback(async () => {
+    setStatsLoading(true);
+    try {
+      const res  = await botAPI.getStatistics();
+      const data = res.data || res;
+      setStats(data);
+    } catch {
+      message.error('Не вдалося завантажити статистику');
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
+  // ── Користувачі ───────────────────────────────────────────────────────────
+  const fetchUsers = useCallback(async (page = 1, search = userSearch) => {
+    setUsersLoading(true);
+    try {
+      const params = { page, page_size: 20, ordering: '-last_activity' };
+      if (search)                      params.search     = search;
+      if (roleFilter)                  params.role       = roleFilter;
+      if (statusFilter === 'blocked')  params.is_blocked = true;
+      if (statusFilter === 'inactive') params.is_active  = false;
+
+      const res  = await botAPI.getUsers(params);
+      const data = res.data || res;
+      setUsers(data.results || []);
+      setUsersTotal(data.count || 0);
+      setUsersPage(page);
+    } catch {
+      message.error('Не вдалося завантажити користувачів');
+    } finally {
+      setUsersLoading(false);
+    }
+  }, [userSearch, roleFilter, statusFilter]);
+
+  // ── Журнал повідомлень ────────────────────────────────────────────────────
+  const fetchMessages = useCallback(async (page = 1, search = messageSearch) => {
+    setMessagesLoading(true);
+    try {
+      const params = { page, page_size: 20, ordering: '-created_at' };
+      if (search)                         params.search      = search;
+      if (directionFilter === 'incoming') params.is_incoming = true;
+      if (directionFilter === 'outgoing') params.is_incoming = false;
+
+      const res  = await botAPI.getMessages(params);
+      const data = res.data || res;
+      setMessagesList(data.results || []);
+      setMessagesTotal(data.count || 0);
+      setMessagesPage(page);
+    } catch {
+      message.error('Не вдалося завантажити повідомлення');
+    } finally {
+      setMessagesLoading(false);
+    }
+  }, [messageSearch, directionFilter]);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
 
   useEffect(() => {
-    fetchBotData();
-  }, [pagination.current, pagination.pageSize]);
+    if (activeTab === 'users')    fetchUsers(1);
+    if (activeTab === 'messages') fetchMessages(1);
+  }, [activeTab, roleFilter, statusFilter, directionFilter]);
 
-  const fetchBotData = async () => {
-    setLoading(true);
+  // ── Клієнти для select у модалці ──────────────────────────────────────────
+  const loadClients = async () => {
+    setClientsLoading(true);
     try {
-      const mockLogs = [
-        {
-          id: 1,
-          chat_id: 123456789,
-          user_name: 'Іван Петренко',
-          phone_number: '+380501234567',
-          message_text: '/start',
-          bot_response: 'Вітаю! Я бот сервісного центру Iveco.',
-          created_at: new Date().toISOString(),
-        },
-        {
-          id: 2,
-          chat_id: 987654321,
-          user_name: 'Олена Коваль',
-          phone_number: '+380671234567',
-          message_text: 'Мої автомобілі 🚚',
-          bot_response: 'Ваші автомобілі в нашій системі...',
-          created_at: new Date(Date.now() - 3600000).toISOString(),
-        },
-      ];
-
-      setLogs(mockLogs);
-      setPagination(prev => ({ ...prev, total: mockLogs.length }));
-      
-      setStats({
-        totalMessages: 156,
-        uniqueUsers: 42,
-        linkedClients: 38,
-        todayMessages: 12,
-      });
-    } catch (error) {
-      message.error('Не вдалося завантажити дані бота');
+      const res  = await clientsAPI.getAll({ page_size: 500 });
+      const data = res.data || res;
+      setClients(data.results || []);
     } finally {
-      setLoading(false);
+      setClientsLoading(false);
     }
   };
 
-  const handleTableChange = (paginationConfig) => {
-    setPagination({
-      ...pagination,
-      current: paginationConfig.current,
-      pageSize: paginationConfig.pageSize,
+  const openEditModal = (user) => {
+    setEditingUser(user);
+    editForm.setFieldsValue({
+      role:       user.role,
+      client:     user.client || null,
+      is_active:  user.is_active,
+      is_blocked: user.is_blocked,
     });
+    setEditModalOpen(true);
+    if (clients.length === 0) loadClients();
   };
 
-  const filteredLogs = logs.filter(log => {
-    if (searchText) {
-      const search = searchText.toLowerCase();
-      if (
-        !log.user_name?.toLowerCase().includes(search) &&
-        !log.phone_number?.includes(search) &&
-        !log.message_text?.toLowerCase().includes(search)
-      ) {
-        return false;
-      }
+  const handleEditSave = async () => {
+    setSaving(true);
+    try {
+      const values = await editForm.validateFields();
+      await botAPI.updateUser(editingUser.id, values);
+      message.success('Збережено');
+      setEditModalOpen(false);
+      fetchUsers(usersPage);
+      fetchStats();
+    } catch {
+      message.error('Помилка збереження');
+    } finally {
+      setSaving(false);
     }
-    
-    if (dateFilter) {
-      const logDate = dayjs(log.created_at).format('YYYY-MM-DD');
-      const filterDate = dateFilter.format('YYYY-MM-DD');
-      if (logDate !== filterDate) {
-        return false;
-      }
-    }
-    
-    return true;
-  });
+  };
 
-  const logsColumns = [
-    {
-      title: 'Час',
-      dataIndex: 'created_at',
-      key: 'time',
-      width: 160,
-      render: (date) => formatDateTime(date),
-    },
+  const toggleBlock = async (user) => {
+    try {
+      await botAPI.updateUser(user.id, { is_blocked: !user.is_blocked });
+      message.success(user.is_blocked ? 'Розблоковано' : 'Заблоковано');
+      fetchUsers(usersPage);
+      fetchStats();
+    } catch {
+      message.error('Не вдалося змінити статус');
+    }
+  };
+
+  // ── Колонки таблиці користувачів ─────────────────────────────────────────
+  const usersColumns = [
     {
       title: 'Користувач',
-      dataIndex: 'user_name',
       key: 'user',
-      width: 150,
-      render: (name, record) => (
-        <div>
-          <div style={{ fontWeight: 500 }}>{name || 'Невідомий'}</div>
-          {record.phone_number && (
-            <div style={{ fontSize: 12, color: '#666' }}>
-              {formatPhone(record.phone_number)}
+      render: (_, r) => (
+        <Space>
+          <Avatar
+            size="small"
+            icon={<UserOutlined />}
+            style={{
+              backgroundColor:
+                r.role === 'admin' ? '#faad14' :
+                r.role === 'owner' ? '#1890ff' : '#aaa',
+            }}
+          />
+          <div>
+            <div style={{ fontWeight: 500, lineHeight: 1.3 }}>
+              {r.first_name || ''} {r.last_name || ''}
+              {!r.first_name && !r.last_name && (
+                <span style={{ color: '#aaa' }}>Без імені</span>
+              )}
             </div>
-          )}
-        </div>
+            {r.username && (
+              <div style={{ fontSize: 11, color: '#888' }}>@{r.username}</div>
+            )}
+          </div>
+        </Space>
       ),
     },
     {
-      title: 'Chat ID',
-      dataIndex: 'chat_id',
-      key: 'chat_id',
-      width: 120,
-      render: (id) => <code>{id}</code>,
+      title: 'Telegram ID',
+      dataIndex: 'telegram_id',
+      key: 'telegram_id',
+      render: (v) => (
+        <code style={{ fontSize: 11, background: '#f5f5f5', padding: '1px 4px', borderRadius: 3 }}>
+          {v}
+        </code>
+      ),
+    },
+    {
+      title: 'Телефон',
+      dataIndex: 'phone_number',
+      key: 'phone',
+      render: (v) => v ? formatPhone(v) : <span style={{ color: '#ccc' }}>—</span>,
+    },
+    {
+      title: 'Роль',
+      dataIndex: 'role',
+      key: 'role',
+      render: roleTag,
+    },
+    {
+      title: 'Клієнт',
+      dataIndex: 'client_name',
+      key: 'client',
+      render: (v) => v || <span style={{ color: '#ccc' }}>—</span>,
+    },
+    {
+      title: 'Остання активність',
+      dataIndex: 'last_activity',
+      key: 'last_activity',
+      render: (v) => v ? formatDateTime(v) : '—',
+    },
+    {
+      title: 'Статус',
+      key: 'status',
+      render: (_, r) => {
+        if (r.is_blocked) return <Tag color="red"     icon={<StopOutlined />}>Заблокований</Tag>;
+        if (r.is_active)  return <Tag color="green"   icon={<CheckCircleOutlined />}>Активний</Tag>;
+        return                   <Tag color="default" icon={<CloseCircleOutlined />}>Неактивний</Tag>;
+      },
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 80,
+      render: (_, r) => (
+        <Space size={4}>
+          <Tooltip title="Редагувати">
+            <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(r)} />
+          </Tooltip>
+          <Tooltip title={r.is_blocked ? 'Розблокувати' : 'Заблокувати'}>
+            <Button
+              size="small"
+              danger={!r.is_blocked}
+              type={r.is_blocked ? 'default' : 'text'}
+              icon={<StopOutlined />}
+              onClick={() => toggleBlock(r)}
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
+
+  // ── Колонки таблиці журналу ───────────────────────────────────────────────
+  const messagesColumns = [
+    {
+      title: 'Час',
+      dataIndex: 'created_at',
+      key: 'created_at',
+      width: 140,
+      render: (v) => formatDateTime(v),
+    },
+    {
+      title: 'Користувач',
+      dataIndex: 'bot_user_name',
+      key: 'user',
+      width: 160,
+      render: (v) => v || '—',
+    },
+    {
+      title: 'Напрямок',
+      dataIndex: 'is_incoming',
+      key: 'direction',
+      width: 130,
+      render: (v) => v
+        ? <Tag color="green" icon={<ArrowDownOutlined />}>Від юзера</Tag>
+        : <Tag color="blue"  icon={<ArrowUpOutlined />}>Від бота</Tag>,
     },
     {
       title: 'Повідомлення',
       dataIndex: 'message_text',
       key: 'message',
-      ellipsis: true,
-      render: (text) => (
-        <Tag color="blue">{text}</Tag>
-      ),
+      render: (v) => v
+        ? <span title={v.length > 120 ? v : undefined}>{v.length > 120 ? v.slice(0, 120) + '…' : v}</span>
+        : <span style={{ color: '#ccc' }}>—</span>,
     },
     {
       title: 'Відповідь бота',
       dataIndex: 'bot_response',
       key: 'response',
-      ellipsis: true,
-      render: (text) => (
-        <span style={{ color: '#666' }}>{text}</span>
-      ),
+      render: (v) => v
+        ? <span title={v.length > 120 ? v : undefined}>{v.length > 120 ? v.slice(0, 120) + '…' : v}</span>
+        : <span style={{ color: '#ccc' }}>—</span>,
     },
   ];
 
-  const tabItems = [
-    {
-      key: 'logs',
-      label: (
-        <span>
-          <MessageOutlined />
-          Логи повідомлень
-        </span>
-      ),
-      children: (
-        <div>
-          <div style={{ marginBottom: 16, display: 'flex', gap: 16 }}>
-            <Input.Search
-              placeholder="Пошук по імені, телефону або тексту"
-              style={{ width: 300 }}
-              value={searchText}
-              onChange={(e) => setSearchText(e.target.value)}
-              allowClear
-            />
-            <DatePicker
-              placeholder="Фільтр по даті"
-              value={dateFilter}
-              onChange={setDateFilter}
-              format="DD.MM.YYYY"
-            />
-          </div>
-          
-          <Table
-            columns={logsColumns}
-            dataSource={filteredLogs}
-            rowKey="id"
-            loading={loading}
-            pagination={{
-              ...pagination,
-              total: filteredLogs.length,
-              showSizeChanger: true,
-              showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`,
-            }}
-            onChange={handleTableChange}
-            size="middle"
-          />
-        </div>
-      ),
-    },
-    {
-      key: 'settings',
-      label: 'Налаштування',
-      children: (
-        <div style={{ padding: 20 }}>
-          <Card title="Статус бота" style={{ marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CheckCircleOutlined style={{ color: '#52c41a', fontSize: 24 }} />
-              <span style={{ fontSize: 16 }}>Бот працює</span>
-            </div>
-            <div style={{ marginTop: 8, color: '#666' }}>
-              Telegram бот підключено та обробляє повідомлення
-            </div>
-          </Card>
-          
-          <Card title="Команди бота">
-            <Table
-              dataSource={[
-                { command: '/start', description: 'Початок роботи, реєстрація' },
-                { command: 'Мої автомобілі 🚚', description: 'Показати список автомобілів клієнта' },
-                { command: 'Перевірити статус замовлення 🧾', description: 'Перевірити статус по номеру' },
-              ]}
-              columns={[
-                { title: 'Команда', dataIndex: 'command', key: 'command', render: (t) => <code>{t}</code> },
-                { title: 'Опис', dataIndex: 'description', key: 'description' },
-              ]}
-              rowKey="command"
-              pagination={false}
-              size="small"
-            />
-          </Card>
-        </div>
-      ),
-    },
-  ];
-
-  if (loading && logs.length === 0) {
-    return <LoadingSpinner />;
-  }
+  const editingName = editingUser
+    ? (`${editingUser.first_name || ''} ${editingUser.last_name || ''}`.trim() || `ID ${editingUser.telegram_id}`)
+    : '';
 
   return (
     <div>
-      <PageHeader
-        title="Telegram Бот"
-        subtitle="Керування та моніторинг бота"
-      />
+      <PageHeader title="Telegram бот" />
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 16 }}>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+      {/* ── Статистика ─────────────────────────────────────────────────────── */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+        <Col xs={12} sm={6}>
+          <Card loading={statsLoading}>
+            <Statistic title="Всього користувачів" value={stats.total} prefix={<TeamOutlined />} />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card loading={statsLoading}>
             <Statistic
-              title="Всього повідомлень"
-              value={stats.totalMessages}
-              prefix={<MessageOutlined />}
+              title="Власники"
+              value={stats.by_role?.owner || 0}
+              prefix={<UserOutlined />}
               valueStyle={{ color: '#1890ff' }}
             />
           </Card>
         </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
+        <Col xs={12} sm={6}>
+          <Card loading={statsLoading}>
             <Statistic
-              title="Унікальних користувачів"
-              value={stats.uniqueUsers}
-              prefix={<UserOutlined />}
-              valueStyle={{ color: '#722ed1' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Прив'язаних клієнтів"
-              value={stats.linkedClients}
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
-            />
-          </Card>
-        </Col>
-        <Col xs={24} sm={12} lg={6}>
-          <Card>
-            <Statistic
-              title="Повідомлень сьогодні"
-              value={stats.todayMessages}
+              title="Гості"
+              value={stats.by_role?.guest || 0}
               prefix={<RobotOutlined />}
-              valueStyle={{ color: '#faad14' }}
+              valueStyle={{ color: '#888' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={6}>
+          <Card loading={statsLoading}>
+            <Statistic
+              title="Заблоковані"
+              value={stats.blocked || 0}
+              prefix={<StopOutlined />}
+              valueStyle={{ color: stats.blocked > 0 ? '#ff4d4f' : undefined }}
             />
           </Card>
         </Col>
       </Row>
 
-      <Card>
-        <Tabs items={tabItems} />
-      </Card>
+      {/* ── Вкладки ────────────────────────────────────────────────────────── */}
+      <Tabs
+        activeKey={activeTab}
+        onChange={setActiveTab}
+        items={[
+          // ── Користувачі ─────────────────────────────────────────────────
+          {
+            key: 'users',
+            label: <span><TeamOutlined /> Користувачі</span>,
+            children: (
+              <>
+                <Space wrap style={{ marginBottom: 16 }}>
+                  <Input.Search
+                    placeholder="Ім'я, @username, телефон..."
+                    style={{ width: 250 }}
+                    allowClear
+                    onSearch={(v) => { setUserSearch(v); fetchUsers(1, v); }}
+                    onChange={(e) => {
+                      if (!e.target.value) { setUserSearch(''); fetchUsers(1, ''); }
+                    }}
+                  />
+                  <Select
+                    placeholder="Роль"
+                    style={{ width: 130 }}
+                    allowClear
+                    options={ROLE_OPTIONS}
+                    onChange={(v) => setRoleFilter(v || '')}
+                  />
+                  <Select
+                    placeholder="Статус"
+                    style={{ width: 150 }}
+                    allowClear
+                    options={[
+                      { value: 'blocked',  label: 'Заблоковані' },
+                      { value: 'inactive', label: 'Неактивні' },
+                    ]}
+                    onChange={(v) => setStatusFilter(v || '')}
+                  />
+                  <Button icon={<ReloadOutlined />} onClick={() => fetchUsers(1)}>
+                    Оновити
+                  </Button>
+                </Space>
+
+                <Table
+                  dataSource={users}
+                  columns={usersColumns}
+                  rowKey="id"
+                  loading={usersLoading}
+                  size="small"
+                  pagination={{
+                    current: usersPage,
+                    pageSize: 20,
+                    total: usersTotal,
+                    onChange: (page) => fetchUsers(page),
+                    showTotal: (total) => `Всього: ${total}`,
+                    showSizeChanger: false,
+                  }}
+                />
+              </>
+            ),
+          },
+
+          // ── Журнал повідомлень ───────────────────────────────────────────
+          {
+            key: 'messages',
+            label: <span><MessageOutlined /> Журнал повідомлень</span>,
+            children: (
+              <>
+                <Space wrap style={{ marginBottom: 16 }}>
+                  <Input.Search
+                    placeholder="Текст повідомлення..."
+                    style={{ width: 280 }}
+                    allowClear
+                    onSearch={(v) => { setMessageSearch(v); fetchMessages(1, v); }}
+                    onChange={(e) => {
+                      if (!e.target.value) { setMessageSearch(''); fetchMessages(1, ''); }
+                    }}
+                  />
+                  <Select
+                    placeholder="Напрямок"
+                    style={{ width: 170 }}
+                    allowClear
+                    options={[
+                      { value: 'incoming', label: 'Від користувача' },
+                      { value: 'outgoing', label: 'Від бота' },
+                    ]}
+                    onChange={(v) => setDirectionFilter(v || '')}
+                  />
+                  <Button icon={<ReloadOutlined />} onClick={() => fetchMessages(1)}>
+                    Оновити
+                  </Button>
+                </Space>
+
+                <Table
+                  dataSource={messagesList}
+                  columns={messagesColumns}
+                  rowKey="id"
+                  loading={messagesLoading}
+                  size="small"
+                  pagination={{
+                    current: messagesPage,
+                    pageSize: 20,
+                    total: messagesTotal,
+                    onChange: (page) => fetchMessages(page),
+                    showTotal: (total) => `Всього: ${total}`,
+                    showSizeChanger: false,
+                  }}
+                />
+              </>
+            ),
+          },
+        ]}
+      />
+
+      {/* ── Модалка редагування користувача ────────────────────────────────── */}
+      <Modal
+        title={`Редагувати — ${editingName}`}
+        open={editModalOpen}
+        onOk={handleEditSave}
+        onCancel={() => setEditModalOpen(false)}
+        okText="Зберегти"
+        cancelText="Скасувати"
+        confirmLoading={saving}
+        width={480}
+        destroyOnClose
+      >
+        {editingUser && (
+          <div style={{
+            marginBottom: 16, padding: '10px 12px',
+            background: '#f8fafc', borderRadius: 6, fontSize: 13, color: '#555',
+          }}>
+            <Space wrap>
+              <Avatar icon={<UserOutlined />} size="small" style={{ backgroundColor: '#1890ff' }} />
+              <span>Telegram ID: <strong>{editingUser.telegram_id}</strong></span>
+              {editingUser.username && <span>@{editingUser.username}</span>}
+              {editingUser.phone_number && <span>{formatPhone(editingUser.phone_number)}</span>}
+            </Space>
+          </div>
+        )}
+
+        <Form form={editForm} layout="vertical">
+          <Form.Item name="role" label="Роль" rules={[{ required: true, message: 'Оберіть роль' }]}>
+            <Select options={ROLE_OPTIONS} />
+          </Form.Item>
+
+          <Form.Item name="client" label="Прив'язати до клієнта">
+            <Select
+              showSearch
+              allowClear
+              loading={clientsLoading}
+              placeholder="Оберіть клієнта зі списку"
+              optionFilterProp="label"
+              options={clients.map((c) => ({ value: c.id, label: c.name }))}
+            />
+          </Form.Item>
+
+          <Row gutter={24}>
+            <Col span={12}>
+              <Form.Item name="is_active" label="Активний" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="is_blocked" label="Заблокований" valuePropName="checked">
+                <Switch />
+              </Form.Item>
+            </Col>
+          </Row>
+        </Form>
+      </Modal>
     </div>
   );
 }
