@@ -33,47 +33,33 @@ function DashboardPage() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      // 🔥 ВИПРАВЛЕННЯ: Прибрали запит getStats, якого не існує на сервері (він давав 404)
-      const [clientsResponse, trucksResponse, ordersResponse] = await Promise.all([
-        clientsAPI.getAll(),
-        trucksAPI.getAll(),
+      const [clientsResponse, trucksResponse, ordersResponse, dashStatsResponse, weekDetailResponse] = await Promise.all([
+        clientsAPI.getAll({ page_size: 1 }),
+        trucksAPI.getAll({ page_size: 1 }),
         ordersAPI.getAll({ page_size: 5, ordering: '-created_at' }),
+        ordersAPI.getDashboardStats(),
+        ordersAPI.getWeekDetail(),
       ]);
 
-      // Розпаковка даних (.data)
       const clientsData = clientsResponse.data || clientsResponse;
       const trucksData = trucksResponse.data || trucksResponse;
       const ordersData = ordersResponse.data || ordersResponse;
+      const dashStats = dashStatsResponse.data || dashStatsResponse;
+      const weekData = weekDetailResponse.data || weekDetailResponse;
 
-      // Рахуємо кількість (Django pagination повертає count)
-      const clientsCount = clientsData.count || (Array.isArray(clientsData) ? clientsData.length : 0);
-      const trucksCount = trucksData.count || (Array.isArray(trucksData) ? trucksData.length : 0);
-      
-      const ordersList = ordersData.results || ordersData || [];
-      const totalOrdersCount = ordersData.count || ordersList.length || 0;
+      const ordersList = ordersData.results || [];
 
-      // Встановлюємо статистику
       setStats({
-        totalClients: clientsCount,
-        totalTrucks: trucksCount,
-        totalOrders: totalOrdersCount,
-        openOrders: 0, // Поки ставимо 0, бо сервер не віддає детальної статистики
-        inProgressOrders: 0,
+        totalClients: clientsData.count || 0,
+        totalTrucks: trucksData.count || 0,
+        totalOrders: ordersData.count || 0,
+        openOrders: dashStats.open_orders || 0,
+        inProgressOrders: dashStats.in_progress_orders || 0,
         monthlyRevenue: 0,
       });
 
-      setRecentOrders(Array.isArray(ordersList) ? ordersList.slice(0, 5) : []);
-      
-      // Мокові дані для графіка
-      setChartData([
-        { name: 'Пн', orders: 2 },
-        { name: 'Вт', orders: 5 },
-        { name: 'Ср', orders: 3 },
-        { name: 'Чт', orders: 8 },
-        { name: 'Пт', orders: 6 },
-        { name: 'Сб', orders: 4 },
-        { name: 'Нд', orders: 1 },
-      ]);
+      setRecentOrders(ordersList.slice(0, 5));
+      setChartData(Array.isArray(weekData) ? weekData : []);
 
     } catch (error) {
       message.error('Не вдалося завантажити статистику');
@@ -143,7 +129,7 @@ function DashboardPage() {
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={16}>
-          <Card title="Динаміка замовлень (тиждень)">
+          <Card title="Замовлення за поточний тиждень">
             <div style={{ height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
