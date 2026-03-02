@@ -197,7 +197,7 @@ function TruckDetailPage() {
     if (filterProducts.length > 0) return;
     setProductsLoading(true);
     try {
-      const res = await inventoryAPI.getAll({ page_size: 500, subcategory__category__category_type: 'filter' });
+      const res = await inventoryAPI.getAll({ page_size: 500, filter_only: 'true' });
       const data = res.data || res;
       setFilterProducts(data.results || data || []);
     } catch {
