@@ -183,7 +183,7 @@ function TruckDetailPage() {
     if (oilProducts.length > 0) return;
     setProductsLoading(true);
     try {
-      const res = await inventoryAPI.getAll({ page_size: 500, subcategory__category__category_type: 'oil' });
+      const res = await inventoryAPI.getAll({ page_size: 500, oil_only: 'true' });
       const data = res.data || res;
       setOilProducts(data.results || data || []);
     } catch {
