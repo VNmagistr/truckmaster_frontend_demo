@@ -52,6 +52,10 @@ function OrderDetailPage() {
   const [problemValue, setProblemValue] = useState('');
   const [savingProblem, setSavingProblem] = useState(false);
 
+  const [editingOrderNumber, setEditingOrderNumber] = useState(false);
+  const [orderNumberValue, setOrderNumberValue] = useState('');
+  const [savingOrderNumber, setSavingOrderNumber] = useState(false);
+
   const [statusHistory, setStatusHistory] = useState([]);
   const [statusHistoryLoading, setStatusHistoryLoading] = useState(false);
 
@@ -252,6 +256,21 @@ function OrderDetailPage() {
       message.error(msg);
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  // Збереження номера наряду
+  const handleSaveOrderNumber = async () => {
+    setSavingOrderNumber(true);
+    try {
+      await ordersAPI.update(id, { order_number: orderNumberValue });
+      setOrder(prev => ({ ...prev, order_number: orderNumberValue }));
+      setEditingOrderNumber(false);
+      message.success('Номер наряду збережено');
+    } catch (error) {
+      message.error('Помилка збереження номера наряду');
+    } finally {
+      setSavingOrderNumber(false);
     }
   };
 
@@ -874,7 +893,38 @@ function OrderDetailPage() {
 
       <Card style={{ marginBottom: 16 }}>
         <Descriptions bordered column={{ xs: 1, sm: 2, md: 3 }} size="small">
-          <Descriptions.Item label="Номер">{order.order_number || '-'}</Descriptions.Item>
+          <Descriptions.Item label="Номер">
+            {editingOrderNumber ? (
+              <Space.Compact>
+                <Input
+                  autoFocus
+                  size="small"
+                  value={orderNumberValue}
+                  onChange={e => setOrderNumberValue(e.target.value)}
+                  onPressEnter={handleSaveOrderNumber}
+                  onKeyDown={e => e.key === 'Escape' && setEditingOrderNumber(false)}
+                  style={{ width: 160 }}
+                />
+                <Button type="primary" size="small" loading={savingOrderNumber} onClick={handleSaveOrderNumber}>Зберегти</Button>
+                <Button size="small" onClick={() => setEditingOrderNumber(false)}>Скасувати</Button>
+              </Space.Compact>
+            ) : (
+              <Space size={4}>
+                <span>{order.order_number || '-'}</span>
+                {!isDeleted && (
+                  <Button
+                    type="text"
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => {
+                      setOrderNumberValue(order.order_number || '');
+                      setEditingOrderNumber(true);
+                    }}
+                  />
+                )}
+              </Space>
+            )}
+          </Descriptions.Item>
           <Descriptions.Item label="Статус">
             <Dropdown 
               menu={{ 
