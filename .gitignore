@@ -58,3 +58,6 @@ coverage/
 # Cache
 .eslintcache
 *.tsbuildinfo
+
+# Claude
+CLAUDE.md
