@@ -55,6 +55,7 @@ function OrderDetailPage() {
   const [editingOrderNumber, setEditingOrderNumber] = useState(false);
   const [orderNumberValue, setOrderNumberValue] = useState('');
   const [savingOrderNumber, setSavingOrderNumber] = useState(false);
+  const orderNumberInputRef = useRef(null);
 
   const [statusHistory, setStatusHistory] = useState([]);
   const [statusHistoryLoading, setStatusHistoryLoading] = useState(false);
@@ -897,7 +898,7 @@ function OrderDetailPage() {
             {editingOrderNumber ? (
               <Space.Compact>
                 <Input
-                  autoFocus
+                  ref={orderNumberInputRef}
                   size="small"
                   value={orderNumberValue}
                   onChange={e => setOrderNumberValue(e.target.value)}
@@ -919,6 +920,7 @@ function OrderDetailPage() {
                     onClick={() => {
                       setOrderNumberValue(order.order_number || '');
                       setEditingOrderNumber(true);
+                      setTimeout(() => orderNumberInputRef.current?.select(), 0);
                     }}
                   />
                 )}
