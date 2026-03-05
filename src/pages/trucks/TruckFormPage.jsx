@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Form, Input, Button, Card, message, Space, Select } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
@@ -10,10 +10,12 @@ function TruckFormPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
+
   // Списки для вибору
   const [clients, setClients] = useState([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
   const [baseModels, setBaseModels] = useState([]);
+  const searchTimer = useRef(null);
   
   const { id } = useParams();
   const navigate = useNavigate();
@@ -41,20 +43,39 @@ function TruckFormPage() {
     init();
   }, [id]);
 
+  const searchClients = async (search = '') => {
+    setClientsLoading(true);
+    try {
+      const resp = await clientsAPI.getAll({ page_size: 25, search });
+      const data = resp.data || resp;
+      return data.results || data || [];
+    } catch {
+      return [];
+    } finally {
+      setClientsLoading(false);
+    }
+  };
+
+  const handleClientSearch = (value) => {
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(async () => {
+      const results = await searchClients(value);
+      setClients(results);
+    }, 400);
+  };
+
   const fetchDictionaries = async () => {
     try {
-      const [clientsResp, baseModelsResp] = await Promise.all([
-        clientsAPI.getAll({ page_size: 50 }), // Вантажимо перші 50
+      const [initialClients, baseModelsResp] = await Promise.all([
+        searchClients(''),
         baseModelsAPI.getAll()
       ]);
 
-      const clientsData = clientsResp.data || clientsResp;
-      const initialClients = clientsData.results || clientsData || [];
       setClients(initialClients);
 
       const modelsData = baseModelsResp.data || baseModelsResp;
       setBaseModels(modelsData.results || modelsData || []);
-      
+
       return initialClients; // Повертаємо, щоб передати в fetchTruck
     } catch (error) {
       return [];
@@ -129,13 +150,6 @@ function TruckFormPage() {
 
   if (loading) return <LoadingSpinner />;
 
-  // Фільтр для пошуку в Select
-  const filterOption = (input, option) => {
-    const children = option?.children;
-    const text = Array.isArray(children) ? children.join('') : String(children ?? '');
-    return text.toLowerCase().includes(input.toLowerCase());
-  };
-
   return (
     <div>
       <PageHeader
@@ -207,17 +221,17 @@ function TruckFormPage() {
             label="Власник"
           >
             <Select
-              placeholder="Оберіть власника"
+              placeholder="Введіть ім'я або телефон для пошуку"
               allowClear
               showSearch
-              filterOption={filterOption}
-            >
-              {clients.map(client => (
-                <Select.Option key={client.id} value={client.id}>
-                  {client.name} {client.phone ? `(${client.phone})` : ''}
-                </Select.Option>
-              ))}
-            </Select>
+              filterOption={false}
+              onSearch={handleClientSearch}
+              loading={clientsLoading}
+              options={clients.map(c => ({
+                value: c.id,
+                label: c.phone ? `${c.name} (${c.phone})` : c.name,
+              }))}
+            />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
