@@ -130,8 +130,11 @@ function TruckFormPage() {
   if (loading) return <LoadingSpinner />;
 
   // Фільтр для пошуку в Select
-  const filterOption = (input, option) =>
-    (option?.children ?? '').toLowerCase().includes(input.toLowerCase());
+  const filterOption = (input, option) => {
+    const children = option?.children;
+    const text = Array.isArray(children) ? children.join('') : String(children ?? '');
+    return text.toLowerCase().includes(input.toLowerCase());
+  };
 
   return (
     <div>
