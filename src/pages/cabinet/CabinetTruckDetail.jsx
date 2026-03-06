@@ -26,8 +26,9 @@ export default function CabinetTruckDetail() {
     Promise.all([
       cabinetAPI.getTrucks(),
       cabinetAPI.getOrders({ truck: id }),
-    ]).then(([trucks, ordersRes]) => {
-      const t = trucks.data.find(x => String(x.id) === String(id));
+    ]).then(([trucksRes, ordersRes]) => {
+      const allTrucks = Array.isArray(trucksRes.data) ? trucksRes.data : (trucksRes.data.results || []);
+      const t = allTrucks.find(x => String(x.id) === String(id));
       setTruck(t || null);
       const list = Array.isArray(ordersRes.data) ? ordersRes.data : (ordersRes.data.results || []);
       setOrders(list);
