@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import logoImg from '../assets/logo.jpg';
 import {
   CarOutlined, FileTextOutlined, UserOutlined, LogoutOutlined, HomeOutlined,
 } from '@ant-design/icons';
@@ -51,11 +52,7 @@ export default function CabinetLayout() {
             style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
             onClick={() => navigate('/cabinet')}
           >
-            <div style={{
-              width: 38, height: 38, background: Y,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 900, fontSize: 14, color: INK, letterSpacing: -1,
-            }}>IT</div>
+            <img src={logoImg} alt="Італ Трак" style={{ width: 42, height: 42, objectFit: 'contain' }} />
             <div>
               <div style={{ fontWeight: 800, fontSize: 15, color: INK, lineHeight: 1.1 }}>Італ Трак</div>
               <div style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 1.5 }}>Кабінет клієнта</div>

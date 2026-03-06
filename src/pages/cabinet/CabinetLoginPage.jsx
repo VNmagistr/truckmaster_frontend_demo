@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { cabinetAuthAPI } from '../../api/cabinet';
 import useCabinetAuthStore from '../../store/cabinetAuthStore';
+import logoImg from '../../assets/logo.jpg';
 
 const Y = '#f5c518';
 const YD = '#d4a800';
@@ -48,11 +49,7 @@ export default function CabinetLoginPage() {
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <div style={{
-            width: 56, height: 56, background: Y, margin: '0 auto 12px',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontWeight: 900, fontSize: 20, color: INK,
-          }}>IT</div>
+          <img src={logoImg} alt="Італ Трак" style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }} />
           <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, margin: 0 }}>Особистий кабінет</h1>
           <p style={{ color: '#888', fontSize: 14, marginTop: 6 }}>Сервісний центр Італ Трак</p>
         </div>
