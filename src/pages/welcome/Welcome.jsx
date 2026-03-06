@@ -578,7 +578,7 @@ const Welcome = () => {
               <div style={{ overflow: 'hidden', boxShadow: '0 4px 32px rgba(0,0,0,0.1)', border: `3px solid ${Y}` }}>
                 <iframe
                   title="Карта"
-                  src="https://maps.google.com/maps?q=Запитів+вул+Київська+185+Львівська+область+Україна&output=embed&hl=uk&z=15"
+                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d381.8849867079073!2d24.22635464372931!3d49.91746731963937!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473ac54acf95915b%3A0xdc293f6a56dd6cd5!2z0IbRgtCw0Lst0KLRgNCw0Lo!5e0!3m2!1suk!2sua!4v1772792246178!5m2!1suk!2sua"
                   width="100%"
                   height="400"
                   style={{ display: 'block', border: 'none' }}
