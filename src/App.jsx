@@ -55,9 +55,26 @@ dayjs.locale('uk');
 
 const theme = {
   token: {
-    colorPrimary: '#1890ff',
-    borderRadius: 6,
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+    colorPrimary: '#f5c518',
+    colorTextLightSolid: '#1a1a1a',   // текст на жовтих кнопках — темний
+    borderRadius: 4,
+    fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif",
+  },
+  components: {
+    Menu: {
+      darkItemBg: '#1a1a1a',
+      darkSubMenuItemBg: '#111111',
+      darkItemHoverBg: '#2a2a2a',
+      darkItemSelectedBg: '#f5c518',
+      darkItemSelectedColor: '#1a1a1a',
+      darkItemColor: 'rgba(255,255,255,0.72)',
+    },
+    Layout: {
+      siderBg: '#1a1a1a',
+      headerBg: '#ffffff',
+      triggerBg: '#111111',
+      triggerColor: 'rgba(255,255,255,0.65)',
+    },
   },
 };
 
