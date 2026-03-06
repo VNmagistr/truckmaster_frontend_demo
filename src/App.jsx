@@ -6,7 +6,9 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/uk';
 
 import { MainLayout, AuthLayout } from './layouts';
+import CabinetLayout from './layouts/CabinetLayout';
 import { ProtectedRoute, LoadingSpinner } from './components';
+import CabinetProtectedRoute from './components/CabinetProtectedRoute';
 
 import { Welcome } from './pages'; 
 
@@ -38,6 +40,16 @@ const ProductDetailPage = lazy(() => import('./pages/inventory/ProductDetailPage
 
 // Bot
 const BotPage = lazy(() => import('./pages/bot/BotPage'));
+
+// Cabinet
+const CabinetLoginPage = lazy(() => import('./pages/cabinet/CabinetLoginPage'));
+const CabinetRegisterPage = lazy(() => import('./pages/cabinet/CabinetRegisterPage'));
+const CabinetDashboard = lazy(() => import('./pages/cabinet/CabinetDashboard'));
+const CabinetTrucksPage = lazy(() => import('./pages/cabinet/CabinetTrucksPage'));
+const CabinetTruckDetail = lazy(() => import('./pages/cabinet/CabinetTruckDetail'));
+const CabinetOrdersPage = lazy(() => import('./pages/cabinet/CabinetOrdersPage'));
+const CabinetOrderDetail = lazy(() => import('./pages/cabinet/CabinetOrderDetail'));
+const CabinetProfilePage = lazy(() => import('./pages/cabinet/CabinetProfilePage'));
 
 dayjs.locale('uk');
 
@@ -93,6 +105,25 @@ function AppRoutes() {
         <Route path="/inventory/:id/edit" element={<ProductFormPage />} />
 
         <Route path="/bot" element={<BotPage />} />
+      </Route>
+
+      {/* Cabinet — client portal */}
+      <Route path="/cabinet/login" element={<CabinetLoginPage />} />
+      <Route path="/cabinet/register" element={<CabinetRegisterPage />} />
+      <Route
+        path="/cabinet"
+        element={
+          <CabinetProtectedRoute>
+            <CabinetLayout />
+          </CabinetProtectedRoute>
+        }
+      >
+        <Route index element={<CabinetDashboard />} />
+        <Route path="trucks" element={<CabinetTrucksPage />} />
+        <Route path="trucks/:id" element={<CabinetTruckDetail />} />
+        <Route path="orders" element={<CabinetOrdersPage />} />
+        <Route path="orders/:id" element={<CabinetOrderDetail />} />
+        <Route path="profile" element={<CabinetProfilePage />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
