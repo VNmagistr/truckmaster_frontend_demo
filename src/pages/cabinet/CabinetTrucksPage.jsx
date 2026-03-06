@@ -12,7 +12,9 @@ export default function CabinetTrucksPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    cabinetAPI.getTrucks().then(r => setTrucks(r.data)).finally(() => setLoading(false));
+    cabinetAPI.getTrucks()
+      .then(r => setTrucks(Array.isArray(r.data) ? r.data : (r.data.results || [])))
+      .finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>Завантаження...</div>;
