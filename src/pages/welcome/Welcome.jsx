@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Row, Col, Collapse } from 'antd';
 import imgSway from '../../assets/trucks/sway.jpg';
 import imgXway from '../../assets/trucks/xway.jpeg';
@@ -112,6 +113,7 @@ function PrimaryBtn({ children, onClick, type = 'button', disabled, loading }) {
 
 /* ══════════════════════════════════════════════ */
 const Welcome = () => {
+  const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [showTop, setShowTop] = useState(false);
@@ -189,6 +191,15 @@ const Welcome = () => {
               >{label}</button>
             ))}
           </nav>
+
+          {/* Cabinet link */}
+          <button onClick={() => navigate('/cabinet')} className="desktop-nav"
+            style={{ background: 'none', border: `1px solid rgba(255,255,255,0.3)`, color: scrolled ? INK2 : BG, fontWeight: 600, fontSize: 13, padding: '8px 16px', cursor: 'pointer', transition: 'all 0.2s' }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = Y; e.currentTarget.style.color = Y; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.color = scrolled ? INK2 : BG; }}
+          >
+            Кабінет
+          </button>
 
           {/* Phone CTA */}
           <a href={`tel:${PHONES[0].number}`} className="desktop-nav"
