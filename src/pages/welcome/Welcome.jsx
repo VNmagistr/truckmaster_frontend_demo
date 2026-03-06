@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Row, Col, Collapse } from 'antd';
+import logoImg from '../../assets/logo.jpg';
 import imgSway from '../../assets/trucks/sway.jpg';
 import imgXway from '../../assets/trucks/xway.jpeg';
 import imgEdaily from '../../assets/trucks/edaily.png';
@@ -70,11 +71,9 @@ function formatPhone(phone) {
 }
 
 /* ── Logo mark ── */
-function LogoMark({ size = 48, light = false }) {
+function LogoMark({ size = 48 }) {
   return (
-    <div style={{ width: size, height: size, background: Y, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-      <span style={{ color: INK, fontWeight: 900, fontSize: Math.round(size * 0.38), letterSpacing: -1, lineHeight: 1 }}>IT</span>
-    </div>
+    <img src={logoImg} alt="Італ Трак" style={{ width: size, height: size, objectFit: 'contain', flexShrink: 0 }} />
   );
 }
 
