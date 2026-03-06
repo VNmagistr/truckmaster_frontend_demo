@@ -38,9 +38,10 @@ export default function CabinetDashboard() {
   useEffect(() => {
     Promise.all([cabinetAPI.getTrucks(), cabinetAPI.getOrders()])
       .then(([t, o]) => {
-        setTrucks(t.data);
-        const list = Array.isArray(o.data) ? o.data : (o.data.results || []);
-        setOrders(list.slice(0, 5));
+        const truckList = Array.isArray(t.data) ? t.data : (t.data.results || []);
+        const orderList = Array.isArray(o.data) ? o.data : (o.data.results || []);
+        setTrucks(truckList);
+        setOrders(orderList.slice(0, 5));
       })
       .finally(() => setLoading(false));
   }, []);
