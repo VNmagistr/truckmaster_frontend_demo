@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Row, Col, Collapse } from 'antd';
+import imgSway from '../../assets/trucks/sway.jpg';
+import imgXway from '../../assets/trucks/xway.jpeg';
+import imgEdaily from '../../assets/trucks/edaily.png';
+import imgDaily4x4 from '../../assets/trucks/daily4x4.png';
+import imgSwayElectric from '../../assets/trucks/sway-electric.png';
 import {
   ToolOutlined, ThunderboltOutlined, SettingOutlined, PhoneOutlined,
   EnvironmentOutlined, ClockCircleOutlined, MenuOutlined, CloseOutlined,
@@ -63,47 +68,12 @@ function formatPhone(phone) {
   return `+${d.slice(0, 2)} (${d.slice(2, 5)}) ${d.slice(5, 8)}-${d.slice(8, 10)}-${d.slice(10)}`;
 }
 
-/* ── SVG truck logo (Iveco cab-over, dark silhouette) ── */
-function TruckIcon({ width = 56, dark = false }) {
-  const fill = dark ? INK : INK;
-  const accent = Y;
-  const h = Math.round(width * 0.52);
+/* ── Logo mark ── */
+function LogoMark({ size = 48, light = false }) {
   return (
-    <svg width={width} height={h} viewBox="0 0 124 64" fill="none">
-      {/* Trailer */}
-      <rect x="38" y="9" width="82" height="30" rx="2" fill={fill} />
-      <line x1="38" y1="24" x2="120" y2="24" stroke={BG} strokeWidth="1" opacity="0.2" />
-      <line x1="80" y1="9" x2="80" y2="39" stroke={BG} strokeWidth="1" opacity="0.2" />
-      {/* Yellow stripe on trailer */}
-      <rect x="38" y="9" width="82" height="4" rx="1" fill={accent} />
-      {/* Coupler */}
-      <rect x="35" y="17" width="4" height="14" rx="1" fill={fill} />
-      {/* Cab */}
-      <path d="M3 13 Q3 9 7 9 L37 9 L37 39 L3 39 Z" fill={fill} />
-      {/* Windshield */}
-      <path d="M6 14 Q6 11 9 11 L22 11 L22 25 L6 25 Z" fill={accent} opacity="0.25" />
-      {/* Door window */}
-      <rect x="24" y="12" width="10" height="10" rx="1" fill={accent} opacity="0.2" />
-      {/* Headlight */}
-      <rect x="3" y="26" width="5" height="7" rx="1" fill={accent} />
-      {/* Bumper */}
-      <rect x="2" y="33" width="10" height="5" rx="1" fill={accent} opacity="0.6" />
-      {/* Exhaust */}
-      <rect x="31" y="1" width="3.5" height="10" rx="1.5" fill={fill} />
-      {/* Deflector */}
-      <path d="M7 9 L7 6 L30 6 L37 9 Z" fill={fill} />
-      {/* Front wheel */}
-      <circle cx="16" cy="44" r="10" fill={fill} />
-      <circle cx="16" cy="44" r="5.5" fill={accent} opacity="0.15" />
-      <circle cx="16" cy="44" r="2" fill={accent} />
-      {/* Rear wheels */}
-      <circle cx="84" cy="44" r="10" fill={fill} />
-      <circle cx="84" cy="44" r="5.5" fill={accent} opacity="0.15" />
-      <circle cx="84" cy="44" r="2" fill={accent} />
-      <circle cx="100" cy="44" r="10" fill={fill} />
-      <circle cx="100" cy="44" r="5.5" fill={accent} opacity="0.15" />
-      <circle cx="100" cy="44" r="2" fill={accent} />
-    </svg>
+    <div style={{ width: size, height: size, background: Y, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+      <span style={{ color: INK, fontWeight: 900, fontSize: Math.round(size * 0.38), letterSpacing: -1, lineHeight: 1 }}>IT</span>
+    </div>
   );
 }
 
@@ -199,7 +169,7 @@ const Welcome = () => {
 
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={scrollToTop}>
-            <TruckIcon width={52} />
+            <LogoMark size={48} />
             <div>
               <div style={{ color: INK, fontWeight: 900, fontSize: 18, letterSpacing: 1, lineHeight: 1.1 }}>Італ Трак</div>
               <div style={{ color: INK3, fontSize: 9, letterSpacing: 2.5, textTransform: 'uppercase' }}>Сервісний центр Iveco</div>
@@ -259,9 +229,12 @@ const Welcome = () => {
         padding: '120px 32px 80px',
       }}>
         {/* Yellow geometric accent — top-right corner block */}
-        <div style={{ position: 'absolute', top: 0, right: 0, width: '38%', height: '100%', background: Y, clipPath: 'polygon(18% 0, 100% 0, 100% 100%, 0% 100%)', zIndex: 0 }} />
-        {/* Dark overlay on yellow part */}
-        <div style={{ position: 'absolute', top: 0, right: 0, width: '38%', height: '100%', background: 'rgba(0,0,0,0.12)', clipPath: 'polygon(18% 0, 100% 0, 100% 100%, 0% 100%)', zIndex: 1 }} />
+        <div style={{ position: 'absolute', top: 0, right: 0, width: '48%', height: '100%', background: Y, clipPath: 'polygon(14% 0, 100% 0, 100% 100%, 0% 100%)', zIndex: 0 }} />
+        {/* Truck photo */}
+        <div style={{ position: 'absolute', top: 0, right: 0, width: '48%', height: '100%', clipPath: 'polygon(14% 0, 100% 0, 100% 100%, 0% 100%)', zIndex: 1, overflow: 'hidden' }}>
+          <img src={imgSway} alt="Iveco S-Way" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center', display: 'block' }} />
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.18)' }} />
+        </div>
 
         <div style={{ position: 'relative', zIndex: 2, maxWidth: 1200, margin: '0 auto', width: '100%' }}>
           <div style={{ maxWidth: 620 }}>
@@ -422,10 +395,21 @@ const Welcome = () => {
             <p style={{ color: INK2, fontSize: 16, maxWidth: 480, margin: '16px auto 0', lineHeight: 1.7 }}>Фотографії нашого сервісу, команди та виконаних робіт</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-            {[...Array(6)].map((_, i) => (
-              <div key={i} style={{ aspectRatio: '4/3', background: BG2, border: '2px dashed #e0e0e0', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: '#bbb' }}>
-                <span style={{ fontSize: 36, marginBottom: 10, opacity: 0.5 }}>{['🚛', '🔧', '⚙️', '🛠️', '🚚', '🔩'][i]}</span>
-                <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: 1.5, textTransform: 'uppercase', color: '#ccc' }}>Фото незабаром</span>
+            {[
+              { src: imgSway, alt: 'Iveco S-Way', label: 'Iveco S-Way' },
+              { src: imgXway, alt: 'Iveco X-Way', label: 'Iveco X-Way' },
+              { src: imgSwayElectric, alt: 'Iveco S-Way Electric', label: 'Iveco S-Way Electric' },
+              { src: imgDaily4x4, alt: 'Iveco Daily 4×4', label: 'Iveco Daily 4×4' },
+              { src: imgEdaily, alt: 'Iveco eDaily', label: 'Iveco eDaily' },
+            ].map(({ src, alt, label }) => (
+              <div key={alt} style={{ aspectRatio: '4/3', overflow: 'hidden', position: 'relative', background: BG2 }}>
+                <img src={src} alt={alt} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.4s' }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.05)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+                />
+                <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: 'linear-gradient(to top, rgba(0,0,0,0.65), transparent)', padding: '20px 16px 12px' }}>
+                  <span style={{ color: BG, fontSize: 13, fontWeight: 700, letterSpacing: 0.5 }}>{label}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -596,7 +580,7 @@ const Welcome = () => {
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 24, marginBottom: 32 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={scrollToTop}>
-              <TruckIcon width={48} />
+              <LogoMark size={44} />
               <div>
                 <div style={{ color: BG, fontWeight: 900, fontSize: 17, letterSpacing: 1 }}>Італ Трак</div>
                 <div style={{ color: '#555', fontSize: 9, letterSpacing: 2.5, textTransform: 'uppercase' }}>Сервісний центр Iveco</div>
