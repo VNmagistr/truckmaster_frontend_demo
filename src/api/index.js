@@ -140,6 +140,7 @@ export const ordersAPI = {
   markForDeletion: (id, reason) => instance.post(`/orders/${id}/mark_for_deletion/`, { reason }),
   unmarkForDeletion: (id) => instance.post(`/orders/${id}/unmark_for_deletion/`),
   getDashboardStats: () => instance.get('/orders/dashboard_stats/'),
+  exportPdf: (id) => instance.get(`/orders/${id}/pdf/`, { responseType: 'blob' }),
   getStats: () => instance.get('/orders/stats/'),
   getWeekDetail: () => instance.get('/orders/week_detail/'),
 
