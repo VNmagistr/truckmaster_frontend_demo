@@ -4,12 +4,23 @@ import {
   UserOutlined,
   CarOutlined,
   FileTextOutlined,
+  DollarOutlined,
+  ClockCircleOutlined,
+  CheckCircleOutlined,
 } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart, Bar, Legend,
+} from 'recharts';
 import { ordersAPI, clientsAPI, trucksAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatMoney } from '../../utils/formatters';
+
+const Y = '#f5c518';
+const INK = '#1a1a1a';
+
+const cardStyle = { borderTop: `4px solid ${Y}`, borderRadius: 8 };
 
 function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -20,10 +31,10 @@ function DashboardPage() {
     openOrders: 0,
     inProgressOrders: 0,
     monthlyRevenue: 0,
+    yearlyRevenue: 0,
+    revenueChart: [],
   });
   const [recentOrders, setRecentOrders] = useState([]);
-  const [chartData, setChartData] = useState([]);
-  
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,35 +44,31 @@ function DashboardPage() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [clientsResponse, trucksResponse, ordersResponse, dashStatsResponse, weekDetailResponse] = await Promise.all([
+      const [clientsRes, trucksRes, ordersRes, dashRes] = await Promise.all([
         clientsAPI.getAll({ page_size: 1 }),
         trucksAPI.getAll({ page_size: 1 }),
         ordersAPI.getAll({ page_size: 5, ordering: '-created_at' }),
         ordersAPI.getDashboardStats(),
-        ordersAPI.getWeekDetail(),
       ]);
 
-      const clientsData = clientsResponse.data || clientsResponse;
-      const trucksData = trucksResponse.data || trucksResponse;
-      const ordersData = ordersResponse.data || ordersResponse;
-      const dashStats = dashStatsResponse.data || dashStatsResponse;
-      const weekData = weekDetailResponse.data || weekDetailResponse;
-
-      const ordersList = ordersData.results || [];
+      const clientsData = clientsRes.data || clientsRes;
+      const trucksData = trucksRes.data || trucksRes;
+      const ordersData = ordersRes.data || ordersRes;
+      const dash = dashRes.data || dashRes;
 
       setStats({
         totalClients: clientsData.count || 0,
         totalTrucks: trucksData.count || 0,
-        totalOrders: ordersData.count || 0,
-        openOrders: dashStats.open_orders || 0,
-        inProgressOrders: dashStats.in_progress_orders || 0,
-        monthlyRevenue: 0,
+        totalOrders: dash.total_orders || ordersData.count || 0,
+        openOrders: dash.open_orders || 0,
+        inProgressOrders: dash.in_progress_orders || 0,
+        monthlyRevenue: dash.monthly_revenue || 0,
+        yearlyRevenue: dash.yearly_revenue || 0,
+        revenueChart: dash.revenue_chart || [],
       });
 
-      setRecentOrders(ordersList.slice(0, 5));
-      setChartData(Array.isArray(weekData) ? weekData : []);
-
-    } catch (error) {
+      setRecentOrders((ordersData.results || []).slice(0, 5));
+    } catch {
       message.error('Не вдалося завантажити статистику');
     } finally {
       setLoading(false);
@@ -73,7 +80,11 @@ function DashboardPage() {
       title: '№',
       dataIndex: 'order_number',
       key: 'order_number',
-      render: (text, record) => <Link to={`/orders/${record.id}`}>{text || `#${record.id}`}</Link>,
+      render: (text, record) => (
+        <Link to={`/orders/${record.id}`} style={{ color: INK, fontWeight: 600 }}>
+          {text || `#${record.id}`}
+        </Link>
+      ),
     },
     {
       title: 'Клієнт',
@@ -91,13 +102,14 @@ function DashboardPage() {
       title: 'Статус',
       dataIndex: 'status',
       key: 'status',
-      render: (status) => <StatusTag status={status} type="order" />,
+      render: (s) => <StatusTag status={s} type="order" />,
     },
     {
       title: 'Сума',
-      dataIndex: 'total_amount',
-      key: 'total_amount',
-      render: (amount) => formatMoney(amount),
+      dataIndex: 'total_cost',
+      key: 'total_cost',
+      align: 'right',
+      render: (v) => formatMoney(v),
     },
   ];
 
@@ -107,45 +119,118 @@ function DashboardPage() {
     <div>
       <PageHeader title="Дашборд" />
 
+      {/* Рядок 1: ключові метрики */}
       <Row gutter={[16, 16]}>
-        <Col xs={24} sm={8}>
-          <Card hoverable onClick={() => navigate('/clients')} style={{ cursor: 'pointer' }}>
-            <Statistic title="Клієнтів" value={stats.totalClients} prefix={<UserOutlined />} valueStyle={{ color: '#3f8600' }} />
+        <Col xs={12} sm={8} lg={4}>
+          <Card hoverable style={cardStyle} onClick={() => navigate('/clients')}>
+            <Statistic
+              title="Клієнтів"
+              value={stats.totalClients}
+              prefix={<UserOutlined />}
+              valueStyle={{ color: INK }}
+            />
           </Card>
         </Col>
-
-        <Col xs={24} sm={8}>
-          <Card hoverable onClick={() => navigate('/trucks')} style={{ cursor: 'pointer' }}>
-            <Statistic title="Вантажівки" value={stats.totalTrucks} prefix={<CarOutlined />} valueStyle={{ color: '#1890ff' }} />
+        <Col xs={12} sm={8} lg={4}>
+          <Card hoverable style={cardStyle} onClick={() => navigate('/trucks')}>
+            <Statistic
+              title="Вантажівок"
+              value={stats.totalTrucks}
+              prefix={<CarOutlined />}
+              valueStyle={{ color: INK }}
+            />
           </Card>
         </Col>
-
-        <Col xs={24} sm={8}>
-          <Card hoverable onClick={() => navigate('/orders')} style={{ cursor: 'pointer' }}>
-            <Statistic title="Всього замовлень" value={stats.totalOrders} prefix={<FileTextOutlined />} />
+        <Col xs={12} sm={8} lg={4}>
+          <Card hoverable style={cardStyle} onClick={() => navigate('/orders')}>
+            <Statistic
+              title="Всього замовлень"
+              value={stats.totalOrders}
+              prefix={<FileTextOutlined />}
+              valueStyle={{ color: INK }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <Card style={cardStyle}>
+            <Statistic
+              title="Відкрито"
+              value={stats.openOrders}
+              prefix={<ClockCircleOutlined />}
+              valueStyle={{ color: '#faad14' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <Card style={cardStyle}>
+            <Statistic
+              title="В роботі"
+              value={stats.inProgressOrders}
+              prefix={<CheckCircleOutlined />}
+              valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <Card style={cardStyle}>
+            <Statistic
+              title="Виторг (місяць)"
+              value={stats.monthlyRevenue}
+              prefix={<DollarOutlined />}
+              suffix="₴"
+              precision={0}
+              valueStyle={{ color: '#3f8600' }}
+            />
           </Card>
         </Col>
       </Row>
 
+      {/* Рядок 2: графік виторгу + останні замовлення */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={16}>
-          <Card title="Замовлення за поточний тиждень">
-            <div style={{ height: 300 }}>
+          <Card
+            title="Виторг за останні 12 місяців"
+            style={cardStyle}
+            extra={
+              <span style={{ color: '#3f8600', fontWeight: 600 }}>
+                {stats.yearlyRevenue.toLocaleString('uk-UA')} ₴ / рік
+              </span>
+            }
+          >
+            <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="orders" stroke="#1890ff" strokeWidth={2} />
-                </LineChart>
+                <AreaChart data={stats.revenueChart}>
+                  <defs>
+                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor={Y} stopOpacity={0.4} />
+                      <stop offset="95%" stopColor={Y} stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
+                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <Tooltip
+                    formatter={(v) => [`${v.toLocaleString('uk-UA')} ₴`, 'Виторг']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke={Y}
+                    strokeWidth={2}
+                    fill="url(#revenueGrad)"
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </Card>
         </Col>
-        
+
         <Col xs={24} lg={8}>
-          <Card title="Останні замовлення" extra={<Link to="/orders">Всі</Link>}>
+          <Card
+            title="Останні замовлення"
+            style={{ ...cardStyle, height: '100%' }}
+            extra={<Link to="/orders" style={{ color: Y }}>Всі</Link>}
+          >
             <Table
               columns={recentOrdersColumns}
               dataSource={recentOrders}
