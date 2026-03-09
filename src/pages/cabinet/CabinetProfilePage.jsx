@@ -6,6 +6,8 @@ import useCabinetAuthStore from '../../store/cabinetAuthStore';
 const Y = '#f5c518';
 const INK = '#1a1a1a';
 const INK2 = '#555';
+const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://api.ital-truck.com.ua';
+const MAPS_URL = 'https://maps.app.goo.gl/mw4fVkobK3tsrpQ88';
 
 export default function CabinetProfilePage() {
   const { user } = useCabinetAuthStore();
@@ -29,8 +31,8 @@ export default function CabinetProfilePage() {
     <div>
       <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, marginBottom: 24 }}>Мій профіль</h1>
 
-      <div style={{ background: '#fff', borderTop: `4px solid ${Y}`, padding: '24px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: 20 }}>
-        {/* Avatar placeholder */}
+      <div style={{ background: '#fff', borderTop: `4px solid ${Y}`, padding: '24px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: 16 }}>
+        {/* Avatar */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
           <div style={{
             width: 64, height: 64, background: Y, borderRadius: '50%',
@@ -60,6 +62,37 @@ export default function CabinetProfilePage() {
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* QR-код сервісного центру */}
+      <div style={{ background: '#fff', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14 }}>
+          Ми на карті
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+          <a href={MAPS_URL} target="_blank" rel="noopener noreferrer">
+            <img
+              src={`${API_BASE}/static/qr_maps.png`}
+              alt="QR-код сервісного центру"
+              style={{ width: 120, height: 120, display: 'block', border: `2px solid ${Y}`, borderRadius: 4 }}
+            />
+          </a>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: INK, marginBottom: 6 }}>Сервісний центр Італ Трак</div>
+            <div style={{ fontSize: 13, color: INK2, lineHeight: 1.7 }}>
+              Відскануйте QR-код або натисніть на нього,<br />
+              щоб відкрити нашу локацію в Google Maps.
+            </div>
+            <a
+              href={MAPS_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: 'inline-block', marginTop: 10, fontSize: 13, fontWeight: 700, color: INK, background: Y, padding: '6px 14px', textDecoration: 'none', borderRadius: 3 }}
+            >
+              Відкрити на картах
+            </a>
+          </div>
         </div>
       </div>
 
