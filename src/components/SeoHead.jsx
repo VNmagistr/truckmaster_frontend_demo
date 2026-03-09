@@ -10,7 +10,7 @@ const structuredData = {
   '@type': 'AutoRepair',
   name: 'Сервісний центр Італ Трак',
   description:
-    'Офіційний сервісний центр Iveco в Україні — ремонт, технічне обслуговування та діагностика вантажних автомобілів Daily, S-Way, X-Way, Stralis, Eurocargo.',
+    'Сервісний центр Iveco в Україні — ремонт, технічне обслуговування та діагностика вантажних автомобілів Daily, S-Way, X-Way, Stralis, Eurocargo.',
   url: SITE_URL,
   logo: LOGO_URL,
   image: LOGO_URL,
@@ -49,7 +49,7 @@ const structuredData = {
 export default function SeoHead() {
   const title = 'Сервісний центр Iveco в Україні | Італ Трак';
   const description =
-    'Офіційний сервіс Iveco — ремонт, ТО та діагностика вантажівок Daily, S-Way, X-Way, Stralis, Eurocargo. Досвід 15+ років. Дзвоніть: +380 95 595 0777';
+    'Сервіс Iveco — ремонт, ТО та діагностика вантажівок Daily, S-Way, X-Way, Stralis, Eurocargo. Досвід 15+ років. Дзвоніть: +380 95 595 0777';
 
   return (
     <Helmet>
