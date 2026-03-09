@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { PhoneOutlined, UserOutlined, MailOutlined, EnvironmentOutlined } from '@ant-design/icons';
-import { QRCodeSVG } from 'qrcode.react';
 import { cabinetAPI } from '../../api/cabinet';
 import useCabinetAuthStore from '../../store/cabinetAuthStore';
+import qrMapsImg from '../../assets/qr_maps.png';
 
 const Y = '#f5c518';
 const INK = '#1a1a1a';
@@ -72,12 +72,10 @@ export default function CabinetProfilePage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
           <a href={MAPS_URL} target="_blank" rel="noopener noreferrer">
-            <QRCodeSVG
-              value={MAPS_URL}
-              size={120}
-              fgColor={INK}
-              bgColor="#ffffff"
-              style={{ display: 'block', border: `2px solid ${Y}`, borderRadius: 4 }}
+            <img
+              src={qrMapsImg}
+              alt="QR-код сервісного центру"
+              style={{ width: 120, height: 120, display: 'block', border: `2px solid ${Y}`, borderRadius: 4 }}
             />
           </a>
           <div>
