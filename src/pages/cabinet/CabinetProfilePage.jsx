@@ -6,7 +6,7 @@ import useCabinetAuthStore from '../../store/cabinetAuthStore';
 const Y = '#f5c518';
 const INK = '#1a1a1a';
 const INK2 = '#555';
-const API_BASE = import.meta.env.VITE_API_URL?.replace('/api', '') || 'https://api.ital-truck.com.ua';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://api.ital-truck.com.ua/api';
 const MAPS_URL = 'https://maps.app.goo.gl/mw4fVkobK3tsrpQ88';
 
 export default function CabinetProfilePage() {
@@ -73,7 +73,7 @@ export default function CabinetProfilePage() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
           <a href={MAPS_URL} target="_blank" rel="noopener noreferrer">
             <img
-              src={`${API_BASE}/static/qr_maps.png`}
+              src={`${API_BASE}/accounts/qr/maps/`}
               alt="QR-код сервісного центру"
               style={{ width: 120, height: 120, display: 'block', border: `2px solid ${Y}`, borderRadius: 4 }}
             />
