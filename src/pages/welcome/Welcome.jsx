@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Row, Col, Collapse } from 'antd';
+import SeoHead from '../../components/SeoHead';
 import logoImg from '../../assets/logo.jpg';
 import imgSway from '../../assets/trucks/sway.jpg';
 import imgXway from '../../assets/trucks/xway.jpeg';
@@ -278,6 +279,7 @@ const Welcome = () => {
 
   return (
     <div style={{ fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif", color: INK, background: BG, overflowX: 'hidden' }}>
+      <SeoHead />
 
       {/* ══ HEADER ══ */}
       <header style={{
