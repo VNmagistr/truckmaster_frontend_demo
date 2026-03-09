@@ -110,19 +110,7 @@ export default function CabinetLoginPage() {
           </div>
         </div>
 
-        {/* Demo hint */}
-        <div style={{
-          marginTop: 16, padding: '14px 18px', background: '#fffbea',
-          border: `1px solid ${Y}`, borderRadius: 4, fontSize: 13,
-        }}>
-          <div style={{ fontWeight: 800, color: INK, marginBottom: 4 }}>🔑 Демо-доступ</div>
-          <div style={{ color: '#555', lineHeight: 1.6 }}>
-            Логін: <code style={{ background: '#f0f0f0', padding: '1px 6px', borderRadius: 3 }}>demo_0001</code><br />
-            Пароль: <code style={{ background: '#f0f0f0', padding: '1px 6px', borderRadius: 3 }}>demo1234</code>
-          </div>
-        </div>
-
-        <div style={{ textAlign: 'center', marginTop: 20 }}>
+<div style={{ textAlign: 'center', marginTop: 20 }}>
           <Link to="/" style={{ color: '#aaa', fontSize: 13, textDecoration: 'none' }}>
             ← Повернутись на сайт
           </Link>
