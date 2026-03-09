@@ -7,6 +7,7 @@ import {
   DeleteOutlined,
   ExclamationCircleOutlined,
   UndoOutlined,
+  CameraOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { ordersAPI } from '../../api';
@@ -199,9 +200,19 @@ function OrdersPage() {
         }
         return (
           <Space direction="vertical" size={0}>
-            <Text strong style={{ color: '#1890ff', cursor: 'pointer' }}>
-              {text}
-            </Text>
+            <Space size={6}>
+              <Text strong style={{ color: '#1890ff', cursor: 'pointer' }}>
+                {text}
+              </Text>
+              {record.photos_count > 0 && (
+                <Tooltip title={`${record.photos_count} фото ремонту`}>
+                  <Space size={2} style={{ color: '#f5c518', fontSize: 12 }}>
+                    <CameraOutlined />
+                    <span>{record.photos_count}</span>
+                  </Space>
+                </Tooltip>
+              )}
+            </Space>
             {record.marked_for_deletion && (
               <Tag color="error" style={{ marginTop: 4 }}>На видалення</Tag>
             )}
