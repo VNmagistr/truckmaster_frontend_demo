@@ -60,12 +60,30 @@ function OrderDetailPage() {
   const [statusHistory, setStatusHistory] = useState([]);
   const [statusHistoryLoading, setStatusHistoryLoading] = useState(false);
 
+  const [pdfLoading, setPdfLoading] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
 
   useEffect(() => {
     initPage();
   }, [id]);
+
+  const handleExportPdf = async () => {
+    setPdfLoading(true);
+    try {
+      const response = await ordersAPI.exportPdf(id);
+      const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `order_${order?.order_number || id}.pdf`;
+      link.click();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      message.error('Не вдалося завантажити PDF');
+    } finally {
+      setPdfLoading(false);
+    }
+  };
 
   const initPage = async () => {
     setLoading(true);
@@ -855,7 +873,13 @@ function OrderDetailPage() {
         showBack
         extra={
           <Space wrap>
-            <Button icon={<PrinterOutlined />}>Друк</Button>
+            <Button
+              icon={<PrinterOutlined />}
+              loading={pdfLoading}
+              onClick={handleExportPdf}
+            >
+              PDF
+            </Button>
             <Dropdown
               menu={{
                 items: statusItems.map(item => ({
