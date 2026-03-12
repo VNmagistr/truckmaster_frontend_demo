@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Calendar, dayjsLocalizer } from 'react-big-calendar';
 import dayjs from 'dayjs';
 import isBetween from 'dayjs/plugin/isBetween';
@@ -17,8 +17,9 @@ dayjs.extend(localizedFormat);
 dayjs.locale('uk');
 import {
   Button, Modal, Form, Input, Select, DatePicker, InputNumber,
-  message, Tag, Space, Popconfirm, Typography, Flex,
+  message, Tag, Space, Popconfirm, Typography, Flex, AutoComplete, Divider,
 } from 'antd';
+import { UserOutlined } from '@ant-design/icons';
 import {
   PlusOutlined, CheckOutlined, CloseOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
@@ -26,6 +27,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getAppointments, createAppointment, updateAppointment, deleteAppointment,
   confirmAppointment, cancelAppointment, completeAppointment,
+  searchClients, getClientTrucks,
 } from '../../api/appointments';
 
 const { Title } = Typography;
@@ -91,6 +93,10 @@ export default function AppointmentsPage() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
+  const [clientOptions, setClientOptions] = useState([]);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [clientTrucks, setClientTrucks] = useState([]);
+  const searchTimer = useRef(null);
   const [calendarRange, setCalendarRange] = useState({
     start: dayjs().startOf('week').toISOString(),
     end: dayjs().endOf('week').toISOString(),
@@ -145,9 +151,11 @@ export default function AppointmentsPage() {
     setModalOpen(true);
   }, [form]);
 
-  const openEdit = useCallback((appt) => {
+  const openEdit = useCallback(async (appt) => {
     setEditingId(appt.id);
+    setSelectedClient(appt.client ? { id: appt.client, name: appt.client_name } : null);
     form.setFieldsValue({
+      client: appt.client,
       client_name: appt.client_name,
       client_phone: appt.client_phone,
       license_plate: appt.license_plate,
@@ -157,10 +165,62 @@ export default function AppointmentsPage() {
       description: appt.description,
       status: appt.status,
     });
+    if (appt.client) {
+      try {
+        const res = await getClientTrucks(appt.client);
+        setClientTrucks(res.data?.results ?? res.data ?? []);
+      } catch { setClientTrucks([]); }
+    }
     setModalOpen(true);
   }, [form]);
 
-  const closeModal = () => { setModalOpen(false); setEditingId(null); form.resetFields(); };
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingId(null);
+    form.resetFields();
+    setSelectedClient(null);
+    setClientOptions([]);
+    setClientTrucks([]);
+  };
+
+  const handleClientSearch = (value) => {
+    clearTimeout(searchTimer.current);
+    if (!value || value.length < 2) { setClientOptions([]); return; }
+    searchTimer.current = setTimeout(async () => {
+      try {
+        const res = await searchClients(value);
+        const list = res.data?.results ?? res.data ?? [];
+        setClientOptions(list.map(c => ({
+          value: c.name,
+          label: (
+            <Flex justify="space-between">
+              <span><UserOutlined style={{ marginRight: 6 }} />{c.name}</span>
+              <span style={{ color: '#888', fontSize: 12 }}>{c.phone}</span>
+            </Flex>
+          ),
+          client: c,
+        })));
+      } catch { setClientOptions([]); }
+    }, 300);
+  };
+
+  const handleClientSelect = async (_, option) => {
+    const c = option.client;
+    setSelectedClient(c);
+    form.setFieldsValue({ client_name: c.name, client_phone: c.phone || '', client: c.id });
+    try {
+      const res = await getClientTrucks(c.id);
+      const trucks = res.data?.results ?? res.data ?? [];
+      setClientTrucks(trucks);
+      if (trucks.length === 1) form.setFieldsValue({ license_plate: trucks[0].license_plate });
+    } catch { setClientTrucks([]); }
+  };
+
+  const handleClientClear = () => {
+    setSelectedClient(null);
+    setClientTrucks([]);
+    form.setFieldsValue({ client_name: '', client_phone: '', license_plate: '', client: null });
+  };
 
   const handleSubmit = () => {
     form.validateFields().then(values => {
@@ -339,29 +399,69 @@ export default function AppointmentsPage() {
           </div>
         )}
         <Form form={form} layout="vertical">
-          <Form.Item name="client_name" label="Ім'я клієнта"
-            rules={[{ required: true, message: 'Вкажіть ім\'я клієнта' }]}>
-            <Input placeholder="Іван Петренко" />
+          <Form.Item name="client" hidden><Input /></Form.Item>
+
+          {/* Client search */}
+          <Form.Item label="Пошук клієнта в базі">
+            <AutoComplete
+              options={clientOptions}
+              onSearch={handleClientSearch}
+              onSelect={handleClientSelect}
+              onClear={handleClientClear}
+              allowClear
+              placeholder="Введіть ім'я або телефон..."
+              style={{ width: '100%' }}
+              filterOption={false}
+            />
           </Form.Item>
-          <Form.Item name="client_phone" label="Телефон"
-            rules={[{ required: true, message: 'Вкажіть телефон' }]}>
-            <Input placeholder="+380 XX XXX XXXX" />
-          </Form.Item>
+
+          {selectedClient && (
+            <div style={{ marginBottom: 12, padding: '6px 10px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4, fontSize: 13 }}>
+              Клієнт знайдений в базі: <strong>{selectedClient.name}</strong>
+            </div>
+          )}
+
+          <Divider style={{ margin: '4px 0 12px', fontSize: 12, color: '#aaa' }}>
+            {selectedClient ? 'Дані заповнено автоматично' : 'або заповніть вручну'}
+          </Divider>
+
+          <Flex gap={12}>
+            <Form.Item name="client_name" label="Ім'я клієнта" style={{ flex: 1 }}
+              rules={[{ required: true, message: 'Вкажіть ім\'я' }]}>
+              <Input placeholder="Іван Петренко" />
+            </Form.Item>
+            <Form.Item name="client_phone" label="Телефон" style={{ flex: 1 }}
+              rules={[{ required: true, message: 'Вкажіть телефон' }]}>
+              <Input placeholder="+380 XX XXX XXXX" />
+            </Form.Item>
+          </Flex>
+
           <Form.Item name="license_plate" label="Держномер авто"
             rules={[{ required: true, message: 'Вкажіть держномер' }]}>
-            <Input placeholder="AA 1234 BB" style={{ textTransform: 'uppercase' }} />
+            {clientTrucks.length > 0 ? (
+              <Select
+                placeholder="Оберіть авто"
+                options={clientTrucks.map(t => ({
+                  value: t.license_plate,
+                  label: `${t.license_plate} — ${t.specific_model_name}`,
+                }))}
+              />
+            ) : (
+              <Input placeholder="AA 1234 BB" style={{ textTransform: 'uppercase' }} />
+            )}
           </Form.Item>
-          <Space size={12} style={{ width: '100%' }}>
-            <Form.Item name="scheduled_dt" label="Дата та час"
-              rules={[{ required: true, message: 'Вкажіть дату та час' }]}
-              style={{ flex: 1, marginBottom: 0 }}>
+
+          <Flex gap={12}>
+            <Form.Item name="scheduled_dt" label="Дата та час" style={{ flex: 1 }}
+              rules={[{ required: true, message: 'Вкажіть дату та час' }]}>
               <DatePicker showTime format="DD.MM.YYYY HH:mm" style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="duration_minutes" label="Тривалість (хв)" style={{ flex: 1, marginBottom: 0 }}>
+            <Form.Item name="duration_minutes" label="Тривалість (хв)" style={{ flex: 1 }}>
               <InputNumber min={15} max={480} step={15} style={{ width: '100%' }} />
             </Form.Item>
-          </Space>
-          <Form.Item name="service_type" label="Тип послуги" style={{ marginTop: 16 }}>
+          </Flex>
+
+          <Form.Item name="service_type" label="Тип послуги">
             <Select options={SERVICE_TYPE_OPTIONS} />
           </Form.Item>
           <Form.Item name="description" label="Опис / коментар">
