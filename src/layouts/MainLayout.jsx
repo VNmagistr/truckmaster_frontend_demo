@@ -3,7 +3,7 @@ import { Layout, Menu, Button, Dropdown, Avatar, Grid, Drawer, Tooltip } from 'a
 import {
   DashboardOutlined, UserOutlined, CarOutlined, FileTextOutlined,
   AppstoreOutlined, RobotOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
-  LogoutOutlined, SettingOutlined, MenuOutlined, PlusOutlined,
+  LogoutOutlined, SettingOutlined, MenuOutlined, PlusOutlined, CalendarOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
@@ -52,6 +52,7 @@ function MainLayout() {
     { key: '/trucks',    icon: <CarOutlined />,        label: quickAddLabel('Вантажівки', '/trucks/new') },
     { key: '/orders',    icon: <FileTextOutlined />,   label: quickAddLabel('Замовлення', '/orders/new') },
     { key: '/inventory', icon: <AppstoreOutlined />,   label: quickAddLabel('Склад',      '/inventory/new') },
+    { key: '/appointments', icon: <CalendarOutlined />, label: 'Записи' },
     { key: '/bot',       icon: <RobotOutlined />,      label: 'Telegram бот' },
   ];
 

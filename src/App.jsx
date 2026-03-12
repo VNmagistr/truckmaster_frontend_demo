@@ -41,6 +41,9 @@ const ProductDetailPage = lazy(() => import('./pages/inventory/ProductDetailPage
 // Bot
 const BotPage = lazy(() => import('./pages/bot/BotPage'));
 
+// Appointments
+const AppointmentsPage = lazy(() => import('./pages/appointments/AppointmentsPage'));
+
 // Cabinet
 const CabinetLoginPage = lazy(() => import('./pages/cabinet/CabinetLoginPage'));
 const CabinetRegisterPage = lazy(() => import('./pages/cabinet/CabinetRegisterPage'));
@@ -122,6 +125,7 @@ function AppRoutes() {
         <Route path="/inventory/:id/edit" element={<ProductFormPage />} />
 
         <Route path="/bot" element={<BotPage />} />
+        <Route path="/appointments" element={<AppointmentsPage />} />
       </Route>
 
       {/* Cabinet — client portal */}
