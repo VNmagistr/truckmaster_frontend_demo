@@ -1,7 +1,20 @@
 import React, { useState, useCallback } from 'react';
 import { Calendar, dayjsLocalizer } from 'react-big-calendar';
 import dayjs from 'dayjs';
+import isBetween from 'dayjs/plugin/isBetween';
+import isSameOrAfter from 'dayjs/plugin/isSameOrAfter';
+import isSameOrBefore from 'dayjs/plugin/isSameOrBefore';
+import localeData from 'dayjs/plugin/localeData';
+import localizedFormat from 'dayjs/plugin/localizedFormat';
+import 'dayjs/locale/uk';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
+
+dayjs.extend(isBetween);
+dayjs.extend(isSameOrAfter);
+dayjs.extend(isSameOrBefore);
+dayjs.extend(localeData);
+dayjs.extend(localizedFormat);
+dayjs.locale('uk');
 import {
   Button, Modal, Form, Input, Select, DatePicker, InputNumber,
   message, Tag, Space, Popconfirm, Typography, Flex,
