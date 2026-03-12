@@ -101,7 +101,7 @@ export default function AppointmentsPage() {
   const { data: appointments = [] } = useQuery({
     queryKey: ['appointments', calendarRange],
     queryFn: () => getAppointments({ start: calendarRange.start, end: calendarRange.end })
-      .then(r => r.data),
+      .then(r => Array.isArray(r.data) ? r.data : (r.data?.results ?? [])),
   });
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['appointments'] });
