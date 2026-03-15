@@ -674,7 +674,7 @@ const Welcome = () => {
                     icon: <ClockCircleOutlined />, title: 'Години роботи',
                     content: (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {[['Пн – Пт', '08:00 – 18:00', false], ['Субота', '08:00 – 14:00', false], ['Неділя', 'Вихідний', true]].map(([day, hours, isOff]) => (
+                        {[['Пн – Пт', '08:00 – 18:00', false], ['Субота – Неділя', 'Вихідний', true]].map(([day, hours, isOff]) => (
                           <div key={day} style={{ display: 'flex', justifyContent: 'space-between', gap: 40, paddingBottom: 8, borderBottom: '1px solid #f0f0f0' }}>
                             <span style={{ color: INK2, fontSize: 15 }}>{day}</span>
                             <span style={{ color: isOff ? '#ef4444' : INK, fontSize: 15, fontWeight: 600 }}>{hours}</span>
