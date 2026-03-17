@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input, Dropdown, Upload } from 'antd';
-import { EditOutlined, PrinterOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { EditOutlined, FilePdfOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI, maintenanceAPI, repairPhotosAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
@@ -68,14 +68,25 @@ function OrderDetailPage() {
     initPage();
   }, [id]);
 
-  const handleExportPdf = async () => {
+  const pdfMenuItems = [
+    { key: 'client', label: 'PDF для клієнта' },
+    { key: 'mechanic', label: 'PDF для механіка' },
+  ];
+
+  const downloadPdf = async (type) => {
     setPdfLoading(true);
     try {
-      const response = await ordersAPI.exportPdf(id);
+      const response = type === 'client'
+        ? await ordersAPI.exportPdf(id)
+        : await ordersAPI.getPdfMechanic(id);
+      const orderNum = order?.order_number || id;
+      const filename = type === 'client'
+        ? `order_${orderNum}_client.pdf`
+        : `order_${orderNum}_mechanic.pdf`;
       const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/pdf' }));
       const link = document.createElement('a');
       link.href = url;
-      link.download = `order_${order?.order_number || id}.pdf`;
+      link.download = filename;
       link.click();
       window.URL.revokeObjectURL(url);
     } catch {
@@ -873,13 +884,11 @@ function OrderDetailPage() {
         showBack
         extra={
           <Space wrap>
-            <Button
-              icon={<PrinterOutlined />}
-              loading={pdfLoading}
-              onClick={handleExportPdf}
-            >
-              PDF
-            </Button>
+            <Dropdown menu={{ items: pdfMenuItems, onClick: ({ key }) => downloadPdf(key) }}>
+              <Button icon={<FilePdfOutlined />} loading={pdfLoading}>
+                PDF <DownOutlined />
+              </Button>
+            </Dropdown>
             <Dropdown
               menu={{
                 items: statusItems.map(item => ({
