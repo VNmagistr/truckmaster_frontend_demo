@@ -50,6 +50,10 @@ const AlprPage = lazy(() => import('./pages/alpr/AlprPage'));
 // Maintenance
 const RemindersPage = lazy(() => import('./pages/maintenance/RemindersPage'));
 
+// Invoices
+const InvoicesPage      = lazy(() => import('./pages/invoices/InvoicesPage'));
+const InvoiceDetailPage = lazy(() => import('./pages/invoices/InvoiceDetailPage'));
+
 // Cabinet
 const CabinetLoginPage = lazy(() => import('./pages/cabinet/CabinetLoginPage'));
 const CabinetRegisterPage = lazy(() => import('./pages/cabinet/CabinetRegisterPage'));
@@ -134,6 +138,8 @@ function AppRoutes() {
         <Route path="/appointments" element={<AppointmentsPage />} />
         <Route path="/alpr" element={<AlprPage />} />
         <Route path="/reminders" element={<RemindersPage />} />
+        <Route path="/invoices" element={<InvoicesPage />} />
+        <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
       </Route>
 
       {/* Cabinet — client portal */}
