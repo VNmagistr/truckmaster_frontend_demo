@@ -225,6 +225,18 @@ export const maintenanceAPI = {
 
   getLogs: (truckId) => instance.get('/orders/maintenance-logs/', { params: { truck: truckId } }),
 
+  // Service types
+  getServiceTypes: () => instance.get('/maintenance/service-types/'),
+
+  // Service reminders
+  getReminders: (params) => instance.get('/maintenance/reminders/', { params }),
+  getRemindersByTruck: (truckId) => instance.get('/maintenance/reminders/by_truck/', { params: { truck_id: truckId } }),
+  createReminder: (data) => instance.post('/maintenance/reminders/', data),
+  updateReminder: (id, data) => instance.patch(`/maintenance/reminders/${id}/`, data),
+  deleteReminder: (id) => instance.delete(`/maintenance/reminders/${id}/`),
+  completeReminder: (id, orderId) => instance.post(`/maintenance/reminders/${id}/complete/`, orderId ? { order_id: orderId } : {}),
+  dismissReminder: (id) => instance.post(`/maintenance/reminders/${id}/dismiss/`),
+
   getIntervals: (truckId) => instance.get('/maintenance-intervals/', { params: { truck: truckId } }),
   saveIntervals: (truckId, data) => {
     // Try update first, fall back to create

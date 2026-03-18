@@ -47,6 +47,9 @@ const AppointmentsPage = lazy(() => import('./pages/appointments/AppointmentsPag
 // ALPR
 const AlprPage = lazy(() => import('./pages/alpr/AlprPage'));
 
+// Maintenance
+const RemindersPage = lazy(() => import('./pages/maintenance/RemindersPage'));
+
 // Cabinet
 const CabinetLoginPage = lazy(() => import('./pages/cabinet/CabinetLoginPage'));
 const CabinetRegisterPage = lazy(() => import('./pages/cabinet/CabinetRegisterPage'));
@@ -130,6 +133,7 @@ function AppRoutes() {
         <Route path="/bot" element={<BotPage />} />
         <Route path="/appointments" element={<AppointmentsPage />} />
         <Route path="/alpr" element={<AlprPage />} />
+        <Route path="/reminders" element={<RemindersPage />} />
       </Route>
 
       {/* Cabinet — client portal */}
