@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Descriptions, Button, Table, Tag, message, Tabs, Modal, Form, Select, InputNumber, Space, Typography, Spin, Empty } from 'antd';
-import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined, HistoryOutlined, DashboardOutlined } from '@ant-design/icons';
+import { Card, Descriptions, Button, Table, Tag, message, Tabs, Modal, Form, Select, InputNumber, Space, Typography, Spin, Empty, Popconfirm, DatePicker, Row, Col } from 'antd';
+import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined, HistoryOutlined, DashboardOutlined, BellOutlined, CheckOutlined, StopOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 
 const INTERVAL_TYPES = [
   { key: 'engine_oil',    label: 'Олива двигуна' },
@@ -43,6 +44,14 @@ function TruckDetailPage() {
   const [formOil] = Form.useForm();
   const [formFilter] = Form.useForm();
   const [formIntervals] = Form.useForm();
+
+  const [reminders, setReminders] = useState([]);
+  const [remindersLoading, setRemindersLoading] = useState(false);
+  const [remindersLoaded, setRemindersLoaded] = useState(false);
+  const [reminderModalOpen, setReminderModalOpen] = useState(false);
+  const [editingReminder, setEditingReminder] = useState(null);
+  const [serviceTypes, setServiceTypes] = useState([]);
+  const [formReminder] = Form.useForm();
 
   const [intervals, setIntervals] = useState(null);
   const [intervalsLoading, setIntervalsLoading] = useState(false);
@@ -174,9 +183,89 @@ function TruckDetailPage() {
     }
   };
 
+  const loadReminders = async () => {
+    if (remindersLoaded) return;
+    setRemindersLoading(true);
+    try {
+      const res = await maintenanceAPI.getRemindersByTruck(id);
+      setReminders(res.data || []);
+      setRemindersLoaded(true);
+    } catch {
+      message.error('Не вдалося завантажити нагадування');
+    } finally {
+      setRemindersLoading(false);
+    }
+  };
+
+  const reloadReminders = async () => {
+    setRemindersLoading(true);
+    try {
+      const res = await maintenanceAPI.getRemindersByTruck(id);
+      setReminders(res.data || []);
+    } catch {} finally {
+      setRemindersLoading(false);
+    }
+  };
+
+  const handleReminderComplete = async (rid) => {
+    try {
+      await maintenanceAPI.completeReminder(rid);
+      message.success('Позначено як виконане');
+      reloadReminders();
+    } catch { message.error('Помилка'); }
+  };
+
+  const handleReminderDismiss = async (rid) => {
+    try {
+      await maintenanceAPI.dismissReminder(rid);
+      message.success('Відхилено');
+      reloadReminders();
+    } catch { message.error('Помилка'); }
+  };
+
+  const openReminderModal = async (record = null) => {
+    if (!serviceTypes.length) {
+      maintenanceAPI.getServiceTypes().then(r => setServiceTypes(r.data?.results || r.data || [])).catch(() => {});
+    }
+    setEditingReminder(record);
+    if (record) {
+      formReminder.setFieldsValue({
+        ...record,
+        target_date: record.target_date ? dayjs(record.target_date) : null,
+      });
+    } else {
+      formReminder.resetFields();
+      formReminder.setFieldsValue({ reminder_type: 'both', priority: 'medium', notify_frequency_days: 7 });
+    }
+    setReminderModalOpen(true);
+  };
+
+  const handleSaveReminder = async () => {
+    try {
+      const values = await formReminder.validateFields();
+      if (values.target_date) values.target_date = values.target_date.format('YYYY-MM-DD');
+      values.truck = Number(id);
+      if (editingReminder) {
+        await maintenanceAPI.updateReminder(editingReminder.id, values);
+        message.success('Оновлено');
+      } else {
+        await maintenanceAPI.createReminder(values);
+        message.success('Нагадування створено');
+      }
+      setReminderModalOpen(false);
+      reloadReminders();
+    } catch (err) {
+      if (err?.response?.data) {
+        const detail = Object.values(err.response.data).flat().join(' ');
+        message.error(detail || 'Помилка збереження');
+      }
+    }
+  };
+
   const handleTabChange = (key) => {
     if (key === 'history') loadLogs();
     if (key === 'intervals') loadIntervals();
+    if (key === 'reminders') loadReminders();
   };
 
   const loadOilProducts = async () => {
@@ -491,6 +580,100 @@ function TruckDetailPage() {
       ),
     },
     {
+      key: 'reminders',
+      label: (
+        <span>
+          <BellOutlined />
+          Нагадування {reminders.filter(r => r.status === 'overdue').length > 0 && (
+            <Tag color="red" style={{ marginLeft: 4, padding: '0 4px' }}>
+              {reminders.filter(r => r.status === 'overdue').length}
+            </Tag>
+          )}
+        </span>
+      ),
+      children: (
+        <Spin spinning={remindersLoading}>
+          <div style={{ marginBottom: 12, textAlign: 'right' }}>
+            <Button
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={() => openReminderModal()}
+              style={{ background: '#f5c518', color: '#1a1a1a', borderColor: '#f5c518' }}
+            >
+              Додати нагадування
+            </Button>
+          </div>
+          <Table
+            rowKey="id"
+            dataSource={reminders}
+            size="small"
+            pagination={false}
+            scroll={{ x: 600 }}
+            locale={{ emptyText: 'Немає нагадувань' }}
+            rowClassName={(r) => r.status === 'overdue' ? 'row-overdue' : ''}
+            columns={[
+              {
+                title: 'Назва',
+                dataIndex: 'title',
+                key: 'title',
+                render: (v, row) => (
+                  <Space direction="vertical" size={0}>
+                    <span style={{ fontWeight: 500 }}>{v}</span>
+                    {row.service_type_name && (
+                      <Text type="secondary" style={{ fontSize: 12 }}>{row.service_type_name}</Text>
+                    )}
+                  </Space>
+                ),
+              },
+              {
+                title: 'Статус',
+                dataIndex: 'status',
+                key: 'status',
+                width: 120,
+                render: (v) => {
+                  const map = { pending: 'blue', notified: 'orange', overdue: 'red', completed: 'green', dismissed: 'default' };
+                  const labels = { pending: 'Очікує', notified: 'Сповіщено', overdue: 'Прострочено', completed: 'Виконано', dismissed: 'Відхилено' };
+                  return <Tag color={map[v]}>{labels[v] || v}</Tag>;
+                },
+              },
+              {
+                title: 'Ціль',
+                key: 'target',
+                width: 160,
+                render: (_, row) => (
+                  <Space direction="vertical" size={0}>
+                    {row.target_date && <span>📅 {dayjs(row.target_date).format('DD.MM.YYYY')}</span>}
+                    {row.target_mileage && <span>🛣 {row.target_mileage.toLocaleString('uk')} км</span>}
+                  </Space>
+                ),
+              },
+              {
+                title: '',
+                key: 'actions',
+                width: 110,
+                render: (_, row) => (
+                  <Space>
+                    <Button size="small" icon={<EditOutlined />} onClick={() => openReminderModal(row)} />
+                    {!['completed', 'dismissed'].includes(row.status) && (
+                      <>
+                        <Popconfirm title="Позначити як виконане?" onConfirm={() => handleReminderComplete(row.id)} okText="Так" cancelText="Ні">
+                          <Button size="small" icon={<CheckOutlined />} style={{ color: 'green', borderColor: 'green' }} />
+                        </Popconfirm>
+                        <Popconfirm title="Відхилити?" onConfirm={() => handleReminderDismiss(row.id)} okText="Так" cancelText="Ні">
+                          <Button size="small" danger icon={<StopOutlined />} />
+                        </Popconfirm>
+                      </>
+                    )}
+                  </Space>
+                ),
+              },
+            ]}
+          />
+          <style>{`.row-overdue td { background: #fff1f0 !important; }`}</style>
+        </Spin>
+      ),
+    },
+    {
       key: 'intervals',
       label: (
         <span>
@@ -657,6 +840,74 @@ function TruckDetailPage() {
           <Button type="primary" htmlType="submit" loading={oilSaving} block>
             {kit ? 'Зберегти' : 'Створити комплект'}
           </Button>
+        </Form>
+      </Modal>
+
+      {/* Модалка нагадування */}
+      <Modal
+        title={editingReminder ? 'Редагувати нагадування' : 'Нове нагадування'}
+        open={reminderModalOpen}
+        onOk={handleSaveReminder}
+        onCancel={() => setReminderModalOpen(false)}
+        okText="Зберегти"
+        cancelText="Скасувати"
+        okButtonProps={{ style: { background: '#f5c518', color: '#1a1a1a', borderColor: '#f5c518' } }}
+        width={520}
+        destroyOnClose
+      >
+        <Form form={formReminder} layout="vertical" style={{ marginTop: 16 }}>
+          <Form.Item name="title" label="Назва" rules={[{ required: true, message: 'Введіть назву' }]}>
+            <Input placeholder="напр. Заміна моторної оливи" maxLength={200} />
+          </Form.Item>
+          <Form.Item name="service_type" label="Тип ТО">
+            <Select allowClear placeholder="Оберіть тип (необов'язково)"
+              options={serviceTypes.map(t => ({ value: t.id, label: t.name }))} />
+          </Form.Item>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="reminder_type" label="Тип" rules={[{ required: true }]}>
+                <Select options={[
+                  { value: 'mileage', label: 'За пробігом' },
+                  { value: 'date', label: 'За датою' },
+                  { value: 'both', label: 'За пробігом або датою' },
+                ]} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="priority" label="Пріоритет" rules={[{ required: true }]}>
+                <Select options={[
+                  { value: 'low', label: 'Низький' },
+                  { value: 'medium', label: 'Середній' },
+                  { value: 'high', label: 'Високий' },
+                  { value: 'critical', label: 'Критичний' },
+                ]} />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Row gutter={12}>
+            <Col span={12}>
+              <Form.Item name="target_mileage" label="Цільовий пробіг">
+                <InputNumber min={0} step={1000} style={{ width: '100%' }} addonAfter="км" />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item name="target_date" label="Цільова дата">
+                <DatePicker style={{ width: '100%' }} format="DD.MM.YYYY" />
+              </Form.Item>
+            </Col>
+          </Row>
+          <Form.Item name="notify_frequency_days" label="Частота повторення">
+            <Select options={[
+              { value: 1, label: 'Щодня' },
+              { value: 2, label: 'Кожні 2 дні' },
+              { value: 3, label: 'Кожні 3 дні' },
+              { value: 7, label: 'Раз на тиждень' },
+              { value: 14, label: 'Раз на 2 тижні' },
+            ]} />
+          </Form.Item>
+          <Form.Item name="description" label="Опис">
+            <Input.TextArea rows={2} maxLength={500} />
+          </Form.Item>
         </Form>
       </Modal>
 

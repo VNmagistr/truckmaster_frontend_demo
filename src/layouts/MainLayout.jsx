@@ -4,7 +4,7 @@ import {
   DashboardOutlined, UserOutlined, CarOutlined, FileTextOutlined,
   AppstoreOutlined, RobotOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   LogoutOutlined, SettingOutlined, MenuOutlined, PlusOutlined, CalendarOutlined,
-  CameraOutlined,
+  CameraOutlined, BellOutlined,
 } from '@ant-design/icons';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
@@ -55,6 +55,7 @@ function MainLayout() {
     { key: '/inventory', icon: <AppstoreOutlined />,   label: quickAddLabel('Склад',      '/inventory/new') },
     { key: '/appointments', icon: <CalendarOutlined />, label: 'Записи' },
     { key: '/bot',       icon: <RobotOutlined />,      label: 'Telegram бот' },
+    { key: '/reminders', icon: <BellOutlined />,       label: 'Нагадування ТО' },
     { key: '/alpr',      icon: <CameraOutlined />,     label: 'Журнал авто' },
   ];
 
