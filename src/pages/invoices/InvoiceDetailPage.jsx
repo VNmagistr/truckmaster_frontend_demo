@@ -43,6 +43,12 @@ function InvoiceHeaderForm({ invoice, onSaved }) {
         notes: invoice.notes,
       });
       setSelectedClientId(invoice.client);
+      if (invoice.client_name) {
+        setClientOptions([{
+          value: invoice.client,
+          label: `${invoice.client_name} (${invoice.client_phone || '—'})`,
+        }]);
+      }
       if (invoice.client) loadTrucks(invoice.client);
     }
   }, [invoice?.id]);
