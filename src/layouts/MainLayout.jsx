@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Layout, Menu, Button, Dropdown, Avatar, Grid, Drawer, Tooltip } from 'antd';
 import {
   DashboardOutlined, UserOutlined, CarOutlined, FileTextOutlined,
@@ -9,6 +9,7 @@ import {
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import useUIStore from '../store/uiStore';
+import useModulesStore from '../store/modulesStore';
 import logoImg from '../assets/logo.jpg';
 
 const { Header, Sider, Content } = Layout;
@@ -22,9 +23,12 @@ function MainLayout() {
   const location = useLocation();
   const { logout, user } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const { fetchModules, isEnabled } = useModulesStore();
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  useEffect(() => { fetchModules(); }, []);
 
   const handleMenuClick = ({ key }) => {
     navigate(key);
@@ -47,18 +51,23 @@ function MainLayout() {
     </span>
   );
 
-  const menuItems = [
-    { key: '/dashboard', icon: <DashboardOutlined />, label: 'Головна' },
-    { key: '/clients',   icon: <UserOutlined />,      label: quickAddLabel('Клієнти',    '/clients/new') },
-    { key: '/trucks',    icon: <CarOutlined />,        label: quickAddLabel('Вантажівки', '/trucks/new') },
-    { key: '/orders',    icon: <FileTextOutlined />,   label: quickAddLabel('Замовлення', '/orders/new') },
-    { key: '/inventory', icon: <AppstoreOutlined />,   label: quickAddLabel('Склад',      '/inventory/new') },
-    { key: '/appointments', icon: <CalendarOutlined />, label: 'Записи' },
-    { key: '/bot',       icon: <RobotOutlined />,      label: 'Telegram бот' },
-    { key: '/reminders', icon: <BellOutlined />,       label: 'Нагадування ТО' },
-    { key: '/invoices',  icon: <FileDoneOutlined />,   label: 'Рахунки' },
-    { key: '/alpr',      icon: <CameraOutlined />,     label: 'Журнал авто' },
+  // Прив'язка пунктів меню до назв модулів (null = core, завжди видимий)
+  const ALL_MENU_ITEMS = [
+    { key: '/dashboard',    module: null,          icon: <DashboardOutlined />, label: 'Головна' },
+    { key: '/clients',      module: null,          icon: <UserOutlined />,      label: quickAddLabel('Клієнти',    '/clients/new') },
+    { key: '/trucks',       module: null,          icon: <CarOutlined />,       label: quickAddLabel('Вантажівки', '/trucks/new') },
+    { key: '/orders',       module: null,          icon: <FileTextOutlined />,  label: quickAddLabel('Замовлення', '/orders/new') },
+    { key: '/inventory',    module: 'inventory',   icon: <AppstoreOutlined />,  label: quickAddLabel('Склад',      '/inventory/new') },
+    { key: '/appointments', module: 'appointments',icon: <CalendarOutlined />,  label: 'Записи' },
+    { key: '/bot',          module: 'bot',         icon: <RobotOutlined />,     label: 'Telegram бот' },
+    { key: '/reminders',    module: 'maintenance', icon: <BellOutlined />,      label: 'Нагадування ТО' },
+    { key: '/invoices',     module: 'invoices',    icon: <FileDoneOutlined />,  label: 'Рахунки' },
+    { key: '/alpr',         module: 'alpr',        icon: <CameraOutlined />,    label: 'Журнал авто' },
   ];
+
+  const menuItems = ALL_MENU_ITEMS
+    .filter(({ module }) => module === null || isEnabled(module))
+    .map(({ module: _m, ...item }) => item);
 
   const selectedKey = '/' + location.pathname.split('/')[1];
 
