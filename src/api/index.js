@@ -328,4 +328,8 @@ export const botAPI = {
   updateReminder: (id, data) => instance.patch(`/bot/reminders/${id}/`, data),
 };
 
+export const modulesAPI = {
+  getAll: () => instance.get('/modules/'),
+};
+
 export default instance;
