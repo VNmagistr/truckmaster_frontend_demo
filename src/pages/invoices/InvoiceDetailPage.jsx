@@ -628,22 +628,28 @@ export default function InvoiceDetailPage() {
               <div style={{ marginTop: 12 }}>
                 {trackingResult.ok ? (
                   <Alert
-                    type={trackingResult.data.status_code === '9' ? 'success' : 'info'}
+                    type={trackingResult.data.StatusCode === '9' ? 'success' : 'info'}
                     showIcon
-                    message={trackingResult.data.status}
+                    message={trackingResult.data.Status}
                     description={
                       <Space direction="vertical" size={2} style={{ fontSize: 13 }}>
-                        {trackingResult.data.city_recipient && (
-                          <span>Місто отримувача: <strong>{trackingResult.data.city_recipient}</strong></span>
+                        {trackingResult.data.CityRecipient && (
+                          <span>Місто отримувача: <strong>{trackingResult.data.CityRecipient}</strong></span>
                         )}
-                        {trackingResult.data.scheduled_delivery_date && (
-                          <span>Очікувана доставка: <strong>{trackingResult.data.scheduled_delivery_date}</strong></span>
+                        {trackingResult.data.WarehouseRecipientAddress && (
+                          <span>Відділення: <strong>{trackingResult.data.WarehouseRecipientAddress}</strong></span>
                         )}
-                        {trackingResult.data.actual_delivery_date && (
-                          <span>Дата отримання: <strong>{trackingResult.data.actual_delivery_date}</strong></span>
+                        {trackingResult.data.ScheduledDeliveryDate && (
+                          <span>Очікувана доставка: <strong>{trackingResult.data.ScheduledDeliveryDate}</strong></span>
                         )}
-                        {trackingResult.data.weight && (
-                          <span>Вага: <strong>{trackingResult.data.weight} кг</strong></span>
+                        {trackingResult.data.ActualDeliveryDate && (
+                          <span>Дата отримання: <strong>{trackingResult.data.ActualDeliveryDate}</strong></span>
+                        )}
+                        {trackingResult.data.DocumentWeight && (
+                          <span>Вага: <strong>{trackingResult.data.DocumentWeight} кг</strong></span>
+                        )}
+                        {trackingResult.data.DateScan && (
+                          <span>Останнє сканування: <strong>{trackingResult.data.DateScan}</strong></span>
                         )}
                       </Space>
                     }
