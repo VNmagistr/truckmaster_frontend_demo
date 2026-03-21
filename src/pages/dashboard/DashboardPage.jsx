@@ -245,6 +245,7 @@ function DashboardPage() {
               rowKey="id"
               pagination={false}
               size="small"
+              scroll={{ x: 'max-content' }}
             />
           </Card>
         </Col>
