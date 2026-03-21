@@ -10,6 +10,7 @@ import {
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components';
+import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import { formatDateTime } from '../../utils/formatters';
 import {
   getArrivals, getIgnored, createIgnored, updateIgnored, deleteIgnored,
@@ -43,6 +44,7 @@ function ArrivalsTab() {
   const [dateFilter, setDate]   = useState(null);
   const [plate, setPlate]       = useState('');
   const [ignoredFilter, setIgnoredFilter] = useState('');
+  const [moduleUnavailable, setModuleUnavailable] = useState(false);
 
   const navigate = useNavigate();
 
@@ -57,7 +59,8 @@ function ArrivalsTab() {
       const d = res.data;
       setData(d.results ?? d);
       setTotal(d.count ?? (d.results ? d.count : d.length));
-    } catch {
+    } catch (err) {
+      if (err.isModuleUnavailable) { setModuleUnavailable(true); return; }
       message.error('Не вдалося завантажити журнал');
     } finally {
       setLoading(false);
@@ -147,6 +150,8 @@ function ArrivalsTab() {
       render: (v) => v != null ? `${Math.round(v)}%` : '—',
     },
   ];
+
+  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Журнал авто" />;
 
   return (
     <>

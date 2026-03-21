@@ -11,6 +11,7 @@ import {
 } from '@ant-design/icons';
 import { botAPI, clientsAPI, trucksAPI } from '../../api';
 import { PageHeader } from '../../components';
+import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import { formatDateTime, formatPhone } from '../../utils/formatters';
 
 const ROLE_OPTIONS = [
@@ -34,6 +35,7 @@ const roleTag = (role) => {
 function BotPage() {
   const [statsLoading, setStatsLoading]     = useState(true);
   const [stats, setStats]                   = useState({ total: 0, by_role: {}, active: 0, blocked: 0 });
+  const [moduleUnavailable, setModuleUnavailable] = useState(false);
 
   // ── Вкладка "Користувачі" ────────────────────────────────────────────────
   const [usersLoading, setUsersLoading]     = useState(false);
@@ -82,7 +84,8 @@ function BotPage() {
       const res  = await botAPI.getStatistics();
       const data = res.data || res;
       setStats(data);
-    } catch {
+    } catch (err) {
+      if (err.isModuleUnavailable) { setModuleUnavailable(true); return; }
       message.error('Не вдалося завантажити статистику');
     } finally {
       setStatsLoading(false);
@@ -394,6 +397,8 @@ function BotPage() {
   const editingName = editingUser
     ? (`${editingUser.first_name || ''} ${editingUser.last_name || ''}`.trim() || `ID ${editingUser.telegram_id}`)
     : '';
+
+  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Telegram бот" />;
 
   return (
     <div>
