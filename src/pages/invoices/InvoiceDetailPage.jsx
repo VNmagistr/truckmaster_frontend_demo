@@ -2,11 +2,12 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Card, Descriptions, Button, Table, Tag, Space, Form, Input,
   Select, InputNumber, Modal, message, Popconfirm, Typography,
-  Divider, Row, Col, Spin, AutoComplete,
+  Divider, Row, Col, Spin, AutoComplete, Alert,
 } from 'antd';
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, SaveOutlined,
   SendOutlined, CheckCircleOutlined, StopOutlined, ArrowLeftOutlined,
+  SearchOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -16,6 +17,7 @@ import {
   getInvoice, createInvoice, updateInvoice,
   markSent, markPaid, cancelInvoice,
   getItems, createItem, updateItem, deleteItem,
+  trackDeclaration,
 } from '../../api/invoices';
 
 const Y   = '#f5c518';
@@ -371,6 +373,8 @@ export default function InvoiceDetailPage() {
   const [liveTotal, setLiveTotal] = useState(0);
   const [declaration, setDeclaration] = useState('');
   const [savingDeclaration, setSavingDeclaration] = useState(false);
+  const [trackingResult, setTrackingResult] = useState(null);
+  const [tracking, setTracking] = useState(false);
 
   // Стан для форми нового рахунку
   const [newForm] = Form.useForm();
@@ -444,11 +448,28 @@ export default function InvoiceDetailPage() {
     try {
       const res = await updateInvoice(invoice.id, { nova_poshta_declaration: declaration || null });
       setInvoice(res.data);
+      setTrackingResult(null);
       message.success('Збережено');
     } catch {
       message.error('Не вдалося зберегти');
     } finally {
       setSavingDeclaration(false);
+    }
+  };
+
+  const handleTrack = async () => {
+    const num = invoice.nova_poshta_declaration;
+    if (!num) return;
+    setTracking(true);
+    setTrackingResult(null);
+    try {
+      const res = await trackDeclaration(num);
+      setTrackingResult({ ok: true, data: res.data });
+    } catch (err) {
+      const detail = err?.response?.data?.detail || 'Не вдалося отримати статус';
+      setTrackingResult({ ok: false, message: detail });
+    } finally {
+      setTracking(false);
     }
   };
 
@@ -571,12 +592,12 @@ export default function InvoiceDetailPage() {
         {invoice.status !== 'cancelled' && (
           <>
             <Divider />
-            <Space align="end">
+            <Space align="end" wrap>
               <div>
                 <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Номер декларації НП</div>
                 <Input
                   value={declaration}
-                  onChange={e => setDeclaration(e.target.value.replace(/\D/g, '').slice(0, 14))}
+                  onChange={e => { setDeclaration(e.target.value.replace(/\D/g, '').slice(0, 14)); setTrackingResult(null); }}
                   placeholder="14 цифр"
                   maxLength={14}
                   style={{ width: 180, fontFamily: 'monospace' }}
@@ -591,7 +612,47 @@ export default function InvoiceDetailPage() {
               >
                 Зберегти
               </Button>
+              {invoice.nova_poshta_declaration && (
+                <Button
+                  icon={<SearchOutlined />}
+                  loading={tracking}
+                  onClick={handleTrack}
+                  type="default"
+                >
+                  Перевірити статус
+                </Button>
+              )}
             </Space>
+
+            {trackingResult && (
+              <div style={{ marginTop: 12 }}>
+                {trackingResult.ok ? (
+                  <Alert
+                    type={trackingResult.data.status_code === '9' ? 'success' : 'info'}
+                    showIcon
+                    message={trackingResult.data.status}
+                    description={
+                      <Space direction="vertical" size={2} style={{ fontSize: 13 }}>
+                        {trackingResult.data.city_recipient && (
+                          <span>Місто отримувача: <strong>{trackingResult.data.city_recipient}</strong></span>
+                        )}
+                        {trackingResult.data.scheduled_delivery_date && (
+                          <span>Очікувана доставка: <strong>{trackingResult.data.scheduled_delivery_date}</strong></span>
+                        )}
+                        {trackingResult.data.actual_delivery_date && (
+                          <span>Дата отримання: <strong>{trackingResult.data.actual_delivery_date}</strong></span>
+                        )}
+                        {trackingResult.data.weight && (
+                          <span>Вага: <strong>{trackingResult.data.weight} кг</strong></span>
+                        )}
+                      </Space>
+                    }
+                  />
+                ) : (
+                  <Alert type="error" showIcon message={trackingResult.message} />
+                )}
+              </div>
+            )}
           </>
         )}
 

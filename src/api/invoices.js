@@ -9,6 +9,8 @@ export const markSent       = (id)     => api.post(`/invoices/${id}/mark_sent/`)
 export const markPaid       = (id)     => api.post(`/invoices/${id}/mark_paid/`);
 export const cancelInvoice  = (id)     => api.post(`/invoices/${id}/cancel/`);
 
+export const trackDeclaration = (number) => api.get(`/nova-poshta/track/${number}/`);
+
 export const getItems       = (invoiceId) => api.get('/invoice-items/', { params: { invoice: invoiceId } });
 export const createItem     = (data)   => api.post('/invoice-items/', data);
 export const updateItem     = (id, data) => api.patch(`/invoice-items/${id}/`, data);
