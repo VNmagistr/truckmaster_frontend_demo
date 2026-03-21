@@ -4,6 +4,7 @@ import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutl
 import { useNavigate } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, EmptyState } from '../../components';
+import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import { formatMoney } from '../../utils/formatters';
 
 function InventoryPage() {
@@ -18,6 +19,7 @@ function InventoryPage() {
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [showDeleted, setShowDeleted] = useState(false);
+  const [moduleUnavailable, setModuleUnavailable] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -83,6 +85,7 @@ function InventoryPage() {
       }));
 
     } catch (error) {
+      if (error.isModuleUnavailable) { setModuleUnavailable(true); return; }
       message.error('Не вдалося завантажити склад');
     } finally {
       setLoading(false);
@@ -205,6 +208,7 @@ function InventoryPage() {
     },
   ];
 
+  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Склад" />;
   if (loading && products.length === 0) return <LoadingSpinner />;
 
   return (

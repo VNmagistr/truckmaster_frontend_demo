@@ -1,7 +1,18 @@
 import axios from 'axios';
+import { notification } from 'antd';
 import useAuthStore from '../store/authStore';
 
-const baseURL = import.meta.env.VITE_API_URL || 'http://REMOVED/api';
+const MODULE_LABELS = {
+  inventory:    'Склад',
+  bot:          'Telegram бот',
+  analytics:    'Аналітика',
+  appointments: 'Записи',
+  invoices:     'Рахунки',
+  alpr:         'Журнал авто',
+  maintenance:  'Нагадування ТО',
+};
+
+const baseURL = import.meta.env.VITE_API_URL;
 
 const instance = axios.create({
   baseURL,
@@ -98,6 +109,26 @@ instance.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    // Handle 503 — module disabled by ModuleMiddleware
+    if (error.response?.status === 503) {
+      const data = error.response.data || {};
+      const moduleName = data.module_name || data.module || null;
+      const label = moduleName ? (MODULE_LABELS[moduleName] || moduleName) : 'Цей модуль';
+
+      notification.warning({
+        message: 'Модуль недоступний',
+        description: `«${label}» наразі недоступний у вашому пакеті. Зверніться до адміністратора для підключення.`,
+        placement: 'topRight',
+        duration: 8,
+      });
+
+      const moduleError = new Error(`Модуль недоступний: ${label}`);
+      moduleError.isModuleUnavailable = true;
+      moduleError.moduleName = moduleName;
+      moduleError.moduleLabel = label;
+      return Promise.reject(moduleError);
     }
 
     return Promise.reject(error);

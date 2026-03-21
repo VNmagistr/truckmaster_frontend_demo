@@ -10,6 +10,7 @@ import {
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components';
+import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import { getInvoices, deleteInvoice } from '../../api/invoices';
 
 const Y   = '#f5c518';
@@ -40,6 +41,7 @@ export default function InvoicesPage() {
   const [statusF, setStatusF]     = useState('');
   const [dateFrom, setDateFrom]   = useState(null);
   const [dateTo, setDateTo]       = useState(null);
+  const [moduleUnavailable, setModuleUnavailable] = useState(false);
 
   const navigate = useNavigate();
 
@@ -55,7 +57,8 @@ export default function InvoicesPage() {
       const d   = res.data;
       setData(d.results ?? d);
       setTotal(d.count ?? (Array.isArray(d) ? d.length : 0));
-    } catch {
+    } catch (err) {
+      if (err.isModuleUnavailable) { setModuleUnavailable(true); return; }
       message.error('Не вдалося завантажити рахунки');
     } finally {
       setLoading(false);
@@ -149,6 +152,8 @@ export default function InvoicesPage() {
       ),
     },
   ];
+
+  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Рахунки" />;
 
   return (
     <div style={{ paddingBottom: 24 }}>

@@ -11,6 +11,7 @@ import {
 import dayjs from 'dayjs';
 import { Link } from 'react-router-dom';
 import { PageHeader } from '../../components';
+import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import { maintenanceAPI, trucksAPI } from '../../api';
 
 const Y = '#f5c518';
@@ -322,6 +323,7 @@ export default function RemindersPage() {
 
   const [modalOpen, setModalOpen]     = useState(false);
   const [editing, setEditing]         = useState(null);
+  const [moduleUnavailable, setModuleUnavailable] = useState(false);
 
   // Stats
   const overdue   = reminders.filter(r => r.status === 'overdue').length;
@@ -339,7 +341,8 @@ export default function RemindersPage() {
       const d = res.data;
       setReminders(d.results ?? d);
       setTotal(d.count ?? (Array.isArray(d) ? d.length : 0));
-    } catch {
+    } catch (err) {
+      if (err.isModuleUnavailable) { setModuleUnavailable(true); return; }
       message.error('Не вдалося завантажити нагадування');
     } finally {
       setLoading(false);
@@ -436,6 +439,8 @@ export default function RemindersPage() {
       ),
     },
   ];
+
+  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Нагадування ТО" />;
 
   return (
     <div style={{ paddingBottom: 24 }}>
