@@ -184,6 +184,7 @@ function DashboardPage() {
               prefix={<DollarOutlined />}
               suffix="₴"
               precision={0}
+              groupSeparator=" "
               valueStyle={{ color: '#3f8600' }}
             />
           </Card>
