@@ -26,6 +26,8 @@ jobs:
       run: |
         npm install
         npm run build
+      env:
+        VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
     # 4. Завантажуємо файли в ТИМЧАСОВУ папку (куди у користувача точно є доступ)
     - name: Copy files to Temp Directory
