@@ -212,7 +212,7 @@ function DashboardPage() {
                       <stop offset="95%" stopColor={Y} stopOpacity={0} />
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                  <CartesianGrid stroke="#f5f5f5" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip
@@ -224,6 +224,8 @@ function DashboardPage() {
                     stroke={Y}
                     strokeWidth={2}
                     fill="url(#revenueGrad)"
+                    activeDot={{ r: 6, strokeWidth: 0 }}
+                    animationDuration={800}
                   />
                 </AreaChart>
               </ResponsiveContainer>
