@@ -20,7 +20,12 @@ import { formatMoney } from '../../utils/formatters';
 const Y = '#f5c518';
 const INK = '#1a1a1a';
 
-const cardStyle = { borderTop: `4px solid ${Y}`, borderRadius: 8 };
+const cardStyle = {
+  borderTop: `4px solid ${Y}`,
+  borderRadius: 8,
+  boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+  transition: 'box-shadow 0.3s, transform 0.3s',
+};
 
 function DashboardPage() {
   const [loading, setLoading] = useState(true);
@@ -246,3 +251,4 @@ function DashboardPage() {
 }
 
 export default DashboardPage;
+
