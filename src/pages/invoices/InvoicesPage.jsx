@@ -141,7 +141,7 @@ export default function InvoicesPage() {
       key: 'actions',
       width: 90,
       render: (_, row) => (
-        <Space>
+        <Space onClick={e => e.stopPropagation()}>
           <Button size="small" icon={<EyeOutlined />} onClick={() => navigate(`/invoices/${row.id}`)} />
           {row.status === 'draft' && (
             <Popconfirm title="Видалити рахунок?" onConfirm={() => handleDelete(row.id)} okText="Так" cancelText="Ні">
@@ -220,6 +220,10 @@ export default function InvoicesPage() {
           loading={loading}
           size="small"
           scroll={{ x: 750 }}
+          onRow={(record) => ({
+            onClick: () => navigate(`/invoices/${record.id}`),
+            style: { cursor: 'pointer' },
+          })}
           pagination={{
             current: page, pageSize, total,
             showSizeChanger: false,
