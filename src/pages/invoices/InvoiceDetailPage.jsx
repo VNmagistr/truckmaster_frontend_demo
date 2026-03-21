@@ -369,6 +369,8 @@ export default function InvoiceDetailPage() {
   const [invoice, setInvoice] = useState(null);
   const [loading, setLoading] = useState(!isNew);
   const [liveTotal, setLiveTotal] = useState(0);
+  const [declaration, setDeclaration] = useState('');
+  const [savingDeclaration, setSavingDeclaration] = useState(false);
 
   // Стан для форми нового рахунку
   const [newForm] = Form.useForm();
@@ -383,6 +385,7 @@ export default function InvoiceDetailPage() {
       const res = await getInvoice(id);
       setInvoice(res.data);
       setLiveTotal(parseFloat(res.data.total || 0));
+      setDeclaration(res.data.nova_poshta_declaration || '');
     } catch {
       message.error('Рахунок не знайдено');
       navigate('/invoices');
@@ -429,6 +432,23 @@ export default function InvoiceDetailPage() {
       }
     } finally {
       setCreating(false);
+    }
+  };
+
+  const handleSaveDeclaration = async () => {
+    if (declaration && !/^\d{14}$/.test(declaration)) {
+      message.error('Номер декларації має містити рівно 14 цифр');
+      return;
+    }
+    setSavingDeclaration(true);
+    try {
+      const res = await updateInvoice(invoice.id, { nova_poshta_declaration: declaration || null });
+      setInvoice(res.data);
+      message.success('Збережено');
+    } catch {
+      message.error('Не вдалося зберегти');
+    } finally {
+      setSavingDeclaration(false);
     }
   };
 
@@ -541,7 +561,39 @@ export default function InvoiceDetailPage() {
               {liveTotal.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴
             </span>
           </Descriptions.Item>
+          {invoice.nova_poshta_declaration && (
+            <Descriptions.Item label="Декларація НП">
+              <Text code>{invoice.nova_poshta_declaration}</Text>
+            </Descriptions.Item>
+          )}
         </Descriptions>
+
+        {invoice.status !== 'cancelled' && (
+          <>
+            <Divider />
+            <Space align="end">
+              <div>
+                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Номер декларації НП</div>
+                <Input
+                  value={declaration}
+                  onChange={e => setDeclaration(e.target.value.replace(/\D/g, '').slice(0, 14))}
+                  placeholder="14 цифр"
+                  maxLength={14}
+                  style={{ width: 180, fontFamily: 'monospace' }}
+                  allowClear
+                />
+              </div>
+              <Button
+                icon={<SaveOutlined />}
+                loading={savingDeclaration}
+                onClick={handleSaveDeclaration}
+                disabled={declaration === (invoice.nova_poshta_declaration || '')}
+              >
+                Зберегти
+              </Button>
+            </Space>
+          </>
+        )}
 
         {invoice.status === 'draft' && (
           <>
