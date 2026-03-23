@@ -296,14 +296,14 @@ const Welcome = () => {
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={scrollToTop}>
             <LogoMark size={76} />
-            <div style={{ color: INK, fontWeight: 900, fontSize: 28, letterSpacing: 1, lineHeight: 1.1 }}>Італ Трак</div>
+            <div>
+              <div style={{ color: INK, fontWeight: 900, fontSize: 28, letterSpacing: 1, lineHeight: 1.1 }}>Італ Трак</div>
+              <div style={{ color: scrolled ? INK3 : 'rgba(255,255,255,0.75)', fontWeight: 800, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' }}>Сервісний центр Iveco</div>
+            </div>
           </div>
 
           {/* Desktop nav */}
           <nav style={{ display: 'flex', gap: 32, alignItems: 'center' }} className="desktop-nav">
-            <span style={{ color: scrolled ? INK : BG, fontWeight: 800, fontSize: 14, letterSpacing: 1.5, textTransform: 'uppercase' }}>
-              Сервісний центр Iveco
-            </span>
             {NAV.map(([id, label]) => (
               <button key={id} onClick={() => scrollTo(id)} style={{
                 background: 'none', border: 'none', borderBottom: '2px solid transparent',
