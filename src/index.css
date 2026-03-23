@@ -52,6 +52,10 @@ body {
   border-radius: 8px;
 }
 
+.ant-tooltip .ant-tooltip-inner {
+  color: #fff !important;
+}
+
 .ant-table-thead > tr > th {
   background-color: #fafafa;
   font-weight: 600;
