@@ -169,7 +169,7 @@ export default function InvoicesPage() {
     {
       title: 'Доставка НП',
       key: 'np_status',
-      width: 160,
+      width: 220,
       render: (_, row) => {
         const decl = row.nova_poshta_declaration;
         if (!decl) return '—';
@@ -186,7 +186,7 @@ export default function InvoicesPage() {
               {np.ScheduledDeliveryDate && !np.ActualDeliveryDate && <div>Очік.: {np.ScheduledDeliveryDate}</div>}
             </div>
           }>
-            <Tag color={npTagColor(np.StatusCode)} style={{ cursor: 'default', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            <Tag color={npTagColor(np.StatusCode)} style={{ cursor: 'default', whiteSpace: 'normal', lineHeight: '18px' }}>
               {np.Status || '—'}
             </Tag>
           </Tooltip>
@@ -276,7 +276,7 @@ export default function InvoicesPage() {
           columns={columns}
           loading={loading}
           size="small"
-          scroll={{ x: 900 }}
+          scroll={{ x: 960 }}
           onRow={(record) => ({
             onClick: () => navigate(`/invoices/${record.id}`),
             style: { cursor: 'pointer' },
