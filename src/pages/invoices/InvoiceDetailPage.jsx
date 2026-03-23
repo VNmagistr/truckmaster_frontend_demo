@@ -7,7 +7,6 @@ import {
 import {
   PlusOutlined, EditOutlined, DeleteOutlined, SaveOutlined,
   SendOutlined, CheckCircleOutlined, StopOutlined, ArrowLeftOutlined,
-  SearchOutlined,
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -402,6 +401,13 @@ export default function InvoiceDetailPage() {
     if (!isNew) load();
   }, [id]);
 
+  // Автоматично завантажуємо статус НП при відкритті/оновленні рахунку
+  useEffect(() => {
+    if (invoice?.nova_poshta_declaration) {
+      handleTrack(invoice.nova_poshta_declaration);
+    }
+  }, [invoice?.nova_poshta_declaration]);
+
   const searchClients = async (val) => {
     if (!val || val.length < 2) return;
     try {
@@ -457,8 +463,8 @@ export default function InvoiceDetailPage() {
     }
   };
 
-  const handleTrack = async () => {
-    const num = invoice.nova_poshta_declaration;
+  const handleTrack = async (explicitNum) => {
+    const num = explicitNum ?? invoice?.nova_poshta_declaration;
     if (!num) return;
     setTracking(true);
     setTrackingResult(null);
@@ -612,17 +618,14 @@ export default function InvoiceDetailPage() {
               >
                 Зберегти
               </Button>
-              {invoice.nova_poshta_declaration && (
-                <Button
-                  icon={<SearchOutlined />}
-                  loading={tracking}
-                  onClick={handleTrack}
-                  type="default"
-                >
-                  Перевірити статус
-                </Button>
-              )}
             </Space>
+
+            {tracking && (
+              <div style={{ marginTop: 12, color: '#888', fontSize: 13 }}>
+                <Spin size="small" style={{ marginRight: 8 }} />
+                Отримання статусу Нової Пошти…
+              </div>
+            )}
 
             {trackingResult && (
               <div style={{ marginTop: 12 }}>
