@@ -118,6 +118,75 @@ a:hover {
   }
 }
 
+/* ─── Table row helpers ──────────────────────────────────────────────────── */
+
+.row-clickable:hover > td {
+  background-color: #fffbea !important;
+}
+
+.row-marked-for-deletion {
+  background-color: #fff2f0 !important;
+}
+.row-marked-for-deletion:hover > td {
+  background-color: #ffccc7 !important;
+}
+
+.row-overdue td {
+  background: #fff1f0 !important;
+}
+
+.row-date-separator > td {
+  padding: 0 !important;
+  background-color: #fafafa !important;
+}
+.row-date-separator:hover > td {
+  background-color: #fafafa !important;
+}
+
+.orders-table .ant-table-cell { font-size: 15px; }
+.orders-table .ant-table-thead .ant-table-cell { font-size: 13px; }
+
+/* ─── Cabinet layout ─────────────────────────────────────────────────────── */
+
+@media (min-width: 769px) {
+  .cab-desktop-name { display: inline !important; }
+}
+
+/* ─── Welcome / Landing page ─────────────────────────────────────────────── */
+
+input::placeholder,
+textarea::placeholder { color: #444; }
+
+input:focus,
+textarea:focus { border-color: #f5c518 !important; outline: none; }
+
+.welcome-page .ant-collapse { border-radius: 0 !important; }
+.welcome-page .ant-collapse-item { border-color: #e8e8e8 !important; }
+.welcome-page .ant-collapse-header {
+  color: #1a1a1a !important;
+  background: #ffffff !important;
+  font-weight: 600 !important;
+}
+.welcome-page .ant-collapse-header:hover { color: #d4a800 !important; }
+.welcome-page .ant-collapse-content {
+  background: #f7f7f7 !important;
+  border-top-color: #f0f0f0 !important;
+}
+.welcome-page .ant-collapse-content-box {
+  color: #555555 !important;
+  line-height: 1.75 !important;
+}
+
+@media (max-width: 768px) {
+  .desktop-nav { display: none !important; }
+  .mobile-burger { display: block !important; }
+}
+@media (min-width: 769px) {
+  .mobile-burger { display: none !important; }
+}
+
+html { scroll-behavior: smooth; }
+
 /* Mobile стилі */
 @media (max-width: 768px) {
   /* Модалки — майже fullscreen */

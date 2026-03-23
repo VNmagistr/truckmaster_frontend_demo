@@ -115,12 +115,6 @@ export default function CabinetLayout() {
         })}
       </nav>
 
-      <style>{`
-        @media (min-width: 769px) {
-          .cab-desktop-name { display: inline !important; }
-        }
-        * { box-sizing: border-box; }
-      `}</style>
     </div>
   );
 }

@@ -534,7 +534,6 @@ export default function RemindersPage() {
         serviceTypes={serviceTypes}
       />
 
-      <style>{`.row-overdue td { background: #fff1f0 !important; }`}</style>
     </div>
   );
 }

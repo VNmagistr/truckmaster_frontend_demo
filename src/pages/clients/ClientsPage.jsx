@@ -170,9 +170,6 @@ function ClientsPage() {
         />
       </Card>
 
-      <style>{`
-        .row-clickable:hover > td { background-color: #fffbea !important; }
-      `}</style>
     </div>
   );
 }

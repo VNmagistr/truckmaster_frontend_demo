@@ -669,7 +669,6 @@ function TruckDetailPage() {
               },
             ]}
           />
-          <style>{`.row-overdue td { background: #fff1f0 !important; }`}</style>
         </Spin>
       ),
     },
