@@ -178,7 +178,7 @@ export default function InvoicesPage() {
         if (np.error) return <Tag color="default">—</Tag>;
         return (
           <Tooltip title={
-            <div style={{ fontSize: 12 }}>
+            <div style={{ fontSize: 12, color: '#fff' }}>
               {np.Status && <div style={{ fontWeight: 600, marginBottom: 4 }}>{np.Status}</div>}
               <div style={{ opacity: 0.75 }}>ТТН: {decl}</div>
               {np.CityRecipient && <div>Місто: {np.CityRecipient}</div>}
