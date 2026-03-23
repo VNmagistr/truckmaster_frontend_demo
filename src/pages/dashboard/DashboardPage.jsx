@@ -7,13 +7,14 @@ import {
   DollarOutlined,
   ClockCircleOutlined,
   CheckCircleOutlined,
+  RobotOutlined,
 } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Legend,
 } from 'recharts';
-import { ordersAPI, clientsAPI, trucksAPI } from '../../api';
+import { ordersAPI, clientsAPI, trucksAPI, botAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatMoney } from '../../utils/formatters';
 
@@ -38,6 +39,7 @@ function DashboardPage() {
     monthlyRevenue: 0,
     yearlyRevenue: 0,
     revenueChart: [],
+    mileageToday: null,
   });
   const [recentOrders, setRecentOrders] = useState([]);
   const navigate = useNavigate();
@@ -49,11 +51,12 @@ function DashboardPage() {
   const fetchDashboardData = async () => {
     setLoading(true);
     try {
-      const [clientsRes, trucksRes, ordersRes, dashRes] = await Promise.all([
+      const [clientsRes, trucksRes, ordersRes, dashRes, botStatsRes] = await Promise.all([
         clientsAPI.getAll({ page_size: 1 }),
         trucksAPI.getAll({ page_size: 1 }),
         ordersAPI.getAll({ page_size: 5, ordering: '-created_at' }),
         ordersAPI.getDashboardStats(),
+        botAPI.getStatistics().catch(() => null),
       ]);
 
       const clientsData = clientsRes.data || clientsRes;
@@ -70,6 +73,7 @@ function DashboardPage() {
         monthlyRevenue: dash.monthly_revenue || 0,
         yearlyRevenue: dash.yearly_revenue || 0,
         revenueChart: dash.revenue_chart || [],
+        mileageToday: botStatsRes ? (botStatsRes.data?.mileage_today ?? null) : null,
       });
 
       setRecentOrders((ordersData.results || []).slice(0, 5));
@@ -189,6 +193,19 @@ function DashboardPage() {
             />
           </Card>
         </Col>
+        {stats.mileageToday !== null && (
+          <Col xs={12} sm={8} lg={4}>
+            <Card style={cardStyle}>
+              <Statistic
+                title="Пробіг через бота (сьогодні)"
+                value={stats.mileageToday}
+                prefix={<RobotOutlined />}
+                suffix="звітів"
+                valueStyle={{ color: INK }}
+              />
+            </Card>
+          </Col>
+        )}
       </Row>
 
       {/* Рядок 2: графік виторгу + останні замовлення */}
