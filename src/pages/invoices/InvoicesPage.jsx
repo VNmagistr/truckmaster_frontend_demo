@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Table, Button, Input, Select, Tag, Space, Statistic,
-  Row, Col, Card, message, Popconfirm, DatePicker, Flex,
+  Row, Col, Card, message, Popconfirm, DatePicker, Flex, Spin, Tooltip,
 } from 'antd';
 import {
   PlusOutlined, SearchOutlined, EyeOutlined,
@@ -11,7 +11,7 @@ import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components';
 import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
-import { getInvoices, deleteInvoice } from '../../api/invoices';
+import { getInvoices, deleteInvoice, trackDeclaration } from '../../api/invoices';
 
 const Y   = '#f5c518';
 const INK = '#1a1a1a';
@@ -30,6 +30,9 @@ const STATUS_LABEL = {
 };
 const STATUS_OPTIONS = Object.entries(STATUS_LABEL).map(([v, l]) => ({ value: v, label: l }));
 
+const NP_TAG_COLOR = { '9': 'green', '8': 'blue', '10': 'red', '11': 'orange' };
+const npTagColor = (code) => NP_TAG_COLOR[String(code)] ?? 'default';
+
 export default function InvoicesPage() {
   const [data, setData]       = useState([]);
   const [loading, setLoading] = useState(false);
@@ -42,8 +45,33 @@ export default function InvoicesPage() {
   const [dateFrom, setDateFrom]   = useState(null);
   const [dateTo, setDateTo]       = useState(null);
   const [moduleUnavailable, setModuleUnavailable] = useState(false);
+  // НП-статуси: { [declaration]: { loading, status, statusCode } }
+  const [npStatuses, setNpStatuses] = useState({});
 
   const navigate = useNavigate();
+
+  const fetchNpStatuses = (rows) => {
+    const declarations = rows
+      .map(r => r.nova_poshta_declaration)
+      .filter(Boolean);
+    if (!declarations.length) { setNpStatuses({}); return; }
+
+    // Помічаємо всі як loading
+    setNpStatuses(prev => {
+      const next = {};
+      declarations.forEach(d => { next[d] = prev[d] ?? { loading: true }; });
+      return next;
+    });
+
+    declarations.forEach(async (decl) => {
+      try {
+        const res = await trackDeclaration(decl);
+        setNpStatuses(prev => ({ ...prev, [decl]: { loading: false, ...res.data } }));
+      } catch {
+        setNpStatuses(prev => ({ ...prev, [decl]: { loading: false, error: true } }));
+      }
+    });
+  };
 
   const fetch = useCallback(async (p = page) => {
     setLoading(true);
@@ -55,8 +83,10 @@ export default function InvoicesPage() {
       if (dateTo)   params.date_to   = dateTo.format('YYYY-MM-DD');
       const res = await getInvoices(params);
       const d   = res.data;
-      setData(d.results ?? d);
+      const rows = d.results ?? d;
+      setData(rows);
       setTotal(d.count ?? (Array.isArray(d) ? d.length : 0));
+      fetchNpStatuses(rows);
     } catch (err) {
       if (err.isModuleUnavailable) { setModuleUnavailable(true); return; }
       message.error('Не вдалося завантажити рахунки');
@@ -135,6 +165,33 @@ export default function InvoicesPage() {
       key: 'status',
       width: 120,
       render: (v) => <Tag color={STATUS_COLOR[v]}>{STATUS_LABEL[v] || v}</Tag>,
+    },
+    {
+      title: 'Доставка НП',
+      key: 'np_status',
+      width: 160,
+      render: (_, row) => {
+        const decl = row.nova_poshta_declaration;
+        if (!decl) return '—';
+        const np = npStatuses[decl];
+        if (!np || np.loading) return <Spin size="small" />;
+        if (np.error) return <Tag color="default">—</Tag>;
+        return (
+          <Tooltip title={
+            <div style={{ fontSize: 12 }}>
+              <div>№ {decl}</div>
+              {np.CityRecipient && <div>Місто: {np.CityRecipient}</div>}
+              {np.WarehouseRecipientAddress && <div>Відд.: {np.WarehouseRecipientAddress}</div>}
+              {np.ActualDeliveryDate && <div>Отримано: {np.ActualDeliveryDate}</div>}
+              {np.ScheduledDeliveryDate && !np.ActualDeliveryDate && <div>Очік.: {np.ScheduledDeliveryDate}</div>}
+            </div>
+          }>
+            <Tag color={npTagColor(np.StatusCode)} style={{ cursor: 'default', maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {np.Status || '—'}
+            </Tag>
+          </Tooltip>
+        );
+      },
     },
     {
       title: '',
@@ -219,7 +276,7 @@ export default function InvoicesPage() {
           columns={columns}
           loading={loading}
           size="small"
-          scroll={{ x: 750 }}
+          scroll={{ x: 900 }}
           onRow={(record) => ({
             onClick: () => navigate(`/invoices/${record.id}`),
             style: { cursor: 'pointer' },
