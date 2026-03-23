@@ -217,7 +217,7 @@ function ProfilePage() {
             <Avatar 
               size={100} 
               icon={<UserOutlined />} 
-              style={{ backgroundColor: '#1890ff', marginBottom: 16 }}
+              style={{ backgroundColor: '#f5c518', color: '#1a1a1a', marginBottom: 16 }}
             >
               {user?.first_name?.[0]}{user?.last_name?.[0]}
             </Avatar>
