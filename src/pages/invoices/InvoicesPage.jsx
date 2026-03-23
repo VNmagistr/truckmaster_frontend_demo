@@ -179,7 +179,8 @@ export default function InvoicesPage() {
         return (
           <Tooltip title={
             <div style={{ fontSize: 12 }}>
-              <div>№ {decl}</div>
+              {np.Status && <div style={{ fontWeight: 600, marginBottom: 4 }}>{np.Status}</div>}
+              <div style={{ opacity: 0.75 }}>ТТН: {decl}</div>
               {np.CityRecipient && <div>Місто: {np.CityRecipient}</div>}
               {np.WarehouseRecipientAddress && <div>Відд.: {np.WarehouseRecipientAddress}</div>}
               {np.ActualDeliveryDate && <div>Отримано: {np.ActualDeliveryDate}</div>}
