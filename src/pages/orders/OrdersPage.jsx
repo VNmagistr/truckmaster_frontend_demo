@@ -39,8 +39,33 @@ function OrdersPage() {
   const [orderToDelete, setOrderToDelete] = useState(null);
   const [deleteForm] = Form.useForm();
   const [actionLoading, setActionLoading] = useState(false);
+  const [editingOrderId, setEditingOrderId] = useState(null);
+  const [editingValue, setEditingValue] = useState('');
+  const [savingOrderId, setSavingOrderId] = useState(null);
 
   const navigate = useNavigate();
+
+  const handleOrderNumberSave = async (record) => {
+    const trimmed = editingValue.trim();
+    if (!trimmed || trimmed === record.order_number) {
+      setEditingOrderId(null);
+      return;
+    }
+    setSavingOrderId(record.id);
+    try {
+      await ordersAPI.update(record.id, { order_number: trimmed });
+      setOrders(prev => prev.map(o => o.id === record.id ? { ...o, order_number: trimmed } : o));
+      message.success('Номер наряду оновлено');
+    } catch (err) {
+      const detail = err?.response?.data?.order_number?.[0]
+        || err?.response?.data?.detail
+        || 'Не вдалося зберегти';
+      message.error(detail);
+    } finally {
+      setSavingOrderId(null);
+      setEditingOrderId(null);
+    }
+  };
 
   useEffect(() => {
     fetchOrders(pagination.current, pagination.pageSize, statusFilter, searchText);
@@ -200,10 +225,30 @@ function OrdersPage() {
         }
         return (
           <Space direction="vertical" size={0}>
-            <Space size={6}>
-              <Text strong style={{ color: '#1890ff', cursor: 'pointer' }}>
-                {text}
-              </Text>
+            <Space size={6} onClick={e => e.stopPropagation()}>
+              {editingOrderId === record.id ? (
+                <Input
+                  size="small"
+                  autoFocus
+                  value={editingValue}
+                  onChange={e => setEditingValue(e.target.value)}
+                  onBlur={() => handleOrderNumberSave(record)}
+                  onPressEnter={() => handleOrderNumberSave(record)}
+                  onKeyDown={e => { if (e.key === 'Escape') setEditingOrderId(null); }}
+                  loading={savingOrderId === record.id}
+                  style={{ width: 110, fontWeight: 600 }}
+                />
+              ) : (
+                <Tooltip title="Клікніть двічі для редагування">
+                  <Text
+                    strong
+                    style={{ color: '#1890ff', cursor: 'pointer' }}
+                    onDoubleClick={() => { setEditingOrderId(record.id); setEditingValue(record.order_number || ''); }}
+                  >
+                    {text}
+                  </Text>
+                </Tooltip>
+              )}
               {record.photos_count > 0 && (
                 <Tooltip title={`${record.photos_count} фото ремонту`}>
                   <Space size={2} style={{ color: '#f5c518', fontSize: 12 }}>
