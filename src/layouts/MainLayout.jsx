@@ -93,11 +93,11 @@ function MainLayout() {
       }}
       onClick={() => navigate('/dashboard')}
     >
-      <img src={logoImg} alt="Італ Трак" style={{ width: 36, height: 36, objectFit: 'contain', flexShrink: 0 }} />
+      <img src={logoImg} alt="Італ Трак" style={{ width: 48, height: 48, objectFit: 'contain', flexShrink: 0 }} />
       {!collapsed && (
         <div>
-          <div style={{ color: '#fff', fontWeight: 800, fontSize: 15, lineHeight: 1.1, letterSpacing: 0.3 }}>Італ Трак</div>
-          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10, textTransform: 'uppercase', letterSpacing: 1.5 }}>CRM</div>
+          <div style={{ color: '#fff', fontWeight: 800, fontSize: 18, lineHeight: 1.1, letterSpacing: 0.3 }}>Італ Трак</div>
+          <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1.5 }}>CRM</div>
         </div>
       )}
     </div>
@@ -146,8 +146,8 @@ function MainLayout() {
           }}
           title={
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <img src={logoImg} alt="Італ Трак" style={{ width: 32, height: 32, objectFit: 'contain' }} />
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: 16 }}>Італ Трак</span>
+              <img src={logoImg} alt="Італ Трак" style={{ width: 42, height: 42, objectFit: 'contain' }} />
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: 19 }}>Італ Трак</span>
             </div>
           }
           closeIcon={<span style={{ color: 'rgba(255,255,255,0.65)' }}>✕</span>}
