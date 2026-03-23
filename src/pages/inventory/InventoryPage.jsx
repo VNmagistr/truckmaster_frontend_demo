@@ -301,17 +301,6 @@ function InventoryPage() {
         )}
       </Card>
 
-      <style>{`
-        .row-clickable:hover > td {
-          background-color: #e6f7ff !important;
-        }
-        .row-marked-for-deletion {
-          background-color: #fff2f0 !important;
-        }
-        .row-marked-for-deletion:hover > td {
-          background-color: #ffccc7 !important;
-        }
-      `}</style>
     </div>
   );
 }

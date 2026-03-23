@@ -278,7 +278,7 @@ const Welcome = () => {
   const NAV = [['why', 'Про нас'], ['services', 'Послуги'], ['gallery', 'Галерея'], ['faq', 'FAQ'], ['contacts', 'Контакти']];
 
   return (
-    <div style={{ fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif", color: INK, background: BG, overflowX: 'hidden' }}>
+    <div className="welcome-page" style={{ fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif", color: INK, background: BG, overflowX: 'hidden' }}>
       <SeoHead />
 
       {/* ══ HEADER ══ */}
@@ -762,25 +762,6 @@ const Welcome = () => {
         <ArrowUpOutlined />
       </button>
 
-      <style>{`
-        input::placeholder, textarea::placeholder { color: #444; }
-        input:focus, textarea:focus { border-color: ${Y} !important; outline: none; }
-        .ant-collapse { border-radius: 0 !important; }
-        .ant-collapse-item { border-color: #e8e8e8 !important; }
-        .ant-collapse-header { color: ${INK} !important; background: ${BG} !important; font-weight: 600 !important; }
-        .ant-collapse-header:hover { color: ${YD} !important; }
-        .ant-collapse-content { background: ${BG2} !important; border-top-color: #f0f0f0 !important; }
-        .ant-collapse-content-box { color: ${INK2} !important; line-height: 1.75 !important; }
-        @media (max-width: 768px) {
-          .desktop-nav { display: none !important; }
-          .mobile-burger { display: block !important; }
-        }
-        @media (min-width: 769px) {
-          .mobile-burger { display: none !important; }
-        }
-        * { box-sizing: border-box; }
-        html { scroll-behavior: smooth; }
-      `}</style>
     </div>
   );
 };

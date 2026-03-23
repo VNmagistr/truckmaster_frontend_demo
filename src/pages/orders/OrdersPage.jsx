@@ -480,31 +480,6 @@ function OrdersPage() {
         </Form>
       </Modal>
 
-      {/* CSS для рядків */}
-      <style>{`
-        .row-marked-for-deletion {
-          background-color: #fff2f0 !important;
-        }
-        .row-marked-for-deletion:hover > td {
-          background-color: #ffccc7 !important;
-        }
-        .row-clickable:hover > td {
-          background-color: #e6f7ff !important;
-        }
-        .row-date-separator > td {
-          padding: 0 !important;
-          background-color: #fafafa !important;
-        }
-        .row-date-separator:hover > td {
-          background-color: #fafafa !important;
-        }
-        .orders-table .ant-table-cell {
-          font-size: 15px;
-        }
-        .orders-table .ant-table-thead .ant-table-cell {
-          font-size: 13px;
-        }
-      `}</style>
     </div>
   );
 }
