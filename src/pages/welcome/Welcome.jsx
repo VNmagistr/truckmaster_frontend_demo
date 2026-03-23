@@ -295,10 +295,10 @@ const Welcome = () => {
 
           {/* Logo */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={scrollToTop}>
-            <LogoMark size={60} />
+            <LogoMark size={76} />
             <div>
-              <div style={{ color: INK, fontWeight: 900, fontSize: 22, letterSpacing: 1, lineHeight: 1.1 }}>Італ Трак</div>
-              <div style={{ color: INK3, fontSize: 12, letterSpacing: 2, textTransform: 'uppercase' }}>Сервісний центр Iveco</div>
+              <div style={{ color: INK, fontWeight: 900, fontSize: 28, letterSpacing: 1, lineHeight: 1.1 }}>Італ Трак</div>
+              <div style={{ color: INK3, fontSize: 14, letterSpacing: 2, textTransform: 'uppercase' }}>Сервісний центр Iveco</div>
             </div>
           </div>
 
