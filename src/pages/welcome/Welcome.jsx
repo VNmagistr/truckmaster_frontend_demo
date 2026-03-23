@@ -297,8 +297,8 @@ const Welcome = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={scrollToTop}>
             <LogoMark size={76} />
             <div>
-              <div style={{ color: INK, fontWeight: 900, fontSize: 28, letterSpacing: 1, lineHeight: 1.1 }}>Італ Трак</div>
-              <div style={{ color: scrolled ? INK3 : 'rgba(255,255,255,0.75)', fontWeight: 800, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' }}>Сервісний центр Iveco</div>
+              <div style={{ color: scrolled ? INK : '#fff', fontWeight: 900, fontSize: 28, letterSpacing: 1, lineHeight: 1.1 }}>Італ Трак</div>
+              <div style={{ color: scrolled ? INK3 : '#fff', fontWeight: 800, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' }}>Сервісний центр Iveco</div>
             </div>
           </div>
 
