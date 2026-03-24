@@ -269,18 +269,7 @@ export const maintenanceAPI = {
   dismissReminder: (id) => instance.post(`/maintenance/reminders/${id}/dismiss/`),
 
   getIntervals: (truckId) => instance.get('/maintenance-intervals/', { params: { truck: truckId } }),
-  saveIntervals: (truckId, data) => {
-    // Try update first, fall back to create
-    return instance.get('/maintenance-intervals/', { params: { truck: truckId } })
-      .then(res => {
-        const d = res.data || res;
-        const list = Array.isArray(d) ? d : (d.results || []);
-        if (list.length > 0) {
-          return instance.patch(`/maintenance-intervals/${list[0].id}/`, data);
-        }
-        return instance.post('/maintenance-intervals/', { truck: truckId, ...data });
-      });
-  },
+  saveIntervals: (truckId, data) => instance.put(`/maintenance-intervals/by-truck/${truckId}/`, data),
 };
 
 export const inventoryAPI = {
