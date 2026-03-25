@@ -241,7 +241,7 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
   );
 }
 
-// ─── Таб 2: Видача водієм ─────────────────────────────────────────────────────
+// ─── Таб 2: Видача водію ─────────────────────────────────────────────────────
 
 function DriverTabSection({ onModuleUnavailable }) {
   const navigate = useNavigate();
@@ -585,7 +585,7 @@ function DriverTabSection({ onModuleUnavailable }) {
           size="small"
           scroll={{ x: 760 }}
           pagination={{ pageSize: 20, showTotal: t => `Всього: ${t}`, hideOnSinglePage: true }}
-          locale={{ emptyText: 'Рахунків типу «Видача водієм» ще немає' }}
+          locale={{ emptyText: 'Рахунків типу «Видача водію» ще немає' }}
           onRow={record => ({ onClick: () => navigate(`/invoices/${record.id}`), style: { cursor: 'pointer' } })}
         />
       </div>
@@ -722,7 +722,7 @@ export default function InvoicesPage() {
           },
           {
             key: 'driver_tab',
-            label: '🚚 Видача водієм',
+            label: '🚚 Видача водію',
             children: <DriverTabSection onModuleUnavailable={() => setModuleUnavailable(true)} />,
           },
         ]}
