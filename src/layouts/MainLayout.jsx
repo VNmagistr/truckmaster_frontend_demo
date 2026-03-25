@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Layout, Menu, Button, Dropdown, Avatar, Grid, Drawer, Tooltip } from 'antd';
+import { Layout, Menu, Button, Dropdown, Avatar, Grid, Drawer, Tooltip, Alert } from 'antd';
 import {
   DashboardOutlined, UserOutlined, CarOutlined, FileTextOutlined,
   AppstoreOutlined, RobotOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
@@ -27,6 +27,10 @@ function MainLayout() {
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const isDemo = import.meta.env.VITE_IS_DEMO === 'true';
+  const [demoBannerVisible, setDemoBannerVisible] = useState(
+    isDemo && localStorage.getItem('demo_banner_dismissed') !== '1'
+  );
 
   useEffect(() => { fetchModules(); }, []);
 
@@ -189,6 +193,26 @@ function MainLayout() {
             </div>
           </Dropdown>
         </Header>
+
+        {/* Demo banner */}
+        {demoBannerVisible && (
+          <Alert
+            banner
+            type="warning"
+            message={
+              <span>
+                <strong>Демо-режим</strong> — дані тестові та не відображають реальну роботу підприємства.
+                Зверніться до нас, щоб отримати повну версію системи.
+              </span>
+            }
+            closable
+            onClose={() => {
+              localStorage.setItem('demo_banner_dismissed', '1');
+              setDemoBannerVisible(false);
+            }}
+            style={{ borderRadius: 0 }}
+          />
+        )}
 
         {/* Content */}
         <Content style={{

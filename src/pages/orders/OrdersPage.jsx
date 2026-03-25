@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip, Typography, Divider, Pagination } from 'antd';
+import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip, Typography, Divider, Pagination, Empty } from 'antd';
 import {
   SearchOutlined,
   PlusOutlined,
@@ -8,6 +8,7 @@ import {
   ExclamationCircleOutlined,
   UndoOutlined,
   CameraOutlined,
+  FileTextOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { ordersAPI } from '../../api';
@@ -451,36 +452,67 @@ function OrdersPage() {
       />
 
       <Card>
-        <Table
-          className="orders-table"
-          columns={columns}
-          dataSource={buildTableData(orders)}
-          rowKey="id"
-          loading={loading}
-          scroll={{ x: 'max-content' }}
-          pagination={false}
-          rowClassName={(record) => {
-            if (record._isSeparator) return 'row-date-separator';
-            return record.marked_for_deletion ? 'row-marked-for-deletion' : 'row-clickable';
-          }}
-          onRow={(record) => {
-            if (record._isSeparator) return {};
-            return { onClick: () => handleRowClick(record), style: { cursor: 'pointer' } };
-          }}
-        />
-        <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
-          <Pagination
-            current={pagination.current}
-            pageSize={pagination.pageSize}
-            total={pagination.total}
-            showSizeChanger
-            pageSizeOptions={['10', '20', '50', '100']}
-            showTotal={(total, range) => `${range[0]}-${range[1]} з ${total}`}
-            onChange={(page, pageSize) => {
-              setPagination(prev => ({ ...prev, current: page, pageSize }));
-            }}
+        {!loading && pagination.total === 0 && !searchText && !statusFilter && !showDeleted ? (
+          <Empty
+            image={<FileTextOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />}
+            imageStyle={{ height: 80 }}
+            description={
+              <div>
+                <Typography.Text style={{ fontSize: 16, display: 'block', marginBottom: 4 }}>
+                  Замовлень ще немає
+                </Typography.Text>
+                <Typography.Text type="secondary">
+                  Створіть перший наряд-замовлення для клієнта
+                </Typography.Text>
+              </div>
+            }
+          >
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/orders/new')}>
+              Нове замовлення
+            </Button>
+          </Empty>
+        ) : !loading && pagination.total === 0 ? (
+          <Empty
+            description={
+              <Typography.Text type="secondary">
+                Нічого не знайдено за вашим запитом
+              </Typography.Text>
+            }
           />
-        </div>
+        ) : (
+          <>
+            <Table
+              className="orders-table"
+              columns={columns}
+              dataSource={buildTableData(orders)}
+              rowKey="id"
+              loading={loading}
+              scroll={{ x: 'max-content' }}
+              pagination={false}
+              rowClassName={(record) => {
+                if (record._isSeparator) return 'row-date-separator';
+                return record.marked_for_deletion ? 'row-marked-for-deletion' : 'row-clickable';
+              }}
+              onRow={(record) => {
+                if (record._isSeparator) return {};
+                return { onClick: () => handleRowClick(record), style: { cursor: 'pointer' } };
+              }}
+            />
+            <div style={{ marginTop: 16, display: 'flex', justifyContent: 'flex-end' }}>
+              <Pagination
+                current={pagination.current}
+                pageSize={pagination.pageSize}
+                total={pagination.total}
+                showSizeChanger
+                pageSizeOptions={['10', '20', '50', '100']}
+                showTotal={(total, range) => `${range[0]}-${range[1]} з ${total}`}
+                onChange={(page, pageSize) => {
+                  setPagination(prev => ({ ...prev, current: page, pageSize }));
+                }}
+              />
+            </div>
+          </>
+        )}
       </Card>
 
       {/* Модальне вікно для підтвердження видалення */}

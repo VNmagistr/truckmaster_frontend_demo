@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, Select, message, Popconfirm, Card } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Input, Select, message, Popconfirm, Card, Empty, Typography } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { clientsAPI } from '../../api';
 import { PageHeader } from '../../components';
@@ -148,26 +148,55 @@ function ClientsPage() {
       </Card>
 
       <Card>
-        <Table
-          columns={columns}
-          dataSource={clients}
-          rowKey="id"
-          scroll={{ x: 'max-content' }}
-          loading={loading}
-          pagination={{
-            current: pagination.current,
-            pageSize: 20,
-            total: pagination.total,
-            showSizeChanger: false,
-            showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`,
-          }}
-          onChange={(p) => setPagination(prev => ({ ...prev, current: p.current }))}
-          rowClassName="row-clickable"
-          onRow={(record) => ({
-            onClick: () => navigate(`/clients/${record.id}`),
-            style: { cursor: 'pointer' },
-          })}
-        />
+        {!loading && pagination.total === 0 && !searchText && !cityFilter ? (
+          <Empty
+            image={<UserOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />}
+            imageStyle={{ height: 80 }}
+            description={
+              <div>
+                <Typography.Text style={{ fontSize: 16, display: 'block', marginBottom: 4 }}>
+                  Клієнтів ще немає
+                </Typography.Text>
+                <Typography.Text type="secondary">
+                  Додайте першого клієнта, щоб почати роботу з CRM
+                </Typography.Text>
+              </div>
+            }
+          >
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/clients/new')}>
+              Додати клієнта
+            </Button>
+          </Empty>
+        ) : !loading && pagination.total === 0 ? (
+          <Empty
+            description={
+              <Typography.Text type="secondary">
+                Нічого не знайдено за вашим запитом
+              </Typography.Text>
+            }
+          />
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={clients}
+            rowKey="id"
+            scroll={{ x: 'max-content' }}
+            loading={loading}
+            pagination={{
+              current: pagination.current,
+              pageSize: 20,
+              total: pagination.total,
+              showSizeChanger: false,
+              showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`,
+            }}
+            onChange={(p) => setPagination(prev => ({ ...prev, current: p.current }))}
+            rowClassName="row-clickable"
+            onRow={(record) => ({
+              onClick: () => navigate(`/clients/${record.id}`),
+              style: { cursor: 'pointer' },
+            })}
+          />
+        )}
       </Card>
 
     </div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, Select, message, Popconfirm, Card } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Input, Select, message, Popconfirm, Card, Empty, Typography } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CarOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { trucksAPI, baseModelsAPI } from '../../api';
 import { PageHeader } from '../../components';
@@ -179,26 +179,55 @@ function TrucksPage() {
       </Card>
 
       <Card>
-        <Table
-          columns={columns}
-          dataSource={trucks}
-          rowKey="id"
-          scroll={{ x: 'max-content' }}
-          loading={loading}
-          pagination={{
-            current: pagination.current,
-            pageSize: 20,
-            total: pagination.total,
-            showSizeChanger: false,
-            showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`,
-          }}
-          onChange={(p) => setPagination(prev => ({ ...prev, current: p.current }))}
-          rowClassName="row-clickable"
-          onRow={(record) => ({
-            onClick: () => navigate(`/trucks/${record.id}`),
-            style: { cursor: 'pointer' },
-          })}
-        />
+        {!loading && pagination.total === 0 && !searchText && !euroFilter && !modelFilter ? (
+          <Empty
+            image={<CarOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />}
+            imageStyle={{ height: 80 }}
+            description={
+              <div>
+                <Typography.Text style={{ fontSize: 16, display: 'block', marginBottom: 4 }}>
+                  Вантажівок ще немає
+                </Typography.Text>
+                <Typography.Text type="secondary">
+                  Додайте перше авто та прив&apos;яжіть його до клієнта
+                </Typography.Text>
+              </div>
+            }
+          >
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/trucks/new')}>
+              Додати авто
+            </Button>
+          </Empty>
+        ) : !loading && pagination.total === 0 ? (
+          <Empty
+            description={
+              <Typography.Text type="secondary">
+                Нічого не знайдено за вашим запитом
+              </Typography.Text>
+            }
+          />
+        ) : (
+          <Table
+            columns={columns}
+            dataSource={trucks}
+            rowKey="id"
+            scroll={{ x: 'max-content' }}
+            loading={loading}
+            pagination={{
+              current: pagination.current,
+              pageSize: 20,
+              total: pagination.total,
+              showSizeChanger: false,
+              showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`,
+            }}
+            onChange={(p) => setPagination(prev => ({ ...prev, current: p.current }))}
+            rowClassName="row-clickable"
+            onRow={(record) => ({
+              onClick: () => navigate(`/trucks/${record.id}`),
+              style: { cursor: 'pointer' },
+            })}
+          />
+        )}
       </Card>
 
     </div>
