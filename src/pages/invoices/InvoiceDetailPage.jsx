@@ -583,7 +583,12 @@ export default function InvoiceDetailPage() {
           </Descriptions.Item>
           <Descriptions.Item label="Телефон">{invoice.client_phone || '—'}</Descriptions.Item>
           <Descriptions.Item label="Вантажівка">{invoice.truck_display || '—'}</Descriptions.Item>
-          <Descriptions.Item label="Сума" span={2}>
+          <Descriptions.Item label="Тип">
+            <Tag color={invoice.invoice_type === 'driver_tab' ? 'orange' : 'blue'}>
+              {invoice.invoice_type_display || '—'}
+            </Tag>
+          </Descriptions.Item>
+          <Descriptions.Item label="Сума">
             <span style={{ fontSize: 20, fontWeight: 700, color: invoice.status === 'paid' ? '#52c41a' : INK }}>
               {liveTotal.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴
             </span>
@@ -595,7 +600,7 @@ export default function InvoiceDetailPage() {
           )}
         </Descriptions>
 
-        {invoice.status !== 'cancelled' && (
+        {invoice.status !== 'cancelled' && invoice.invoice_type !== 'driver_tab' && (
           <>
             <Divider />
             <Space align="end" wrap>

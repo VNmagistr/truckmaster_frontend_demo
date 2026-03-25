@@ -15,3 +15,9 @@ export const getItems       = (invoiceId) => api.get('/invoice-items/', { params
 export const createItem     = (data)   => api.post('/invoice-items/', data);
 export const updateItem     = (id, data) => api.patch(`/invoice-items/${id}/`, data);
 export const deleteItem     = (id)     => api.delete(`/invoice-items/${id}/`);
+
+export const getDriverPickups         = (params) => api.get('/driver-pickups/', { params });
+export const createDriverPickup       = (data)   => api.post('/driver-pickups/', data);
+export const updateDriverPickup       = (id, data) => api.patch(`/driver-pickups/${id}/`, data);
+export const deleteDriverPickup       = (id)     => api.delete(`/driver-pickups/${id}/`);
+export const generateDriverTabInvoice = (data)   => api.post('/driver-pickups/generate-invoice/', data);
