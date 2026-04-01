@@ -1,16 +1,76 @@
-# React + Vite
+# TruckMaster CRM — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React-інтерфейс CRM-системи для сервісного центру вантажних автомобілів Iveco.
+Це демонстраційна версія. Backend: [truckmaster_demo](https://github.com/VNmagistr/truckmaster_demo)
 
-Currently, two official plugins are available:
+## Можливості
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Дашборд з ключовими показниками
+- Управління клієнтами та вантажівками
+- Наряди-замовлення: створення, зміна статусів, PDF-документи
+- Склад та облік запчастин
+- Рахунки з інтеграцією Nova Poshta
+- Записи на сервіс (календар)
+- Особистий кабінет клієнта (окрема авторизація)
+- Адаптивний дизайн (мобільна версія)
 
-## React Compiler
+## Швидкий старт
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 1. Клонування та залежності
 
-## Expanding the ESLint configuration
+```bash
+git clone https://github.com/VNmagistr/truckmaster_frontend_demo.git
+cd truckmaster_frontend_demo
+npm install
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### 2. Налаштування середовища
+
+```bash
+cp .env.example .env
+```
+
+За замовчуванням фронтенд підключається до `http://localhost:8000/api` — локального бекенду.
+Щоб запустити бекенд, див. [truckmaster_demo](https://github.com/VNmagistr/truckmaster_demo).
+
+### 3. Запуск
+
+```bash
+npm run dev
+```
+
+Відкрийте: http://localhost:3000
+
+Логін: `admin` / Пароль: `demo1234` *(після запуску `create_demo_data` на бекенді)*
+
+## Змінні середовища
+
+| Змінна | Опис | За замовчуванням |
+|--------|------|-----------------|
+| `VITE_API_URL` | URL бекенд API | `http://localhost:8000/api` |
+
+## Технології
+
+- React 18 + Vite
+- Ant Design 5
+- Zustand (state management)
+- Axios
+- React Router v6
+- React Big Calendar
+- ReportLab PDF (через бекенд)
+
+## Структура додатку
+
+| Шлях | Опис |
+|------|------|
+| `/` | Лендінг (публічна сторінка) |
+| `/login` | Вхід для персоналу |
+| `/dashboard` | Головна панель |
+| `/clients` | Клієнти |
+| `/trucks` | Вантажівки |
+| `/orders` | Наряди-замовлення |
+| `/inventory` | Склад |
+| `/invoices` | Рахунки |
+| `/appointments` | Записи на сервіс |
+| `/cabinet` | Особистий кабінет клієнта |
+| `/admin` | Django Admin (на бекенді) |
