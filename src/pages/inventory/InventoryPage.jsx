@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Input, message, Card, Tag, Tabs, Select, Popconfirm, Tooltip } from 'antd';
-import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UndoOutlined, ShoppingCartOutlined } from '@ant-design/icons';
+import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UndoOutlined, ShoppingCartOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, EmptyState } from '../../components';
 import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import { formatMoney } from '../../utils/formatters';
 import OrderListTab from './OrderListTab';
+import WholesaleTab from './WholesaleTab';
 
 function InventoryPage() {
   const [products, setProducts] = useState([]);
@@ -208,6 +209,14 @@ function InventoryPage() {
       )
     },
     {
+      key: 'wholesale',
+      label: (
+        <span>
+          <DatabaseOutlined /> Оптовий
+        </span>
+      )
+    },
+    {
       key: 'order_list',
       label: (
         <span>
@@ -218,14 +227,14 @@ function InventoryPage() {
   ];
 
   if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Склад" />;
-  if (loading && products.length === 0 && activeTab !== 'order_list') return <LoadingSpinner />;
+  if (loading && products.length === 0 && activeTab !== 'order_list' && activeTab !== 'wholesale') return <LoadingSpinner />;
 
   return (
     <div>
       <PageHeader
         title="Склад запчастин"
         extra={
-          activeTab !== 'order_list' && (
+          activeTab !== 'order_list' && activeTab !== 'wholesale' && (
             <Space>
               <Input
                 placeholder="Назва або 4 останні цифри артикулу..."
@@ -280,7 +289,9 @@ function InventoryPage() {
           style={{ marginBottom: 16 }}
         />
 
-        {activeTab === 'order_list' ? (
+        {activeTab === 'wholesale' ? (
+          <WholesaleTab />
+        ) : activeTab === 'order_list' ? (
           <OrderListTab />
         ) : products.length > 0 ? (
           <Table

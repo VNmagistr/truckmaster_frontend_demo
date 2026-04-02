@@ -314,6 +314,10 @@ export const inventoryAPI = {
   getMovementsByProduct: (productId) => instance.get('/inventory/movements/', { params: { product: productId } }),
   createMovement: (data) => instance.post('/inventory/movements/', data),
 
+  // Stock transfers & receiving
+  transferStock: (data) => instance.post('/inventory/movements/transfer/', data),
+  receiveStock: (data) => instance.post('/inventory/movements/receive_stock/', data),
+
   // Order folders
   getOrderFolders: () => instance.get('/inventory/order-folders/'),
   createOrderFolder: (data) => instance.post('/inventory/order-folders/', data),
