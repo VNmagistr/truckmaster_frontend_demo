@@ -31,15 +31,12 @@ function InventoryPage() {
 
   // Debounce: очищення — одразу, набір тексту — 500мс затримка
   useEffect(() => {
-    console.log('[SEARCH] searchText changed:', JSON.stringify(searchText));
     if (searchText === '') {
-      console.log('[SEARCH] empty → reset searchQuery immediately');
       setSearchQuery('');
       setPagination(prev => ({ ...prev, current: 1 }));
       return;
     }
     const timer = setTimeout(() => {
-      console.log('[SEARCH] debounce fired, setting searchQuery:', JSON.stringify(searchText));
       setSearchQuery(searchText);
       setPagination(prev => ({ ...prev, current: 1 }));
     }, 500);
@@ -48,7 +45,6 @@ function InventoryPage() {
 
   // Єдиний fetch-ефект — спрацьовує при зміні будь-якого фільтра або пагінації
   useEffect(() => {
-    console.log('[FETCH] effect triggered, searchQuery:', JSON.stringify(searchQuery), 'page:', pagination.current);
     fetchProducts(pagination.current, searchQuery);
   }, [pagination.current, activeTab, selectedCategory, showDeleted, searchQuery]);
 
@@ -72,7 +68,6 @@ function InventoryPage() {
         search: search,
         ordering: 'name',
       };
-      console.log('[API] GET /inventory/products/ params:', params);
       
       if (activeTab === 'low_stock') {
         params.low_stock = true;
@@ -86,7 +81,6 @@ function InventoryPage() {
 
       const response = await inventoryAPI.getAll(params);
       const data = response.data || response;
-      console.log('[API] response: count=', data.count, 'results=', (data.results || data || []).length);
       setProducts(data.results || data || []);
       setPagination(prev => ({
         ...prev,
@@ -95,7 +89,6 @@ function InventoryPage() {
       }));
 
     } catch (error) {
-      console.error('[API] error:', error?.response?.status, error?.response?.data || error?.message);
       if (error.isModuleUnavailable) { setModuleUnavailable(true); return; }
       message.error('Не вдалося завантажити склад');
     } finally {
@@ -248,7 +241,7 @@ function InventoryPage() {
               <Input
                 placeholder="Назва або артикул (будь-яка частина)..."
                 prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-                onChange={e => { console.log('[INPUT] onChange, value:', JSON.stringify(e.target.value)); setSearchText(e.target.value); }}
+                onChange={e => setSearchText(e.target.value)}
                 style={{ width: 220 }}
                 allowClear
               />

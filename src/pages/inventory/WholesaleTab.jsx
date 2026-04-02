@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Table, Button, Space, Input, Select, Modal, Form, InputNumber,
   Tag, message, Tooltip, Typography, Alert, Divider,
@@ -13,13 +13,12 @@ const { Text } = Typography;
 
 function WholesaleTab() {
   const [warehouses, setWarehouses] = useState([]);
-  const [wholesaleWarehouses, setWholesaleWarehouses] = useState([]);
-  const [retailWarehouses, setRetailWarehouses] = useState([]);
   const [stock, setStock] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [stockLoading, setStockLoading] = useState(false);
   const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [selectedWarehouse, setSelectedWarehouse] = useState(null);
+  const [selectedWarehouse, setSelectedWarehouse] = useState(undefined);
 
   // Receive modal
   const [receiveOpen, setReceiveOpen] = useState(false);
@@ -30,15 +29,18 @@ function WholesaleTab() {
   const [transferOpen, setTransferOpen] = useState(false);
   const [transferForm] = Form.useForm();
   const [transferSaving, setTransferSaving] = useState(false);
-  const [transferRecord, setTransferRecord] = useState(null); // pre-fill from row
+  const [transferRecord, setTransferRecord] = useState(null);
 
+  // Завантажуємо склади і товари при монтуванні — незалежно одне від одного
   useEffect(() => {
     fetchWarehouses();
+    fetchProducts();
   }, []);
 
+  // Завантажуємо залишки при зміні складу
   useEffect(() => {
     if (selectedWarehouse !== undefined) {
-      fetchStock();
+      fetchStock(selectedWarehouse);
     }
   }, [selectedWarehouse]);
 
@@ -48,46 +50,64 @@ function WholesaleTab() {
       const data = (res.data || res).results || (res.data || res) || [];
       setWarehouses(data);
       const wholesale = data.filter(w => w.warehouse_type === 'wholesale');
-      const retail = data.filter(w => w.warehouse_type === 'retail' || w.is_default);
-      setWholesaleWarehouses(wholesale);
-      setRetailWarehouses(retail);
       if (wholesale.length > 0) {
         setSelectedWarehouse(wholesale[0].id);
       } else {
         setSelectedWarehouse(null);
-        setLoading(false);
       }
     } catch {
       message.error('Не вдалося завантажити склади');
-      setLoading(false);
+      setSelectedWarehouse(null);
     }
   };
 
-  const fetchStock = useCallback(async () => {
-    setLoading(true);
+  const fetchProducts = async () => {
+    setProductsLoading(true);
     try {
-      const params = {};
-      if (selectedWarehouse) params.warehouse = selectedWarehouse;
-      const [stockRes, productsRes] = await Promise.all([
-        inventoryAPI.getStock(params),
-        inventoryAPI.getAll({ page_size: 1000, ordering: 'name' }),
-      ]);
-      const stockData = (stockRes.data || stockRes).results || (stockRes.data || stockRes) || [];
-      const productsData = (productsRes.data || productsRes).results || (productsRes.data || productsRes) || [];
-      setStock(stockData);
-      setProducts(productsData);
+      const res = await inventoryAPI.getAll({ page_size: 10000, ordering: 'name' });
+      const data = (res.data || res).results || (res.data || res) || [];
+      setProducts(data);
+    } catch {
+      message.error('Не вдалося завантажити список товарів');
+    } finally {
+      setProductsLoading(false);
+    }
+  };
+
+  const fetchStock = async (warehouseId) => {
+    setStockLoading(true);
+    try {
+      const params = warehouseId ? { warehouse: warehouseId } : {};
+      const res = await inventoryAPI.getStock(params);
+      const data = (res.data || res).results || (res.data || res) || [];
+      setStock(data);
     } catch {
       message.error('Не вдалося завантажити залишки');
     } finally {
-      setLoading(false);
+      setStockLoading(false);
     }
-  }, [selectedWarehouse]);
+  };
 
-  useEffect(() => {
-    if (selectedWarehouse !== undefined && selectedWarehouse !== null) {
-      fetchStock();
-    }
-  }, [fetchStock]);
+  const productOptions = products.map(p => ({
+    value: p.id,
+    label: `${p.name}${p.brand ? ` (${p.brand})` : ''}${p.sku_code ? ` [${p.sku_code}]` : ''}`,
+    sku: p.sku_code || '',
+    name: p.name || '',
+  }));
+
+  const filterProductOption = (input, option) => {
+    const q = input.toLowerCase();
+    return (
+      (option?.name || '').toLowerCase().includes(q) ||
+      (option?.sku || '').toLowerCase().includes(q)
+    );
+  };
+
+  const warehouseOptions = warehouses.map(w => ({
+    value: w.id,
+    label: w.name,
+    type: w.warehouse_type,
+  }));
 
   const filteredStock = stock.filter(item => {
     if (!search) return true;
@@ -114,7 +134,7 @@ function WholesaleTab() {
       await inventoryAPI.receiveStock(values);
       message.success('Надходження зареєстровано');
       setReceiveOpen(false);
-      fetchStock();
+      fetchStock(selectedWarehouse);
     } catch (err) {
       const errMsg = err?.response?.data?.error || 'Помилка реєстрації надходження';
       message.error(errMsg);
@@ -145,7 +165,7 @@ function WholesaleTab() {
       await inventoryAPI.transferStock(values);
       message.success('Товар переміщено');
       setTransferOpen(false);
-      fetchStock();
+      fetchStock(selectedWarehouse);
     } catch (err) {
       const errMsg = err?.response?.data?.error || 'Помилка переміщення';
       message.error(errMsg);
@@ -228,7 +248,24 @@ function WholesaleTab() {
     },
   ];
 
-  const hasNoWholesale = wholesaleWarehouses.length === 0;
+  const hasNoWholesale = selectedWarehouse === null;
+
+  const WarehouseSelect = ({ disabled }) => (
+    <Select
+      style={{ width: '100%' }}
+      placeholder="Оберіть склад"
+      disabled={disabled}
+      options={warehouseOptions}
+      optionRender={(opt) => (
+        <Space>
+          {opt.data.label}
+          <Tag color={opt.data.type === 'wholesale' ? 'purple' : 'blue'} style={{ marginLeft: 4 }}>
+            {opt.data.type === 'wholesale' ? 'Оптовий' : 'Роздрібний'}
+          </Tag>
+        </Space>
+      )}
+    />
+  );
 
   return (
     <div>
@@ -238,7 +275,7 @@ function WholesaleTab() {
           icon={<WarningOutlined />}
           showIcon
           message='Оптовий склад не налаштовано'
-          description='Створіть склад з типом "Оптовий" у налаштуваннях, або додайте надходження на будь-який склад нижче.'
+          description='Створіть склад з типом "Оптовий" у налаштуваннях, або зробіть надходження на будь-який склад нижче.'
           style={{ marginBottom: 16 }}
         />
       )}
@@ -246,22 +283,21 @@ function WholesaleTab() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
         <Space wrap>
           <Select
-            style={{ minWidth: 200 }}
+            style={{ minWidth: 220 }}
             placeholder="Оберіть склад"
             value={selectedWarehouse}
             onChange={setSelectedWarehouse}
             allowClear
-          >
-            {warehouses.map(w => (
-              <Select.Option key={w.id} value={w.id}>
-                {w.name}
-                {' '}
-                <Tag style={{ marginLeft: 4 }} color={w.warehouse_type === 'wholesale' ? 'purple' : w.warehouse_type === 'retail' ? 'blue' : 'default'}>
-                  {w.warehouse_type === 'wholesale' ? 'Оптовий' : w.warehouse_type === 'retail' ? 'Роздрібний' : 'Інший'}
+            options={warehouseOptions}
+            optionRender={(opt) => (
+              <Space>
+                {opt.data.label}
+                <Tag color={opt.data.type === 'wholesale' ? 'purple' : 'blue'}>
+                  {opt.data.type === 'wholesale' ? 'Оптовий' : 'Роздрібний'}
                 </Tag>
-              </Select.Option>
-            ))}
-          </Select>
+              </Space>
+            )}
+          />
           <Input
             placeholder="Пошук за назвою або артикулом..."
             prefix={<SearchOutlined />}
@@ -285,7 +321,7 @@ function WholesaleTab() {
         columns={columns}
         dataSource={filteredStock}
         rowKey="id"
-        loading={loading}
+        loading={stockLoading}
         size="middle"
         scroll={{ x: 'max-content' }}
         locale={{ emptyText: selectedWarehouse ? 'На цьому складі товарів немає' : 'Оберіть склад' }}
@@ -305,26 +341,16 @@ function WholesaleTab() {
       >
         <Form form={receiveForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="warehouse" label="Склад" rules={[{ required: true, message: 'Оберіть склад' }]}>
-            <Select placeholder="Оберіть склад">
-              {warehouses.map(w => (
-                <Select.Option key={w.id} value={w.id}>
-                  {w.name}{' '}
-                  <Tag color={w.warehouse_type === 'wholesale' ? 'purple' : 'blue'} style={{ marginLeft: 4 }}>
-                    {w.warehouse_type === 'wholesale' ? 'Оптовий' : 'Роздрібний'}
-                  </Tag>
-                </Select.Option>
-              ))}
-            </Select>
+            <WarehouseSelect />
           </Form.Item>
           <Form.Item name="product" label="Товар" rules={[{ required: true, message: 'Оберіть товар' }]}>
             <Select
               showSearch
-              placeholder="Назва або артикул..."
-              optionFilterProp="label"
-              options={products.map(p => ({
-                value: p.id,
-                label: `${p.name}${p.brand ? ` (${p.brand})` : ''}${p.sku_code ? ` [${p.sku_code}]` : ''}`,
-              }))}
+              loading={productsLoading}
+              placeholder="Введіть назву або артикул..."
+              filterOption={filterProductOption}
+              options={productOptions}
+              notFoundContent={productsLoading ? 'Завантаження...' : 'Нічого не знайдено'}
             />
           </Form.Item>
           <Form.Item name="quantity" label="Кількість" rules={[{ required: true, message: 'Введіть кількість' }]}>
@@ -361,38 +387,19 @@ function WholesaleTab() {
           <Form.Item name="product" label="Товар" rules={[{ required: true, message: 'Оберіть товар' }]}>
             <Select
               showSearch
-              placeholder="Назва або артикул..."
-              optionFilterProp="label"
+              loading={productsLoading}
+              placeholder="Введіть назву або артикул..."
+              filterOption={filterProductOption}
+              options={productOptions}
               disabled={!!transferRecord}
-              options={products.map(p => ({
-                value: p.id,
-                label: `${p.name}${p.brand ? ` (${p.brand})` : ''}${p.sku_code ? ` [${p.sku_code}]` : ''}`,
-              }))}
+              notFoundContent={productsLoading ? 'Завантаження...' : 'Нічого не знайдено'}
             />
           </Form.Item>
           <Form.Item name="warehouse_from" label="Звідки" rules={[{ required: true, message: 'Оберіть склад-джерело' }]}>
-            <Select placeholder="Склад-джерело" disabled={!!transferRecord}>
-              {warehouses.map(w => (
-                <Select.Option key={w.id} value={w.id}>
-                  {w.name}{' '}
-                  <Tag color={w.warehouse_type === 'wholesale' ? 'purple' : 'blue'} style={{ marginLeft: 4 }}>
-                    {w.warehouse_type === 'wholesale' ? 'Оптовий' : 'Роздрібний'}
-                  </Tag>
-                </Select.Option>
-              ))}
-            </Select>
+            <WarehouseSelect disabled={!!transferRecord} />
           </Form.Item>
           <Form.Item name="warehouse_to" label="Куди" rules={[{ required: true, message: 'Оберіть склад призначення' }]}>
-            <Select placeholder="Склад призначення">
-              {warehouses.map(w => (
-                <Select.Option key={w.id} value={w.id}>
-                  {w.name}{' '}
-                  <Tag color={w.warehouse_type === 'wholesale' ? 'purple' : 'blue'} style={{ marginLeft: 4 }}>
-                    {w.warehouse_type === 'wholesale' ? 'Оптовий' : 'Роздрібний'}
-                  </Tag>
-                </Select.Option>
-              ))}
-            </Select>
+            <WarehouseSelect />
           </Form.Item>
           <Form.Item name="quantity" label="Кількість" rules={[{ required: true, message: 'Введіть кількість' }]}>
             <InputNumber min={0.01} step={1} style={{ width: '100%' }} placeholder="1" />
