@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   Button, Collapse, List, Tag, Space, Input, InputNumber,
   Modal, Form, Popconfirm, message, Typography, Tooltip, Empty, Switch,
-  Select, Radio, Spin, Divider,
+  Select, Radio, Spin, Divider, Alert,
 } from 'antd';
 import {
   PlusOutlined, DeleteOutlined, EditOutlined, FolderOutlined,
   CheckCircleOutlined, ClockCircleOutlined, ShoppingCartOutlined,
   InboxOutlined, RollbackOutlined, SearchOutlined, ImportOutlined,
-  LinkOutlined, FileAddOutlined,
+  LinkOutlined, FileAddOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
 import { inventoryAPI } from '../../api';
 
@@ -34,16 +34,24 @@ function OrderListTab() {
   const [itemFolderId, setItemFolderId] = useState(null);
   const [itemSaving, setItemSaving] = useState(false);
 
-  // Receive modal
+  // Individual receive modal
   const [receiveModalOpen, setReceiveModalOpen] = useState(false);
   const [receiveItem, setReceiveItem] = useState(null);
   const [receiveForm] = Form.useForm();
-  const [receiveMode, setReceiveMode] = useState('existing'); // 'existing' | 'new'
+  const [receiveMode, setReceiveMode] = useState('existing');
   const [productMatches, setProductMatches] = useState([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState(null);
-  const [warehouses, setWarehouses] = useState([]);
   const [receiveSaving, setReceiveSaving] = useState(false);
+
+  // Bulk receive modal
+  const [bulkReceiveModalOpen, setBulkReceiveModalOpen] = useState(false);
+  const [bulkReceiveFolder, setBulkReceiveFolder] = useState(null);
+  const [bulkReceiveForm] = Form.useForm();
+  const [bulkReceiveSaving, setBulkReceiveSaving] = useState(false);
+
+  // Shared warehouses list
+  const [warehouses, setWarehouses] = useState([]);
 
   useEffect(() => {
     fetchFolders();
@@ -63,7 +71,18 @@ function OrderListTab() {
     }
   };
 
-  // Фільтрація по пошуку: папки де назва папки або хоча б одна позиція збігається
+  const ensureWarehouses = async () => {
+    if (warehouses.length > 0) return;
+    try {
+      const res = await inventoryAPI.getWarehouses();
+      const data = res.data || res;
+      setWarehouses(data.results || data || []);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Фільтрація по пошуку
   const q = searchText.toLowerCase().trim();
   const filteredFolders = q
     ? folders.filter(f =>
@@ -154,6 +173,36 @@ function OrderListTab() {
     }
   };
 
+  const openBulkReceive = async (folder, e) => {
+    e.stopPropagation();
+    setBulkReceiveFolder(folder);
+    bulkReceiveForm.resetFields();
+    setBulkReceiveModalOpen(true);
+    await ensureWarehouses();
+  };
+
+  const saveBulkReceive = async () => {
+    const values = await bulkReceiveForm.validateFields();
+    setBulkReceiveSaving(true);
+    try {
+      const res = await inventoryAPI.receiveAllFolder(bulkReceiveFolder.id, {
+        warehouse_id: values.warehouse_id,
+      });
+      const data = res.data || res;
+      message.success(`Оприбутковано ${data.received} позицій`);
+      if (data.errors && data.errors.length > 0) {
+        message.warning(`Помилки: ${data.errors.map(e => e.item).join(', ')}`);
+      }
+      setBulkReceiveModalOpen(false);
+      fetchFolders();
+    } catch (err) {
+      const detail = err?.response?.data?.error || 'Помилка масового оприбуткування';
+      message.error(detail);
+    } finally {
+      setBulkReceiveSaving(false);
+    }
+  };
+
   // --- Item actions ---
 
   const openNewItem = (folderId, e) => {
@@ -173,6 +222,7 @@ function OrderListTab() {
       quantity: item.quantity,
       unit: item.unit,
       notes: item.notes,
+      purchase_price: item.purchase_price,
     });
     setItemModalOpen(true);
   };
@@ -218,7 +268,7 @@ function OrderListTab() {
     }
   };
 
-  // --- Receive actions ---
+  // --- Individual receive ---
 
   const openReceiveModal = async (item, e) => {
     e.stopPropagation();
@@ -229,31 +279,18 @@ function OrderListTab() {
     receiveForm.resetFields();
     receiveForm.setFieldsValue({
       quantity: item.quantity || 1,
+      purchase_price: item.purchase_price || null,
     });
-
     setReceiveModalOpen(true);
+    await ensureWarehouses();
 
-    // Load warehouses if needed
-    if (warehouses.length === 0) {
-      try {
-        const res = await inventoryAPI.getWarehouses();
-        const data = res.data || res;
-        setWarehouses(data.results || data || []);
-      } catch {
-        // ignore
-      }
-    }
-
-    // Auto-search products by item name
     if (item.name) {
       setMatchesLoading(true);
       try {
         const res = await inventoryAPI.searchProductsForItem(item.name);
         const data = res.data || res;
         setProductMatches(data || []);
-        if (data && data.length === 0) {
-          setReceiveMode('new');
-        }
+        if (!data || data.length === 0) setReceiveMode('new');
       } catch {
         // ignore
       } finally {
@@ -283,6 +320,7 @@ function OrderListTab() {
       const payload = {
         warehouse_id: values.warehouse_id,
         quantity: values.quantity,
+        purchase_price: values.purchase_price || null,
       };
       if (receiveMode === 'existing') {
         payload.product_id = selectedProductId;
@@ -378,7 +416,7 @@ function OrderListTab() {
               <Text
                 style={{
                   textDecoration: item.is_received ? 'line-through' : 'none',
-                  color: item.is_received ? '#8c8c8c' : item.is_ordered ? '#1a1a1a' : '#1a1a1a',
+                  color: item.is_received ? '#8c8c8c' : '#1a1a1a',
                   fontWeight: 500,
                 }}
               >
@@ -387,6 +425,11 @@ function OrderListTab() {
               {(item.quantity || item.unit) && (
                 <Text type="secondary" style={{ fontSize: 13 }}>
                   {item.quantity ? `${item.quantity}` : ''}{item.unit ? ` ${item.unit}` : ''}
+                </Text>
+              )}
+              {item.purchase_price && (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  · {Number(item.purchase_price).toFixed(2)} грн
                 </Text>
               )}
               {item.is_received && item.linked_product_name && (
@@ -409,6 +452,7 @@ function OrderListTab() {
     const ordered = folder.items.filter(i => i.is_ordered).length;
     const received = folder.items.filter(i => i.is_received).length;
     const allOrdered = total > 0 && ordered === total;
+    const canBulkReceive = folder.items.some(i => i.is_ordered && !i.is_received && i.linked_product);
 
     return (
       <Space style={{ width: '100%', justifyContent: 'space-between', flexWrap: 'wrap' }}>
@@ -436,6 +480,18 @@ function OrderListTab() {
             </Tooltip>
           ) : (
             <>
+              {canBulkReceive && (
+                <Tooltip title="Прийняти все на склад (позиції з прив'язкою до товару)">
+                  <Button
+                    size="small"
+                    icon={<ThunderboltOutlined />}
+                    style={{ color: '#1677ff', borderColor: '#1677ff' }}
+                    onClick={(e) => openBulkReceive(folder, e)}
+                  >
+                    Прийняти все
+                  </Button>
+                </Tooltip>
+              )}
               <Button
                 size="small"
                 type={allOrdered ? 'default' : 'primary'}
@@ -482,11 +538,7 @@ function OrderListTab() {
             style={{ width: 280 }}
           />
           <Space>
-            <Switch
-              checked={showArchived}
-              onChange={setShowArchived}
-              size="small"
-            />
+            <Switch checked={showArchived} onChange={setShowArchived} size="small" />
             <Text type="secondary">Показати архів</Text>
           </Space>
         </Space>
@@ -533,12 +585,7 @@ function OrderListTab() {
                   )}
                 </div>
               ) : (
-                <List
-                  dataSource={folder.items}
-                  renderItem={renderItem}
-                  size="small"
-                  split={false}
-                />
+                <List dataSource={folder.items} renderItem={renderItem} size="small" split={false} />
               )}
             </Panel>
           ))}
@@ -556,11 +603,7 @@ function OrderListTab() {
         cancelText="Скасувати"
       >
         <Form form={folderForm} layout="vertical">
-          <Form.Item
-            name="name"
-            label="Назва папки"
-            rules={[{ required: true, message: 'Введіть назву' }]}
-          >
+          <Form.Item name="name" label="Назва папки" rules={[{ required: true, message: 'Введіть назву' }]}>
             <Input placeholder="Напр. Мідні шайби" autoFocus />
           </Form.Item>
         </Form>
@@ -577,11 +620,7 @@ function OrderListTab() {
         cancelText="Скасувати"
       >
         <Form form={itemForm} layout="vertical">
-          <Form.Item
-            name="name"
-            label="Назва"
-            rules={[{ required: true, message: 'Введіть назву' }]}
-          >
+          <Form.Item name="name" label="Назва" rules={[{ required: true, message: 'Введіть назву' }]}>
             <Input placeholder="Напр. 10х16х1,5" autoFocus />
           </Form.Item>
           <Space style={{ width: '100%' }}>
@@ -592,13 +631,29 @@ function OrderListTab() {
               <Input placeholder="шт / кг / уп..." />
             </Form.Item>
           </Space>
+          <Form.Item
+            name="purchase_price"
+            label="Ціна закупівлі (грн)"
+            rules={[
+              {
+                validator: (_, value) => {
+                  if (value !== undefined && value !== null && value !== '' && Number(value) === 0) {
+                    return Promise.reject('Ціна не може бути 0 — аналітика не зійдеться');
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <InputNumber min={0} precision={2} style={{ width: '100%' }} placeholder="Необов'язково" />
+          </Form.Item>
           <Form.Item name="notes" label="Примітки">
             <Input.TextArea rows={2} placeholder="Додаткова інформація..." />
           </Form.Item>
         </Form>
       </Modal>
 
-      {/* Receive modal */}
+      {/* Individual receive modal */}
       <Modal
         title={
           <Space>
@@ -615,7 +670,6 @@ function OrderListTab() {
         width={520}
       >
         <Form form={receiveForm} layout="vertical">
-          {/* Mode selector */}
           <div style={{ marginBottom: 16 }}>
             <Radio.Group
               value={receiveMode}
@@ -638,7 +692,7 @@ function OrderListTab() {
                 {matchesLoading
                   ? <Spin size="small" style={{ marginRight: 8 }} />
                   : productMatches.length > 0
-                    ? <Text type="secondary">Знайдено {productMatches.length} збіг(ів) за назвою — оберіть або пошукайте вручну:</Text>
+                    ? <Text type="secondary">Знайдено {productMatches.length} збіг(ів) — оберіть або пошукайте вручну:</Text>
                     : <Text type="warning">Збіги не знайдені — спробуйте пошук або оберіть "Новий товар"</Text>
                 }
               </div>
@@ -673,11 +727,7 @@ function OrderListTab() {
           {receiveMode === 'new' && (
             <>
               <Divider plain style={{ margin: '0 0 12px' }}>Новий товар в базі складу</Divider>
-              <Form.Item
-                name="product_name"
-                label="Назва товару"
-                initialValue={receiveItem?.name}
-              >
+              <Form.Item name="product_name" label="Назва товару" initialValue={receiveItem?.name}>
                 <Input placeholder={receiveItem?.name} />
               </Form.Item>
               <Space style={{ width: '100%' }}>
@@ -715,11 +765,80 @@ function OrderListTab() {
               name="quantity"
               label="Кількість"
               rules={[{ required: true, message: 'Вкажіть кількість' }]}
-              style={{ width: 120, marginBottom: 0 }}
+              style={{ width: 110, marginBottom: 0 }}
             >
               <InputNumber min={0.01} style={{ width: '100%' }} />
             </Form.Item>
           </Space>
+
+          <Form.Item
+            name="purchase_price"
+            label="Ціна закупівлі (грн)"
+            style={{ marginTop: 12, marginBottom: 0 }}
+            rules={[
+              { required: true, message: 'Вкажіть ціну закупівлі' },
+              {
+                validator: (_, value) => {
+                  if (!value || Number(value) <= 0) {
+                    return Promise.reject('Ціна має бути більше 0 — інакше аналітика прибутковості не зійдеться');
+                  }
+                  return Promise.resolve();
+                },
+              },
+            ]}
+          >
+            <InputNumber min={0.01} precision={2} style={{ width: '100%' }} placeholder="грн за одиницю" />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Bulk receive modal */}
+      <Modal
+        title={
+          <Space>
+            <ThunderboltOutlined />
+            Прийняти все: {bulkReceiveFolder?.name}
+          </Space>
+        }
+        open={bulkReceiveModalOpen}
+        onOk={saveBulkReceive}
+        onCancel={() => setBulkReceiveModalOpen(false)}
+        confirmLoading={bulkReceiveSaving}
+        okText="Прийняти все"
+        cancelText="Скасувати"
+      >
+        <Form form={bulkReceiveForm} layout="vertical">
+          {bulkReceiveFolder && (() => {
+            const readyItems = bulkReceiveFolder.items.filter(
+              i => i.is_ordered && !i.is_received && i.linked_product
+            );
+            const noPriceItems = readyItems.filter(i => !i.purchase_price);
+            return (
+              <>
+                <Alert
+                  type="info"
+                  style={{ marginBottom: 16 }}
+                  message={`Буде оприбутковано ${readyItems.length} позицій (лише ті, що замовлені і прив'язані до товару)`}
+                  description={
+                    noPriceItems.length > 0
+                      ? `Без ціни закупівлі: ${noPriceItems.map(i => i.name).join(', ')} — додайте ціни в редагуванні позицій для коректної аналітики`
+                      : null
+                  }
+                />
+                <Form.Item
+                  name="warehouse_id"
+                  label="Склад призначення"
+                  rules={[{ required: true, message: 'Оберіть склад' }]}
+                >
+                  <Select placeholder="Оберіть склад">
+                    {warehouses.map(w => (
+                      <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
+                    ))}
+                  </Select>
+                </Form.Item>
+              </>
+            );
+          })()}
         </Form>
       </Modal>
     </div>

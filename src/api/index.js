@@ -327,6 +327,7 @@ export const inventoryAPI = {
   deleteOrderFolder: (id) => instance.delete(`/inventory/order-folders/${id}/`),
   markAllOrdered: (id) => instance.post(`/inventory/order-folders/${id}/mark_all_ordered/`),
   unmarkAllOrdered: (id) => instance.post(`/inventory/order-folders/${id}/unmark_all_ordered/`),
+  receiveAllFolder: (id, data) => instance.post(`/inventory/order-folders/${id}/receive_all/`, data),
 
   // Order items
   createOrderItem: (data) => instance.post('/inventory/order-items/', data),
