@@ -319,7 +319,9 @@ export const inventoryAPI = {
   receiveStock: (data) => instance.post('/inventory/movements/receive_stock/', data),
 
   // Order folders
-  getOrderFolders: () => instance.get('/inventory/order-folders/'),
+  getOrderFolders: (params) => instance.get('/inventory/order-folders/', { params }),
+  archiveOrderFolder: (id) => instance.post(`/inventory/order-folders/${id}/archive/`),
+  unarchiveOrderFolder: (id) => instance.post(`/inventory/order-folders/${id}/unarchive/`),
   createOrderFolder: (data) => instance.post('/inventory/order-folders/', data),
   updateOrderFolder: (id, data) => instance.patch(`/inventory/order-folders/${id}/`, data),
   deleteOrderFolder: (id) => instance.delete(`/inventory/order-folders/${id}/`),

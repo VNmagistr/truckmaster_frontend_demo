@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Button, Card, Collapse, List, Tag, Space, Input, InputNumber,
-  Modal, Form, Popconfirm, message, Typography, Tooltip, Empty
+  Button, Collapse, List, Tag, Space, Input, InputNumber,
+  Modal, Form, Popconfirm, message, Typography, Tooltip, Empty, Switch,
 } from 'antd';
 import {
   PlusOutlined, DeleteOutlined, EditOutlined, FolderOutlined,
   CheckCircleOutlined, ClockCircleOutlined, ShoppingCartOutlined,
+  InboxOutlined, RollbackOutlined, SearchOutlined,
 } from '@ant-design/icons';
 import { inventoryAPI } from '../../api';
 
@@ -15,6 +16,8 @@ const { Panel } = Collapse;
 function OrderListTab() {
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchText, setSearchText] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   // Folder modal
   const [folderModalOpen, setFolderModalOpen] = useState(false);
@@ -31,12 +34,13 @@ function OrderListTab() {
 
   useEffect(() => {
     fetchFolders();
-  }, []);
+  }, [showArchived]);
 
   const fetchFolders = async () => {
     setLoading(true);
     try {
-      const res = await inventoryAPI.getOrderFolders();
+      const params = showArchived ? { show_archived: true } : {};
+      const res = await inventoryAPI.getOrderFolders(params);
       const data = res.data || res;
       setFolders(data.results || data || []);
     } catch {
@@ -45,6 +49,15 @@ function OrderListTab() {
       setLoading(false);
     }
   };
+
+  // Фільтрація по пошуку: папки де назва папки або хоча б одна позиція збігається
+  const q = searchText.toLowerCase().trim();
+  const filteredFolders = q
+    ? folders.filter(f =>
+        f.name.toLowerCase().includes(q) ||
+        f.items.some(i => i.name.toLowerCase().includes(q))
+      )
+    : folders;
 
   // --- Folder actions ---
 
@@ -88,6 +101,28 @@ function OrderListTab() {
       fetchFolders();
     } catch {
       message.error('Не вдалося видалити папку');
+    }
+  };
+
+  const archiveFolder = async (folder, e) => {
+    e.stopPropagation();
+    try {
+      await inventoryAPI.archiveOrderFolder(folder.id);
+      message.success('Папку переміщено в архів');
+      fetchFolders();
+    } catch {
+      message.error('Помилка архівування');
+    }
+  };
+
+  const unarchiveFolder = async (folder, e) => {
+    e.stopPropagation();
+    try {
+      await inventoryAPI.unarchiveOrderFolder(folder.id);
+      message.success('Папку відновлено з архіву');
+      fetchFolders();
+    } catch {
+      message.error('Помилка відновлення');
     }
   };
 
@@ -170,6 +205,19 @@ function OrderListTab() {
     }
   };
 
+  // Підсвічуємо текст що збігається з пошуком
+  const highlight = (text) => {
+    if (!q || !text.toLowerCase().includes(q)) return text;
+    const idx = text.toLowerCase().indexOf(q);
+    return (
+      <>
+        {text.slice(0, idx)}
+        <mark style={{ background: '#fff3a0', padding: 0 }}>{text.slice(idx, idx + q.length)}</mark>
+        {text.slice(idx + q.length)}
+      </>
+    );
+  };
+
   // --- Render ---
 
   const renderItem = (item) => (
@@ -181,7 +229,6 @@ function OrderListTab() {
         marginBottom: 6,
         padding: '8px 12px',
         border: `1px solid ${item.is_ordered ? '#b7eb8f' : '#ffd591'}`,
-        cursor: 'default',
       }}
       actions={[
         <Tooltip title={item.is_ordered ? 'Скасувати замовлення' : 'Позначити як замовлено'} key="toggle">
@@ -209,11 +256,10 @@ function OrderListTab() {
       <List.Item.Meta
         title={
           <Space>
-            {item.is_ordered ? (
-              <Tag color="success" icon={<CheckCircleOutlined />}>Замовлено</Tag>
-            ) : (
-              <Tag color="warning" icon={<ClockCircleOutlined />}>Потрібно замовити</Tag>
-            )}
+            {item.is_ordered
+              ? <Tag color="success" icon={<CheckCircleOutlined />}>Замовлено</Tag>
+              : <Tag color="warning" icon={<ClockCircleOutlined />}>Потрібно замовити</Tag>
+            }
             <Text
               style={{
                 textDecoration: item.is_ordered ? 'line-through' : 'none',
@@ -221,7 +267,7 @@ function OrderListTab() {
                 fontWeight: 500,
               }}
             >
-              {item.name}
+              {highlight(item.name)}
             </Text>
             {(item.quantity || item.unit) && (
               <Text type="secondary" style={{ fontSize: 13 }}>
@@ -243,8 +289,11 @@ function OrderListTab() {
     return (
       <Space style={{ width: '100%', justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <Space>
-          <FolderOutlined style={{ color: '#f5c518', fontSize: 16 }} />
-          <Text strong style={{ fontSize: 15 }}>{folder.name}</Text>
+          <FolderOutlined style={{ color: folder.is_archived ? '#8c8c8c' : '#f5c518', fontSize: 16 }} />
+          <Text strong style={{ fontSize: 15, color: folder.is_archived ? '#8c8c8c' : undefined }}>
+            {highlight(folder.name)}
+          </Text>
+          {folder.is_archived && <Tag color="default">Архів</Tag>}
           {total > 0 && (
             <Tag color={allOrdered ? 'success' : 'default'}>
               {ordered}/{total} замовлено
@@ -252,26 +301,41 @@ function OrderListTab() {
           )}
         </Space>
         <Space onClick={(e) => e.stopPropagation()}>
-          <Button
-            size="small"
-            type={allOrdered ? 'default' : 'primary'}
-            style={allOrdered ? { color: '#52c41a', borderColor: '#52c41a' } : {}}
-            onClick={(e) => markAllOrdered(folder, e)}
-            disabled={total === 0}
-          >
-            {allOrdered ? 'Скасувати всі' : 'Замовлено все'}
-          </Button>
-          <Button size="small" icon={<PlusOutlined />} onClick={(e) => openNewItem(folder.id, e)}>
-            Додати
-          </Button>
-          <Button size="small" icon={<EditOutlined />} onClick={(e) => openEditFolder(folder, e)} />
-          <Popconfirm
-            title="Видалити папку разом з усіма позиціями?"
-            onConfirm={() => deleteFolder(folder.id)}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Button size="small" icon={<DeleteOutlined />} danger />
-          </Popconfirm>
+          {folder.is_archived ? (
+            <Tooltip title="Відновити з архіву">
+              <Button size="small" icon={<RollbackOutlined />} onClick={(e) => unarchiveFolder(folder, e)}>
+                Відновити
+              </Button>
+            </Tooltip>
+          ) : (
+            <>
+              <Button
+                size="small"
+                type={allOrdered ? 'default' : 'primary'}
+                style={allOrdered ? { color: '#52c41a', borderColor: '#52c41a' } : {}}
+                onClick={(e) => markAllOrdered(folder, e)}
+                disabled={total === 0}
+              >
+                {allOrdered ? 'Скасувати всі' : 'Замовлено все'}
+              </Button>
+              <Button size="small" icon={<PlusOutlined />} onClick={(e) => openNewItem(folder.id, e)}>
+                Додати
+              </Button>
+              <Button size="small" icon={<EditOutlined />} onClick={(e) => openEditFolder(folder, e)} />
+              <Tooltip title="Перемістити в архів">
+                <Button size="small" icon={<InboxOutlined />} onClick={(e) => archiveFolder(folder, e)} />
+              </Tooltip>
+            </>
+          )}
+          {folder.is_archived && (
+            <Popconfirm
+              title="Видалити папку назавжди?"
+              onConfirm={() => deleteFolder(folder.id)}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Button size="small" icon={<DeleteOutlined />} danger />
+            </Popconfirm>
+          )}
         </Space>
       </Space>
     );
@@ -279,38 +343,67 @@ function OrderListTab() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+      {/* Панель управління */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: 8 }}>
+        <Space wrap>
+          <Input
+            placeholder="Пошук по папках і позиціях..."
+            prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+            value={searchText}
+            onChange={e => setSearchText(e.target.value)}
+            allowClear
+            style={{ width: 280 }}
+          />
+          <Space>
+            <Switch
+              checked={showArchived}
+              onChange={setShowArchived}
+              size="small"
+            />
+            <Text type="secondary">Показати архів</Text>
+          </Space>
+        </Space>
         <Button type="primary" icon={<PlusOutlined />} onClick={openNewFolder}>
           Нова папка
         </Button>
       </div>
 
-      {!loading && folders.length === 0 && (
+      {!loading && filteredFolders.length === 0 && (
         <Empty
           image={<ShoppingCartOutlined style={{ fontSize: 48, color: '#d9d9d9' }} />}
-          description="Поки немає папок замовлень"
+          description={
+            q ? `Нічого не знайдено за запитом «${searchText}»`
+              : showArchived ? 'Архів порожній'
+              : 'Поки немає папок замовлень'
+          }
         >
-          <Button type="primary" icon={<PlusOutlined />} onClick={openNewFolder}>
-            Створити папку
-          </Button>
+          {!q && !showArchived && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={openNewFolder}>
+              Створити папку
+            </Button>
+          )}
         </Empty>
       )}
 
-      {folders.length > 0 && (
-        <Collapse accordion={false} defaultActiveKey={folders.map(f => f.id)}>
-          {folders.map(folder => (
-            <Panel key={folder.id} header={renderFolderHeader(folder)}>
+      {filteredFolders.length > 0 && (
+        <Collapse accordion={false} defaultActiveKey={filteredFolders.map(f => f.id)}>
+          {filteredFolders.map(folder => (
+            <Panel
+              key={folder.id}
+              header={renderFolderHeader(folder)}
+              style={folder.is_archived ? { opacity: 0.7 } : {}}
+            >
               {folder.items.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '12px 0' }}>
                   <Text type="secondary">Список порожній</Text>
-                  <br />
-                  <Button
-                    type="link"
-                    icon={<PlusOutlined />}
-                    onClick={(e) => openNewItem(folder.id, e)}
-                  >
-                    Додати позицію
-                  </Button>
+                  {!folder.is_archived && (
+                    <>
+                      <br />
+                      <Button type="link" icon={<PlusOutlined />} onClick={(e) => openNewItem(folder.id, e)}>
+                        Додати позицію
+                      </Button>
+                    </>
+                  )}
                 </div>
               ) : (
                 <List
