@@ -1,16 +1,95 @@
-# React + Vite
+# TruckMaster — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React-додаток CRM для сервісного центру вантажних автомобілів Iveco («Італ Трак»).
 
-Currently, two official plugins are available:
+## Стек
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- React 18 + Vite
+- Ant Design 5 (UI-компоненти)
+- Zustand (стейт-менеджмент)
+- Axios (HTTP)
+- React Router v6
 
-## React Compiler
+## Запуск локально
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+cp .env.example .env   # вказати VITE_API_URL
+npm run dev
+```
 
-## Expanding the ESLint configuration
+## Змінні середовища
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```env
+VITE_API_URL=https://api.ital-truck.com.ua
+```
+
+## Структура
+
+```
+src/
+├── api/           — axios-клієнти (staff + cabinet)
+├── assets/        — логотип, фото вантажівок
+├── components/    — загальні компоненти
+├── layouts/       — MainLayout, AuthLayout, CabinetLayout
+├── pages/
+│   ├── auth/      — логін staff
+│   ├── cabinet/   — особистий кабінет клієнта (8 сторінок)
+│   ├── clients/   — клієнти та автомобілі
+│   ├── dashboard/ — головна
+│   ├── inventory/ — склад запчастин
+│   ├── invoices/  — рахунки
+│   ├── orders/    — наряди-замовлення
+│   ├── appointments/ — записи на сервіс
+│   └── welcome/   — публічний лендінг
+└── store/         — Zustand-стори (auth, cabinetAuth, modules)
+```
+
+## Розділ «Склад»
+
+| Вкладка | Опис |
+|---------|------|
+| Всі товари | Повний список з пошуком і фільтрами |
+| Закінчуються | Товари нижче мінімального залишку |
+| Оптовий | Залишки по складах, надходження, переміщення |
+| Замовити | Папки зі списками товарів для замовлення |
+
+## Дизайн-токени
+
+| Змінна | Значення | Використання |
+|--------|----------|--------------|
+| Primary | `#f5c518` | Жовтий акцент |
+| Ink | `#1a1a1a` | Основний текст |
+| BG | `#ffffff` | Фон |
+| BG2 | `#f7f7f7` | Другорядний фон |
+
+## Changelog
+
+### v2.6 — 2026-04-02
+- **Склад / Оптовий**: перегляд залишків по будь-якому складу; модалка «Надходження» (товар, кількість, постачальник, накладна); модалка «Переміщення» між складами; теги Оптовий/Роздрібний
+- **Склад / Замовити**: папки замовлень; додавання позицій (назва, кількість, одиниця); кнопка «Замовлено все»; колірне розрізнення замовлено/не замовлено
+- **Пошук товарів**: серверний пошук в дропдаунах (підтримка 11k+ товарів); виправлено debounce/race condition у списку складу
+
+### v2.5 — 2026-03-23
+- Особистий кабінет клієнта (8 сторінок)
+- Підтвердження email клієнта
+
+### v2.4
+- Відстеження відправок Нова Пошта в боті та рахунках
+- Авто-завантаження статусу ТТН при відкритті рахунку
+
+### v2.3
+- Приховування вимкнених модулів у меню
+- Сторінка лендінгу з відгуками Google та картою
+
+### v2.2
+- Склад запчастин: список товарів, деталі, форма
+
+### v2.1
+- Рахунки з позиціями та статусами
+
+### v2.0
+- Наряди-замовлення, роботи, запчастини, фото
+
+### v1.x
+- Клієнти, автомобілі, авторизація
