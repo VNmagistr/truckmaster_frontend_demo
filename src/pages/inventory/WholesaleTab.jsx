@@ -15,8 +15,9 @@ function WholesaleTab() {
   const [warehouses, setWarehouses] = useState([]);
   const [stock, setStock] = useState([]);
   const [stockLoading, setStockLoading] = useState(false);
-  const [products, setProducts] = useState([]);
-  const [productsLoading, setProductsLoading] = useState(true);
+  // Пошук товарів через API (без завантаження всього списку)
+  const [productOptions, setProductOptions] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [selectedWarehouse, setSelectedWarehouse] = useState(undefined);
 
@@ -31,10 +32,8 @@ function WholesaleTab() {
   const [transferSaving, setTransferSaving] = useState(false);
   const [transferRecord, setTransferRecord] = useState(null);
 
-  // Завантажуємо склади і товари при монтуванні — незалежно одне від одного
   useEffect(() => {
     fetchWarehouses();
-    fetchProducts();
   }, []);
 
   // Завантажуємо залишки при зміні складу
@@ -61,14 +60,21 @@ function WholesaleTab() {
     }
   };
 
-  const fetchProducts = async () => {
+  const searchProducts = async (query) => {
+    if (!query || query.length < 2) {
+      setProductOptions([]);
+      return;
+    }
     setProductsLoading(true);
     try {
-      const res = await inventoryAPI.getAll({ page_size: 10000, ordering: 'name' });
+      const res = await inventoryAPI.getAll({ search: query, page_size: 50, ordering: 'name' });
       const data = (res.data || res).results || (res.data || res) || [];
-      setProducts(data);
+      setProductOptions(data.map(p => ({
+        value: p.id,
+        label: `${p.name}${p.brand ? ` (${p.brand})` : ''} [${p.sku_code}]`,
+      })));
     } catch {
-      message.error('Не вдалося завантажити список товарів');
+      // тихо
     } finally {
       setProductsLoading(false);
     }
@@ -86,21 +92,6 @@ function WholesaleTab() {
     } finally {
       setStockLoading(false);
     }
-  };
-
-  const productOptions = products.map(p => ({
-    value: p.id,
-    label: `${p.name}${p.brand ? ` (${p.brand})` : ''}${p.sku_code ? ` [${p.sku_code}]` : ''}`,
-    sku: p.sku_code || '',
-    name: p.name || '',
-  }));
-
-  const filterProductOption = (input, option) => {
-    const q = input.toLowerCase();
-    return (
-      (option?.name || '').toLowerCase().includes(q) ||
-      (option?.sku || '').toLowerCase().includes(q)
-    );
   };
 
   const warehouseOptions = warehouses.map(w => ({
@@ -121,6 +112,7 @@ function WholesaleTab() {
   // --- Receive stock ---
   const openReceive = () => {
     receiveForm.resetFields();
+    setProductOptions([]);
     if (selectedWarehouse) {
       receiveForm.setFieldsValue({ warehouse: selectedWarehouse });
     }
@@ -146,6 +138,7 @@ function WholesaleTab() {
   // --- Transfer ---
   const openTransfer = (record) => {
     transferForm.resetFields();
+    setProductOptions([]);
     setTransferRecord(record || null);
     if (record) {
       transferForm.setFieldsValue({
@@ -347,10 +340,11 @@ function WholesaleTab() {
             <Select
               showSearch
               loading={productsLoading}
-              placeholder="Введіть назву або артикул..."
-              filterOption={filterProductOption}
+              placeholder="Введіть назву або артикул (мін. 2 символи)..."
+              filterOption={false}
+              onSearch={searchProducts}
               options={productOptions}
-              notFoundContent={productsLoading ? 'Завантаження...' : 'Нічого не знайдено'}
+              notFoundContent={productsLoading ? 'Пошук...' : 'Нічого не знайдено'}
             />
           </Form.Item>
           <Form.Item name="quantity" label="Кількість" rules={[{ required: true, message: 'Введіть кількість' }]}>
