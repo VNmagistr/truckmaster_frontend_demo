@@ -382,11 +382,12 @@ function WholesaleTab() {
             <Select
               showSearch
               loading={productsLoading}
-              placeholder="Введіть назву або артикул..."
-              filterOption={filterProductOption}
+              placeholder="Введіть назву або артикул (мін. 2 символи)..."
+              filterOption={false}
+              onSearch={searchProducts}
               options={productOptions}
               disabled={!!transferRecord}
-              notFoundContent={productsLoading ? 'Завантаження...' : 'Нічого не знайдено'}
+              notFoundContent={productsLoading ? 'Пошук...' : 'Нічого не знайдено'}
             />
           </Form.Item>
           <Form.Item name="warehouse_from" label="Звідки" rules={[{ required: true, message: 'Оберіть склад-джерело' }]}>
