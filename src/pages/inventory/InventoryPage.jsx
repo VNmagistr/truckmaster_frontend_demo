@@ -12,11 +12,12 @@ import WholesaleTab from './WholesaleTab';
 function InventoryPage() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Пагінація та Пошук
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
-  const [searchText, setSearchText] = useState('');
-  
+  const [searchText, setSearchText] = useState('');   // значення інпута
+  const [searchQuery, setSearchQuery] = useState(''); // debounced — надсилається на сервер
+
   const [activeTab, setActiveTab] = useState('all');
   const [categories, setCategories] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -28,20 +29,20 @@ function InventoryPage() {
     fetchCategories();
   }, []);
 
-  // Перезавантажуємо при зміні фільтрів або сторінки
+  // Debounce: оновлює searchQuery і скидає на сторінку 1
   useEffect(() => {
-    fetchProducts(pagination.current, searchText);
-  }, [pagination.current, activeTab, selectedCategory, showDeleted]);
-
-  // Debounce для пошуку
-  useEffect(() => {
+    if (searchText.length > 0 && searchText.length < 4) return;
     const timer = setTimeout(() => {
-        if (searchText.length > 0 && searchText.length < 4) return;
-        setPagination(prev => ({ ...prev, current: 1 }));
-        fetchProducts(1, searchText);
+      setSearchQuery(searchText);
+      setPagination(prev => ({ ...prev, current: 1 }));
     }, 600);
     return () => clearTimeout(timer);
   }, [searchText]);
+
+  // Єдиний fetch-ефект — спрацьовує при зміні будь-якого фільтра або пагінації
+  useEffect(() => {
+    fetchProducts(pagination.current, searchQuery);
+  }, [pagination.current, activeTab, selectedCategory, showDeleted, searchQuery]);
 
   const fetchCategories = async () => {
     try {
@@ -98,7 +99,7 @@ function InventoryPage() {
     try {
       await inventoryAPI.markForDeletion(id);
       message.success('Товар видалено');
-      fetchProducts(pagination.current, searchText);
+      fetchProducts(pagination.current, searchQuery);
     } catch (error) {
       message.error('Не вдалося видалити товар');
     }
@@ -108,7 +109,7 @@ function InventoryPage() {
     try {
       await inventoryAPI.unmarkForDeletion(id);
       message.success('Товар відновлено');
-      fetchProducts(pagination.current, searchText);
+      fetchProducts(pagination.current, searchQuery);
     } catch (error) {
       message.error('Не вдалося відновити товар');
     }
