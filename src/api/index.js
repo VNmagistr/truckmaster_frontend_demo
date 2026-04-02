@@ -333,6 +333,8 @@ export const inventoryAPI = {
   updateOrderItem: (id, data) => instance.patch(`/inventory/order-items/${id}/`, data),
   deleteOrderItem: (id) => instance.delete(`/inventory/order-items/${id}/`),
   toggleOrderItem: (id) => instance.post(`/inventory/order-items/${id}/toggle_ordered/`),
+  receiveOrderItem: (id, data) => instance.post(`/inventory/order-items/${id}/receive/`, data),
+  searchProductsForItem: (q) => instance.get('/inventory/order-items/search_products/', { params: { q } }),
 };
 
 export const userAPI = {

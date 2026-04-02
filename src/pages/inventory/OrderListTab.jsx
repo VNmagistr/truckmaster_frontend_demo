@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import {
   Button, Collapse, List, Tag, Space, Input, InputNumber,
   Modal, Form, Popconfirm, message, Typography, Tooltip, Empty, Switch,
+  Select, Radio, Spin, Divider,
 } from 'antd';
 import {
   PlusOutlined, DeleteOutlined, EditOutlined, FolderOutlined,
   CheckCircleOutlined, ClockCircleOutlined, ShoppingCartOutlined,
-  InboxOutlined, RollbackOutlined, SearchOutlined,
+  InboxOutlined, RollbackOutlined, SearchOutlined, ImportOutlined,
+  LinkOutlined, FileAddOutlined,
 } from '@ant-design/icons';
 import { inventoryAPI } from '../../api';
 
@@ -31,6 +33,17 @@ function OrderListTab() {
   const [editingItem, setEditingItem] = useState(null);
   const [itemFolderId, setItemFolderId] = useState(null);
   const [itemSaving, setItemSaving] = useState(false);
+
+  // Receive modal
+  const [receiveModalOpen, setReceiveModalOpen] = useState(false);
+  const [receiveItem, setReceiveItem] = useState(null);
+  const [receiveForm] = Form.useForm();
+  const [receiveMode, setReceiveMode] = useState('existing'); // 'existing' | 'new'
+  const [productMatches, setProductMatches] = useState([]);
+  const [matchesLoading, setMatchesLoading] = useState(false);
+  const [selectedProductId, setSelectedProductId] = useState(null);
+  const [warehouses, setWarehouses] = useState([]);
+  const [receiveSaving, setReceiveSaving] = useState(false);
 
   useEffect(() => {
     fetchFolders();
@@ -205,6 +218,91 @@ function OrderListTab() {
     }
   };
 
+  // --- Receive actions ---
+
+  const openReceiveModal = async (item, e) => {
+    e.stopPropagation();
+    setReceiveItem(item);
+    setReceiveMode('existing');
+    setSelectedProductId(null);
+    setProductMatches([]);
+    receiveForm.resetFields();
+    receiveForm.setFieldsValue({
+      quantity: item.quantity || 1,
+    });
+
+    setReceiveModalOpen(true);
+
+    // Load warehouses if needed
+    if (warehouses.length === 0) {
+      try {
+        const res = await inventoryAPI.getWarehouses();
+        const data = res.data || res;
+        setWarehouses(data.results || data || []);
+      } catch {
+        // ignore
+      }
+    }
+
+    // Auto-search products by item name
+    if (item.name) {
+      setMatchesLoading(true);
+      try {
+        const res = await inventoryAPI.searchProductsForItem(item.name);
+        const data = res.data || res;
+        setProductMatches(data || []);
+        if (data && data.length === 0) {
+          setReceiveMode('new');
+        }
+      } catch {
+        // ignore
+      } finally {
+        setMatchesLoading(false);
+      }
+    }
+  };
+
+  const handleReceiveSearch = async (value) => {
+    if (!value || value.length < 2) return;
+    setMatchesLoading(true);
+    try {
+      const res = await inventoryAPI.searchProductsForItem(value);
+      const data = res.data || res;
+      setProductMatches(data || []);
+    } catch {
+      // ignore
+    } finally {
+      setMatchesLoading(false);
+    }
+  };
+
+  const saveReceive = async () => {
+    const values = await receiveForm.validateFields();
+    setReceiveSaving(true);
+    try {
+      const payload = {
+        warehouse_id: values.warehouse_id,
+        quantity: values.quantity,
+      };
+      if (receiveMode === 'existing') {
+        payload.product_id = selectedProductId;
+      } else {
+        payload.sku_code = values.sku_code;
+        payload.product_name = values.product_name || receiveItem.name;
+        payload.unit = values.unit || receiveItem.unit || 'pcs';
+      }
+      await inventoryAPI.receiveOrderItem(receiveItem.id, payload);
+      message.success('Товар оприбутковано на склад');
+      setReceiveModalOpen(false);
+      fetchFolders();
+    } catch (err) {
+      const detail = err?.response?.data?.error || 'Помилка оприбуткування';
+      message.error(detail);
+    } finally {
+      setReceiveSaving(false);
+    }
+  };
+
   // Підсвічуємо текст що збігається з пошуком
   const highlight = (text) => {
     if (!q || !text.toLowerCase().includes(q)) return text;
@@ -220,70 +318,96 @@ function OrderListTab() {
 
   // --- Render ---
 
-  const renderItem = (item) => (
-    <List.Item
-      key={item.id}
-      style={{
-        background: item.is_ordered ? '#f6ffed' : '#fff9f0',
-        borderRadius: 6,
-        marginBottom: 6,
-        padding: '8px 12px',
-        border: `1px solid ${item.is_ordered ? '#b7eb8f' : '#ffd591'}`,
-      }}
-      actions={[
-        <Tooltip title={item.is_ordered ? 'Скасувати замовлення' : 'Позначити як замовлено'} key="toggle">
-          <Button
-            size="small"
-            type={item.is_ordered ? 'default' : 'primary'}
-            icon={item.is_ordered ? <ClockCircleOutlined /> : <CheckCircleOutlined />}
-            style={item.is_ordered ? { color: '#52c41a', borderColor: '#52c41a' } : {}}
-            onClick={(e) => toggleItem(item, e)}
-          />
-        </Tooltip>,
-        <Tooltip title="Редагувати" key="edit">
-          <Button size="small" icon={<EditOutlined />} onClick={(e) => openEditItem(item, e)} />
-        </Tooltip>,
-        <Popconfirm
-          key="del"
-          title="Видалити позицію?"
-          onConfirm={(e) => deleteItem(item.id, e || { stopPropagation: () => {} })}
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Button size="small" icon={<DeleteOutlined />} danger />
-        </Popconfirm>,
-      ]}
-    >
-      <List.Item.Meta
-        title={
-          <Space>
-            {item.is_ordered
-              ? <Tag color="success" icon={<CheckCircleOutlined />}>Замовлено</Tag>
-              : <Tag color="warning" icon={<ClockCircleOutlined />}>Потрібно замовити</Tag>
-            }
-            <Text
-              style={{
-                textDecoration: item.is_ordered ? 'line-through' : 'none',
-                color: item.is_ordered ? '#8c8c8c' : '#1a1a1a',
-                fontWeight: 500,
-              }}
-            >
-              {highlight(item.name)}
-            </Text>
-            {(item.quantity || item.unit) && (
-              <Text type="secondary" style={{ fontSize: 13 }}>
-                {item.quantity ? `${item.quantity}` : ''}{item.unit ? ` ${item.unit}` : ''}
+  const renderItem = (item) => {
+    const canReceive = item.is_ordered && !item.is_received;
+    return (
+      <List.Item
+        key={item.id}
+        style={{
+          background: item.is_received ? '#e6f7ff' : item.is_ordered ? '#f6ffed' : '#fff9f0',
+          borderRadius: 6,
+          marginBottom: 6,
+          padding: '8px 12px',
+          border: `1px solid ${item.is_received ? '#91d5ff' : item.is_ordered ? '#b7eb8f' : '#ffd591'}`,
+        }}
+        actions={[
+          canReceive && (
+            <Tooltip title="Приїхало — оприбуткувати на склад" key="receive">
+              <Button
+                size="small"
+                type="primary"
+                icon={<ImportOutlined />}
+                style={{ background: '#1677ff', borderColor: '#1677ff' }}
+                onClick={(e) => openReceiveModal(item, e)}
+              />
+            </Tooltip>
+          ),
+          !item.is_received && (
+            <Tooltip title={item.is_ordered ? 'Скасувати замовлення' : 'Позначити як замовлено'} key="toggle">
+              <Button
+                size="small"
+                type={item.is_ordered ? 'default' : 'primary'}
+                icon={item.is_ordered ? <ClockCircleOutlined /> : <CheckCircleOutlined />}
+                style={item.is_ordered ? { color: '#52c41a', borderColor: '#52c41a' } : {}}
+                onClick={(e) => toggleItem(item, e)}
+              />
+            </Tooltip>
+          ),
+          <Tooltip title="Редагувати" key="edit">
+            <Button size="small" icon={<EditOutlined />} onClick={(e) => openEditItem(item, e)} />
+          </Tooltip>,
+          <Popconfirm
+            key="del"
+            title="Видалити позицію?"
+            onConfirm={(e) => deleteItem(item.id, e || { stopPropagation: () => {} })}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Button size="small" icon={<DeleteOutlined />} danger />
+          </Popconfirm>,
+        ].filter(Boolean)}
+      >
+        <List.Item.Meta
+          title={
+            <Space wrap>
+              {item.is_received
+                ? <Tag color="processing" icon={<ImportOutlined />}>Отримано</Tag>
+                : item.is_ordered
+                  ? <Tag color="success" icon={<CheckCircleOutlined />}>Замовлено</Tag>
+                  : <Tag color="warning" icon={<ClockCircleOutlined />}>Потрібно замовити</Tag>
+              }
+              <Text
+                style={{
+                  textDecoration: item.is_received ? 'line-through' : 'none',
+                  color: item.is_received ? '#8c8c8c' : item.is_ordered ? '#1a1a1a' : '#1a1a1a',
+                  fontWeight: 500,
+                }}
+              >
+                {highlight(item.name)}
               </Text>
-            )}
-          </Space>
-        }
-        description={item.notes || null}
-      />
-    </List.Item>
-  );
+              {(item.quantity || item.unit) && (
+                <Text type="secondary" style={{ fontSize: 13 }}>
+                  {item.quantity ? `${item.quantity}` : ''}{item.unit ? ` ${item.unit}` : ''}
+                </Text>
+              )}
+              {item.is_received && item.linked_product_name && (
+                <Tooltip title={`Оприбутковано як: ${item.linked_product_name}`}>
+                  <Tag color="blue" icon={<LinkOutlined />} style={{ fontSize: 11 }}>
+                    {item.linked_product_name}
+                  </Tag>
+                </Tooltip>
+              )}
+            </Space>
+          }
+          description={item.notes || null}
+        />
+      </List.Item>
+    );
+  };
 
   const renderFolderHeader = (folder) => {
     const total = folder.items.length;
     const ordered = folder.items.filter(i => i.is_ordered).length;
+    const received = folder.items.filter(i => i.is_received).length;
     const allOrdered = total > 0 && ordered === total;
 
     return (
@@ -298,6 +422,9 @@ function OrderListTab() {
             <Tag color={allOrdered ? 'success' : 'default'}>
               {ordered}/{total} замовлено
             </Tag>
+          )}
+          {received > 0 && (
+            <Tag color="processing">{received} отримано</Tag>
           )}
         </Space>
         <Space onClick={(e) => e.stopPropagation()}>
@@ -468,6 +595,131 @@ function OrderListTab() {
           <Form.Item name="notes" label="Примітки">
             <Input.TextArea rows={2} placeholder="Додаткова інформація..." />
           </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Receive modal */}
+      <Modal
+        title={
+          <Space>
+            <ImportOutlined />
+            Оприбуткувати: {receiveItem?.name}
+          </Space>
+        }
+        open={receiveModalOpen}
+        onOk={saveReceive}
+        onCancel={() => setReceiveModalOpen(false)}
+        confirmLoading={receiveSaving}
+        okText="Оприбуткувати"
+        cancelText="Скасувати"
+        width={520}
+      >
+        <Form form={receiveForm} layout="vertical">
+          {/* Mode selector */}
+          <div style={{ marginBottom: 16 }}>
+            <Radio.Group
+              value={receiveMode}
+              onChange={e => setReceiveMode(e.target.value)}
+              optionType="button"
+              buttonStyle="solid"
+            >
+              <Radio.Button value="existing">
+                <LinkOutlined /> Є в базі складу
+              </Radio.Button>
+              <Radio.Button value="new">
+                <FileAddOutlined /> Новий товар
+              </Radio.Button>
+            </Radio.Group>
+          </div>
+
+          {receiveMode === 'existing' && (
+            <>
+              <div style={{ marginBottom: 8 }}>
+                {matchesLoading
+                  ? <Spin size="small" style={{ marginRight: 8 }} />
+                  : productMatches.length > 0
+                    ? <Text type="secondary">Знайдено {productMatches.length} збіг(ів) за назвою — оберіть або пошукайте вручну:</Text>
+                    : <Text type="warning">Збіги не знайдені — спробуйте пошук або оберіть "Новий товар"</Text>
+                }
+              </div>
+              <Form.Item label="Товар на складі" required>
+                <Select
+                  showSearch
+                  placeholder="Пошук по назві або артикулу..."
+                  filterOption={false}
+                  onSearch={handleReceiveSearch}
+                  value={selectedProductId}
+                  onChange={setSelectedProductId}
+                  notFoundContent={matchesLoading ? <Spin size="small" /> : 'Не знайдено'}
+                  style={{ width: '100%' }}
+                  optionLabelProp="label"
+                >
+                  {productMatches.map(p => (
+                    <Select.Option key={p.id} value={p.id} label={p.name}>
+                      <div>
+                        <Text strong>{p.name}</Text>
+                        {p.brand && <Text type="secondary"> · {p.brand}</Text>}
+                      </div>
+                      <div style={{ fontSize: 12, color: '#8c8c8c' }}>
+                        [{p.sku_code}] · залишок: {p.current_stock} {p.unit}
+                      </div>
+                    </Select.Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </>
+          )}
+
+          {receiveMode === 'new' && (
+            <>
+              <Divider plain style={{ margin: '0 0 12px' }}>Новий товар в базі складу</Divider>
+              <Form.Item
+                name="product_name"
+                label="Назва товару"
+                initialValue={receiveItem?.name}
+              >
+                <Input placeholder={receiveItem?.name} />
+              </Form.Item>
+              <Space style={{ width: '100%' }}>
+                <Form.Item
+                  name="sku_code"
+                  label="Артикул (SKU)"
+                  style={{ flex: 1 }}
+                  rules={[{ required: true, message: 'Введіть артикул' }]}
+                >
+                  <Input placeholder="Напр. HM-10-50" />
+                </Form.Item>
+                <Form.Item name="unit" label="Одиниця" style={{ flex: 1 }}>
+                  <Input placeholder={receiveItem?.unit || 'шт'} />
+                </Form.Item>
+              </Space>
+            </>
+          )}
+
+          <Divider plain style={{ margin: '4px 0 12px' }} />
+
+          <Space style={{ width: '100%' }} size={12}>
+            <Form.Item
+              name="warehouse_id"
+              label="Склад"
+              rules={[{ required: true, message: 'Оберіть склад' }]}
+              style={{ flex: 1, marginBottom: 0 }}
+            >
+              <Select placeholder="Оберіть склад" style={{ width: '100%' }}>
+                {warehouses.map(w => (
+                  <Select.Option key={w.id} value={w.id}>{w.name}</Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+            <Form.Item
+              name="quantity"
+              label="Кількість"
+              rules={[{ required: true, message: 'Вкажіть кількість' }]}
+              style={{ width: 120, marginBottom: 0 }}
+            >
+              <InputNumber min={0.01} style={{ width: '100%' }} />
+            </Form.Item>
+          </Space>
         </Form>
       </Modal>
     </div>
