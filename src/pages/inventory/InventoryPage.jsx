@@ -29,13 +29,17 @@ function InventoryPage() {
     fetchCategories();
   }, []);
 
-  // Debounce: оновлює searchQuery і скидає на сторінку 1
+  // Debounce: очищення — одразу, набір тексту — 500мс затримка
   useEffect(() => {
-    if (searchText.length > 0 && searchText.length < 4) return;
+    if (searchText === '') {
+      setSearchQuery('');
+      setPagination(prev => ({ ...prev, current: 1 }));
+      return;
+    }
     const timer = setTimeout(() => {
       setSearchQuery(searchText);
       setPagination(prev => ({ ...prev, current: 1 }));
-    }, 600);
+    }, 500);
     return () => clearTimeout(timer);
   }, [searchText]);
 
