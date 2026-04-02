@@ -313,6 +313,20 @@ export const inventoryAPI = {
   getMovements: (params) => instance.get('/inventory/movements/', { params }),
   getMovementsByProduct: (productId) => instance.get('/inventory/movements/', { params: { product: productId } }),
   createMovement: (data) => instance.post('/inventory/movements/', data),
+
+  // Order folders
+  getOrderFolders: () => instance.get('/inventory/order-folders/'),
+  createOrderFolder: (data) => instance.post('/inventory/order-folders/', data),
+  updateOrderFolder: (id, data) => instance.patch(`/inventory/order-folders/${id}/`, data),
+  deleteOrderFolder: (id) => instance.delete(`/inventory/order-folders/${id}/`),
+  markAllOrdered: (id) => instance.post(`/inventory/order-folders/${id}/mark_all_ordered/`),
+  unmarkAllOrdered: (id) => instance.post(`/inventory/order-folders/${id}/unmark_all_ordered/`),
+
+  // Order items
+  createOrderItem: (data) => instance.post('/inventory/order-items/', data),
+  updateOrderItem: (id, data) => instance.patch(`/inventory/order-items/${id}/`, data),
+  deleteOrderItem: (id) => instance.delete(`/inventory/order-items/${id}/`),
+  toggleOrderItem: (id) => instance.post(`/inventory/order-items/${id}/toggle_ordered/`),
 };
 
 export const userAPI = {

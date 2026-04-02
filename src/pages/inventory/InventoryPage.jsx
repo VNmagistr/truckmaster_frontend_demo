@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Input, message, Card, Tag, Tabs, Select, Popconfirm, Tooltip } from 'antd';
-import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UndoOutlined } from '@ant-design/icons';
+import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UndoOutlined, ShoppingCartOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, EmptyState } from '../../components';
 import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import { formatMoney } from '../../utils/formatters';
+import OrderListTab from './OrderListTab';
 
 function InventoryPage() {
   const [products, setProducts] = useState([]);
@@ -198,66 +199,76 @@ function InventoryPage() {
 
   const tabItems = [
     { key: 'all', label: 'Всі товари' },
-    { 
-      key: 'low_stock', 
+    {
+      key: 'low_stock',
       label: (
         <span>
           <WarningOutlined /> Закінчуються
         </span>
       )
     },
+    {
+      key: 'order_list',
+      label: (
+        <span>
+          <ShoppingCartOutlined /> Замовити
+        </span>
+      )
+    },
   ];
 
   if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Склад" />;
-  if (loading && products.length === 0) return <LoadingSpinner />;
+  if (loading && products.length === 0 && activeTab !== 'order_list') return <LoadingSpinner />;
 
   return (
     <div>
       <PageHeader
         title="Склад запчастин"
         extra={
-          <Space>
-            <Input
-              placeholder="Назва або 4 останні цифри артикулу..."
-              prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
-              onChange={e => setSearchText(e.target.value)}
-              style={{ width: 220 }}
-              allowClear
-            />
-            
-            <Select
-              placeholder="Категорія"
-              allowClear
-              style={{ width: 150 }}
-              value={selectedCategory}
-              onChange={setSelectedCategory}
-            >
-              {categories.map(cat => (
-                <Select.Option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </Select.Option>
-              ))}
-            </Select>
+          activeTab !== 'order_list' && (
+            <Space>
+              <Input
+                placeholder="Назва або 4 останні цифри артикулу..."
+                prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
+                onChange={e => setSearchText(e.target.value)}
+                style={{ width: 220 }}
+                allowClear
+              />
 
-            <Button
-              type={showDeleted ? 'primary' : 'default'}
-              danger={showDeleted}
-              onClick={() => {
-                setShowDeleted(!showDeleted);
-                setPagination(prev => ({ ...prev, current: 1 }));
-              }}
-            >
-              {showDeleted ? 'Приховати видалені' : 'Показати видалені'}
-            </Button>
+              <Select
+                placeholder="Категорія"
+                allowClear
+                style={{ width: 150 }}
+                value={selectedCategory}
+                onChange={setSelectedCategory}
+              >
+                {categories.map(cat => (
+                  <Select.Option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </Select.Option>
+                ))}
+              </Select>
 
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => navigate('/inventory/new')}
-            >
-              Додати товар
-            </Button>
-          </Space>
+              <Button
+                type={showDeleted ? 'primary' : 'default'}
+                danger={showDeleted}
+                onClick={() => {
+                  setShowDeleted(!showDeleted);
+                  setPagination(prev => ({ ...prev, current: 1 }));
+                }}
+              >
+                {showDeleted ? 'Приховати видалені' : 'Показати видалені'}
+              </Button>
+
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => navigate('/inventory/new')}
+              >
+                Додати товар
+              </Button>
+            </Space>
+          )
         }
       />
 
@@ -269,7 +280,9 @@ function InventoryPage() {
           style={{ marginBottom: 16 }}
         />
 
-        {products.length > 0 ? (
+        {activeTab === 'order_list' ? (
+          <OrderListTab />
+        ) : products.length > 0 ? (
           <Table
             columns={columns}
             dataSource={products}
