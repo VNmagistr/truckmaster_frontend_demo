@@ -237,7 +237,7 @@ function InventoryPage() {
           activeTab !== 'order_list' && activeTab !== 'wholesale' && (
             <Space>
               <Input
-                placeholder="Назва або 4 останні цифри артикулу..."
+                placeholder="Назва або артикул (будь-яка частина)..."
                 prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
                 onChange={e => setSearchText(e.target.value)}
                 style={{ width: 220 }}
