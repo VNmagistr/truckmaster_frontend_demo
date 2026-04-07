@@ -197,7 +197,11 @@ function OrderDetailPage() {
       setIsPhotoModalOpen(false);
       setPhotoFileList([]);
       setPhotoDescription('');
-      initPage();
+      // Refresh order data without triggering full-page loading spinner (preserves active tab)
+      try {
+        const response = await ordersAPI.getById(id);
+        setOrder(response.data || response);
+      } catch { /* ignore refresh error */ }
     } catch {
       message.error('Не вдалося завантажити фото');
     } finally {
@@ -216,7 +220,10 @@ function OrderDetailPage() {
         try {
           await repairPhotosAPI.delete(photoId);
           message.success('Фото видалено');
-          initPage();
+          try {
+            const response = await ordersAPI.getById(id);
+            setOrder(response.data || response);
+          } catch { /* ignore */ }
         } catch {
           message.error('Не вдалося видалити фото');
         }
