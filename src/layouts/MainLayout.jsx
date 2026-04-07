@@ -4,8 +4,9 @@ import {
   DashboardOutlined, UserOutlined, CarOutlined, FileTextOutlined,
   AppstoreOutlined, RobotOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   LogoutOutlined, SettingOutlined, MenuOutlined, PlusOutlined, CalendarOutlined,
-  CameraOutlined, BellOutlined, FileDoneOutlined,
+  CameraOutlined, BellOutlined, FileDoneOutlined, DownloadOutlined,
 } from '@ant-design/icons';
+import PWAUpdatePrompt from '../components/PWAUpdatePrompt';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import useUIStore from '../store/uiStore';
@@ -31,6 +32,28 @@ function MainLayout() {
   const [demoBannerVisible, setDemoBannerVisible] = useState(
     isDemo && localStorage.getItem('demo_banner_dismissed') !== '1'
   );
+
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+  const [canInstall, setCanInstall] = useState(
+    !isStandalone && !!window.__pwaInstallPrompt
+  );
+
+  useEffect(() => {
+    const handler = () => setCanInstall(true);
+    window.addEventListener('pwainstallready', handler);
+    return () => window.removeEventListener('pwainstallready', handler);
+  }, []);
+
+  const handleInstallPWA = async () => {
+    const prompt = window.__pwaInstallPrompt;
+    if (!prompt) return;
+    await prompt.prompt();
+    const { outcome } = await prompt.userChoice;
+    if (outcome === 'accepted') {
+      window.__pwaInstallPrompt = null;
+      setCanInstall(false);
+    }
+  };
 
   useEffect(() => { fetchModules(); }, []);
 
@@ -184,6 +207,17 @@ function MainLayout() {
             </span>
           )}
 
+          <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          {canInstall && (
+            <Tooltip title="Встановити додаток">
+              <Button
+                type="text"
+                icon={<DownloadOutlined />}
+                onClick={handleInstallPWA}
+                style={{ color: INK, fontSize: 16 }}
+              />
+            </Tooltip>
+          )}
           <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} placement="bottomRight" arrow>
             <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 12, padding: '0 8px' }}>
               {!isMobile && (
@@ -192,6 +226,7 @@ function MainLayout() {
               <Avatar icon={<UserOutlined />} style={{ background: Y, color: INK, fontWeight: 700 }} />
             </div>
           </Dropdown>
+          </div>
         </Header>
 
         {/* Demo banner */}
@@ -213,6 +248,8 @@ function MainLayout() {
             style={{ borderRadius: 0 }}
           />
         )}
+
+        <PWAUpdatePrompt />
 
         {/* Content */}
         <Content style={{

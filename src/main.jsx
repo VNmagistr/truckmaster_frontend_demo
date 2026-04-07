@@ -5,8 +5,16 @@ import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
 import useAuthStore from './store/authStore';
 import ErrorBoundary from './components/ErrorBoundary';
-import PWAUpdatePrompt from './components/PWAUpdatePrompt';
 import './index.css';
+
+// Перехоплюємо prompt встановлення PWA і блокуємо авто-показ.
+// Показуємо кнопку встановлення тільки авторизованому персоналу в MainLayout.
+window.__pwaInstallPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  window.__pwaInstallPrompt = e;
+  window.dispatchEvent(new Event('pwainstallready'));
+});
 
 // Ініціалізуємо auth store ДО рендеру додатку
 useAuthStore.getState().initialize();
@@ -28,7 +36,6 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <QueryClientProvider client={queryClient}>
         <ErrorBoundary>
           <App />
-          <PWAUpdatePrompt />
         </ErrorBoundary>
       </QueryClientProvider>
     </HelmetProvider>

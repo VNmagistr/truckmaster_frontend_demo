@@ -12,7 +12,7 @@ export default defineConfig({
         name: 'Італ Трак',
         short_name: 'Італ Трак',
         description: 'Сервісний центр Iveco — управління нарядами, складом та клієнтами',
-        start_url: '/',
+        start_url: '/dashboard',
         scope: '/',
         display: 'standalone',
         background_color: '#ffffff',
