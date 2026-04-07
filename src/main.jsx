@@ -5,6 +5,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import App from './App';
 import useAuthStore from './store/authStore';
 import ErrorBoundary from './components/ErrorBoundary';
+import PWAUpdatePrompt from './components/PWAUpdatePrompt';
 import './index.css';
 
 // Ініціалізуємо auth store ДО рендеру додатку
@@ -27,6 +28,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
       <QueryClientProvider client={queryClient}>
         <ErrorBoundary>
           <App />
+          <PWAUpdatePrompt />
         </ErrorBoundary>
       </QueryClientProvider>
     </HelmetProvider>
