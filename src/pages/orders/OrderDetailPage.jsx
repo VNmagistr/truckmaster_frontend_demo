@@ -181,15 +181,16 @@ function OrderDetailPage() {
   };
 
   const handleUploadRepairPhoto = async () => {
-    if (!photoFileList[0]?.originFileObj) return;
+    const files = photoFileList.filter(f => f.originFileObj);
+    if (!files.length) return;
     setPhotoModalLoading(true);
     try {
       const formData = new FormData();
       formData.append('service_order', id);
-      formData.append('image', photoFileList[0].originFileObj);
+      files.forEach(f => formData.append('images', f.originFileObj));
       if (photoDescription) formData.append('description', photoDescription);
-      await repairPhotosAPI.upload(formData);
-      message.success('Фото додано');
+      await repairPhotosAPI.bulkUpload(formData);
+      message.success(files.length === 1 ? 'Фото додано' : `Додано фото: ${files.length}`);
       setIsPhotoModalOpen(false);
       setPhotoFileList([]);
       setPhotoDescription('');
@@ -1427,15 +1428,13 @@ function OrderDetailPage() {
             fileList={photoFileList}
             onChange={({ fileList }) => setPhotoFileList(fileList)}
             beforeUpload={() => false}
-            maxCount={1}
+            multiple
             accept="image/*"
           >
-            {photoFileList.length === 0 && (
-              <div>
-                <PlusOutlined />
-                <div style={{ marginTop: 8 }}>Вибрати фото</div>
-              </div>
-            )}
+            <div>
+              <PlusOutlined />
+              <div style={{ marginTop: 8 }}>Вибрати фото</div>
+            </div>
           </Upload>
         </div>
         <Input
@@ -1451,7 +1450,7 @@ function OrderDetailPage() {
           onClick={handleUploadRepairPhoto}
           block
         >
-          Завантажити
+          {photoFileList.length > 1 ? `Завантажити ${photoFileList.length} фото` : 'Завантажити'}
         </Button>
       </Modal>
     </div>

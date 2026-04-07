@@ -192,6 +192,9 @@ export const repairPhotosAPI = {
   upload: (formData) => instance.post('/repair-photos/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  bulkUpload: (formData) => instance.post('/repair-photos/bulk_upload/', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  }),
   delete: (id) => instance.delete(`/repair-photos/${id}/`),
 };
 
