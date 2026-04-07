@@ -59,6 +59,7 @@ function OrderDetailPage() {
   const [savingOrderNumber, setSavingOrderNumber] = useState(false);
   const orderNumberInputRef = useRef(null);
 
+  const [activeTab, setActiveTab] = useState('works');
   const [statusHistory, setStatusHistory] = useState([]);
   const [statusHistoryLoading, setStatusHistoryLoading] = useState(false);
 
@@ -1191,7 +1192,7 @@ function OrderDetailPage() {
       </Card>
 
       <Card>
-        <Tabs items={tabItems} defaultActiveKey="works" />
+        <Tabs items={tabItems} activeKey={activeTab} onChange={setActiveTab} />
       </Card>
 
       {/* Модалка додавання роботи */}
