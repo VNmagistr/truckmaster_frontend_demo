@@ -9,8 +9,15 @@ import { MainLayout, AuthLayout } from './layouts';
 import CabinetLayout from './layouts/CabinetLayout';
 import { ProtectedRoute, LoadingSpinner } from './components';
 import CabinetProtectedRoute from './components/CabinetProtectedRoute';
+import useAuthStore from './store/authStore';
 
-import { Welcome } from './pages'; 
+import { Welcome } from './pages';
+
+// Якщо персонал авторизований — одразу на дашборд, інакше — лендінг
+function HomeRoute() {
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  return isAuthenticated ? <Navigate to="/dashboard" replace /> : <Welcome />;
+}
 
 // Lazy loading
 const LoginPage = lazy(() => import('./pages/auth/LoginPage'));
@@ -95,7 +102,7 @@ function AppRoutes() {
   return (
     <Routes>
       {/* 1. Головна сторінка */}
-      <Route path="/" element={<Welcome />} />
+      <Route path="/" element={<HomeRoute />} />
 
       {/* 2. Сторінка логіну */}
       <Route element={<AuthLayout />}>
