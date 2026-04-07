@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Descriptions, Button, Table, Tag, message, Tabs, Modal, Form, Select, Input, InputNumber, Space, Typography, Spin, Empty, Popconfirm, DatePicker, Row, Col } from 'antd';
-import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined, HistoryOutlined, DashboardOutlined, BellOutlined, CheckOutlined, StopOutlined } from '@ant-design/icons';
+import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined, HistoryOutlined, DashboardOutlined, BellOutlined, CheckOutlined, StopOutlined, QrcodeOutlined, DownloadOutlined } from '@ant-design/icons';
+import { QRCodeCanvas } from 'qrcode.react';
 import dayjs from 'dayjs';
 
 const INTERVAL_TYPES = [
@@ -31,6 +32,18 @@ function TruckDetailPage() {
   const [oilProducts, setOilProducts] = useState([]);
   const [filterProducts, setFilterProducts] = useState([]);
   const [productsLoading, setProductsLoading] = useState(false);
+
+  const [isQrModalOpen, setIsQrModalOpen] = useState(false);
+
+  const handleDownloadQr = () => {
+    const canvas = document.getElementById('truck-qr-canvas');
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `qr-${truck?.license_plate || id}.png`;
+    a.click();
+  };
 
   const [isOilModalOpen, setIsOilModalOpen] = useState(false);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -749,13 +762,21 @@ function TruckDetailPage() {
         subtitle={truck.specific_model_name}
         showBack
         extra={
-          <Button
-            type="primary"
-            icon={<EditOutlined />}
-            onClick={() => navigate(`/trucks/${id}/edit`)}
-          >
-            Редагувати
-          </Button>
+          <Space>
+            <Button
+              icon={<QrcodeOutlined />}
+              onClick={() => setIsQrModalOpen(true)}
+            >
+              QR-код
+            </Button>
+            <Button
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => navigate(`/trucks/${id}/edit`)}
+            >
+              Редагувати
+            </Button>
+          </Space>
         }
       />
 
@@ -950,6 +971,35 @@ function TruckDetailPage() {
             Додати
           </Button>
         </Form>
+      </Modal>
+
+      {/* QR Code Modal */}
+      <Modal
+        title={<span><QrcodeOutlined style={{ marginRight: 8 }} />QR-код вантажівки</span>}
+        open={isQrModalOpen}
+        onCancel={() => setIsQrModalOpen(false)}
+        footer={[
+          <Button key="download" type="primary" icon={<DownloadOutlined />} onClick={handleDownloadQr}>
+            Завантажити PNG
+          </Button>,
+          <Button key="close" onClick={() => setIsQrModalOpen(false)}>Закрити</Button>,
+        ]}
+        width={320}
+      >
+        <div style={{ textAlign: 'center', padding: '16px 0' }}>
+          <QRCodeCanvas
+            id="truck-qr-canvas"
+            value={`https://ital-truck.com.ua/trucks/${truck?.id}`}
+            size={220}
+            includeMargin
+          />
+          <p style={{ marginTop: 12, color: '#666', fontSize: 13 }}>
+            {truck?.license_plate} — {truck?.make} {truck?.model}
+          </p>
+          <p style={{ color: '#aaa', fontSize: 12, marginTop: 4 }}>
+            Наклейте на дверцята кабіни
+          </p>
+        </div>
       </Modal>
     </div>
   );

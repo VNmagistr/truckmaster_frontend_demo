@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input, Dropdown, Upload } from 'antd';
-import { EditOutlined, FilePdfOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { EditOutlined, FilePdfOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined, ScanOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI, maintenanceAPI, repairPhotosAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
+import BarcodeScanner from '../../components/BarcodeScanner';
 import { formatMoney, formatDateTime } from '../../utils/formatters';
 
 function OrderDetailPage() {
@@ -12,6 +13,7 @@ function OrderDetailPage() {
   
   const [isWorkModalOpen, setIsWorkModalOpen] = useState(false);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isEditWorkModalOpen, setIsEditWorkModalOpen] = useState(false);
   const [editingWork, setEditingWork] = useState(null);
   const [modalLoading, setModalLoading] = useState(false);
@@ -397,6 +399,27 @@ function OrderDetailPage() {
     const part = safeList.find(p => p.id === partId);
     if (part) {
         formPart.setFieldsValue({ unit_price: part.selling_price || part.price || 0 });
+    }
+  };
+
+  const handleBarcodeDetected = async (code) => {
+    setIsScannerOpen(false);
+    try {
+      const res = await inventoryAPI.getAll({ barcode: code, page_size: 1 });
+      const results = (res.data?.results || res.data || []);
+      if (results.length > 0) {
+        const part = results[0];
+        setPartsList([part]);
+        formPart.setFieldsValue({
+          part: part.id,
+          unit_price: part.selling_price || 0,
+        });
+        message.success(`Знайдено: ${part.name}`);
+      } else {
+        message.warning(`Товар зі штрих-кодом "${code}" не знайдено. Спробуйте пошук вручну.`);
+      }
+    } catch {
+      message.error('Помилка пошуку за штрих-кодом');
     }
   };
 
@@ -1225,7 +1248,19 @@ function OrderDetailPage() {
               />
             )}
             
-            <Form.Item name="part" label="Запчастина" rules={[{ required: true, message: 'Оберіть запчастину' }]}>
+            <Form.Item name="part" label={
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                Запчастина
+                <Button
+                  size="small"
+                  icon={<ScanOutlined />}
+                  onClick={() => setIsScannerOpen(true)}
+                  title="Сканувати штрих-код"
+                >
+                  Сканувати
+                </Button>
+              </span>
+            } rules={[{ required: true, message: 'Оберіть запчастину' }]}>
                 <Select
                     showSearch
                     placeholder="Назва або 4 останні цифри артикулу"
@@ -1453,6 +1488,12 @@ function OrderDetailPage() {
           {photoFileList.length > 1 ? `Завантажити ${photoFileList.length} фото` : 'Завантажити'}
         </Button>
       </Modal>
+
+      <BarcodeScanner
+        open={isScannerOpen}
+        onDetected={handleBarcodeDetected}
+        onClose={() => setIsScannerOpen(false)}
+      />
     </div>
   );
 }
