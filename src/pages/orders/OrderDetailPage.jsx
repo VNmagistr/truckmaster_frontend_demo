@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input, Dropdown, Upload } from 'antd';
+import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input, Dropdown, Upload, Typography } from 'antd';
+const { Text } = Typography;
 import { EditOutlined, FilePdfOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined, ScanOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI, maintenanceAPI, repairPhotosAPI } from '../../api';
@@ -12,6 +13,8 @@ function OrderDetailPage() {
   const [loading, setLoading] = useState(true);
   
   const [isWorkModalOpen, setIsWorkModalOpen] = useState(false);
+  const [liveWorkPrice, setLiveWorkPrice] = useState(null);
+  const [liveEditWorkPrice, setLiveEditWorkPrice] = useState(null);
   const [isPartModalOpen, setIsPartModalOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isEditWorkModalOpen, setIsEditWorkModalOpen] = useState(false);
@@ -433,12 +436,20 @@ function OrderDetailPage() {
 
   const handleEditWork = (record) => {
     setEditingWork(record);
+    const hours = parseFloat(record.hours_spent) || 1;
+    const workId = record.work?.id || record.work;
     formEditWork.setFieldsValue({
-      work: record.work?.id || record.work,
+      work: workId,
       mechanic: record.mechanic?.id || record.mechanic,
-      hours_spent: parseFloat(record.hours_spent) || 1,
+      hours_spent: hours,
       description: record.description || ''
     });
+    // Живий розрахунок при відкритті
+    const w = safeWorksList.find(x => x.id === workId);
+    if (w) {
+      const rate = parseFloat(w.hourly_rate) || 0;
+      setLiveEditWorkPrice({ hours, rate, total: hours * rate });
+    }
     setIsEditWorkModalOpen(true);
   };
 
@@ -604,11 +615,10 @@ function OrderDetailPage() {
       key: 'hours_spent',
       render: (val) => (val != null && val !== '') ? val : '-'
     },
-    { 
-      title: 'Вартість', 
-      dataIndex: 'price_at_moment', 
-      key: 'price_at_moment', 
-      render: (val) => formatMoney(val) 
+    {
+      title: 'Вартість',
+      key: 'amount',
+      render: (_, record) => formatMoney(record.amount ?? record.price_at_moment),
     },
     {
       title: 'Дії',
@@ -1203,28 +1213,60 @@ function OrderDetailPage() {
       </Card>
 
       {/* Модалка додавання роботи */}
-      <Modal title="Додати роботу" open={isWorkModalOpen} onCancel={() => setIsWorkModalOpen(false)} footer={null} destroyOnClose>
+      <Modal
+        title="Додати роботу"
+        open={isWorkModalOpen}
+        onCancel={() => { setIsWorkModalOpen(false); setLiveWorkPrice(null); }}
+        footer={null}
+        destroyOnClose
+      >
         <Form form={formWork} layout="vertical" onFinish={handleAddWork}>
             <Form.Item name="work" label="Послуга" rules={[{ required: true, message: 'Оберіть послугу' }]}>
-                 <Select 
-                    showSearch 
-                    placeholder="Оберіть послугу" 
-                    optionFilterProp="label" 
-                    options={safeWorksList.map(w => ({ value: w.id, label: w.name }))} 
+                 <Select
+                    showSearch
+                    placeholder="Оберіть послугу"
+                    optionFilterProp="label"
+                    options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
+                    onSelect={(workId) => {
+                      const w = safeWorksList.find(x => x.id === workId);
+                      if (!w) return;
+                      const hours = parseFloat(w.standard_hours) || 1;
+                      const rate = parseFloat(w.hourly_rate) || 0;
+                      formWork.setFieldsValue({ hours });
+                      setLiveWorkPrice({ hours, rate, total: hours * rate });
+                    }}
                  />
             </Form.Item>
             <Form.Item name="employee" label="Механік">
-                 <Select 
-                    showSearch 
+                 <Select
+                    showSearch
                     allowClear
-                    placeholder="Оберіть механіка" 
-                    optionFilterProp="label" 
-                    options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))} 
+                    placeholder="Оберіть механіка"
+                    optionFilterProp="label"
+                    options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))}
                  />
             </Form.Item>
-            <Form.Item name="hours" label="Витрачено годин" initialValue={1} rules={[{ required: true }]}>
-                <InputNumber min={0.1} step={0.5} style={{ width: '100%' }} />
+            <Form.Item name="hours" label="Кількість годин" rules={[{ required: true }]}>
+                <InputNumber
+                  min={0.1}
+                  step={0.5}
+                  style={{ width: '100%' }}
+                  onChange={(val) => {
+                    const workId = formWork.getFieldValue('work');
+                    const w = safeWorksList.find(x => x.id === workId);
+                    if (w && val) {
+                      const rate = parseFloat(w.hourly_rate) || 0;
+                      setLiveWorkPrice({ hours: val, rate, total: val * rate });
+                    }
+                  }}
+                />
             </Form.Item>
+            {liveWorkPrice && (
+              <div style={{ background: '#f7f7f7', borderLeft: '4px solid #f5c518', padding: '6px 12px', borderRadius: 4, marginBottom: 16, fontSize: 13 }}>
+                <Text type="secondary">{liveWorkPrice.hours} год × {formatMoney(liveWorkPrice.rate)}/год = </Text>
+                <Text strong style={{ fontSize: 15 }}>{formatMoney(liveWorkPrice.total)}</Text>
+              </div>
+            )}
             <Button type="primary" htmlType="submit" loading={modalLoading} block>Зберегти</Button>
         </Form>
       </Modal>
@@ -1386,6 +1428,7 @@ function OrderDetailPage() {
           setIsEditWorkModalOpen(false);
           setEditingWork(null);
           formEditWork.resetFields();
+          setLiveEditWorkPrice(null);
         }}
         footer={null}
         destroyOnClose
@@ -1397,6 +1440,14 @@ function OrderDetailPage() {
                     placeholder="Оберіть послугу"
                     optionFilterProp="label"
                     options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
+                    onSelect={(workId) => {
+                      const w = safeWorksList.find(x => x.id === workId);
+                      if (!w) return;
+                      const hours = parseFloat(w.standard_hours) || 1;
+                      const rate = parseFloat(w.hourly_rate) || 0;
+                      formEditWork.setFieldsValue({ hours_spent: hours });
+                      setLiveEditWorkPrice({ hours, rate, total: hours * rate });
+                    }}
                  />
             </Form.Item>
             <Form.Item name="mechanic" label="Механік">
@@ -1408,9 +1459,27 @@ function OrderDetailPage() {
                     options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))}
                  />
             </Form.Item>
-            <Form.Item name="hours_spent" label="Витрачено годин" rules={[{ required: true }]}>
-                <InputNumber min={0.1} step={0.5} style={{ width: '100%' }} />
+            <Form.Item name="hours_spent" label="Кількість годин" rules={[{ required: true }]}>
+                <InputNumber
+                  min={0.1}
+                  step={0.5}
+                  style={{ width: '100%' }}
+                  onChange={(val) => {
+                    const workId = formEditWork.getFieldValue('work');
+                    const w = safeWorksList.find(x => x.id === workId);
+                    if (w && val) {
+                      const rate = parseFloat(w.hourly_rate) || 0;
+                      setLiveEditWorkPrice({ hours: val, rate, total: val * rate });
+                    }
+                  }}
+                />
             </Form.Item>
+            {liveEditWorkPrice && (
+              <div style={{ background: '#f7f7f7', borderLeft: '4px solid #f5c518', padding: '6px 12px', borderRadius: 4, marginBottom: 16, fontSize: 13 }}>
+                <Text type="secondary">{liveEditWorkPrice.hours} год × {formatMoney(liveEditWorkPrice.rate)}/год = </Text>
+                <Text strong style={{ fontSize: 15 }}>{formatMoney(liveEditWorkPrice.total)}</Text>
+              </div>
+            )}
             <Form.Item name="description" label="Опис">
                 <Input.TextArea rows={2} placeholder="Додатковий опис (необов'язково)" />
             </Form.Item>
