@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Table, Button, Space, Input, Select, Modal, Form, InputNumber,
   Tag, message, Tooltip, Typography, Alert, Divider,
 } from 'antd';
 import {
   PlusOutlined, SwapOutlined, SearchOutlined, InboxOutlined,
-  WarningOutlined,
+  WarningOutlined, BarcodeOutlined,
 } from '@ant-design/icons';
 import { inventoryAPI } from '../../api';
 
@@ -25,6 +25,10 @@ function WholesaleTab() {
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [receiveForm] = Form.useForm();
   const [receiveSaving, setReceiveSaving] = useState(false);
+  const [receiveSelectedProduct, setReceiveSelectedProduct] = useState(null);
+  const [skuInput, setSkuInput] = useState('');
+  const [skuSearching, setSkuSearching] = useState(false);
+  const skuInputRef = useRef(null);
 
   // Transfer modal
   const [transferOpen, setTransferOpen] = useState(false);
@@ -71,12 +75,66 @@ function WholesaleTab() {
       const data = (res.data || res).results || (res.data || res) || [];
       setProductOptions(data.map(p => ({
         value: p.id,
-        label: `${p.name}${p.brand ? ` (${p.brand})` : ''} [${p.sku_code}]`,
+        label: `${p.name}${p.brand ? ` (${p.brand})` : ''} [${p.sku_code || '—'}]`,
+        product: p,
       })));
     } catch {
       // тихо
     } finally {
       setProductsLoading(false);
+    }
+  };
+
+  const handleReceiveProductSelect = (productId) => {
+    const opt = productOptions.find(o => o.value === productId);
+    if (!opt) return;
+    const p = opt.product;
+    setReceiveSelectedProduct(p);
+    // Підставляємо закупівельну ціну якщо поле порожнє
+    const currentPrice = receiveForm.getFieldValue('purchase_price');
+    if (!currentPrice && p.cost_price) {
+      receiveForm.setFieldValue('purchase_price', Number(p.cost_price));
+    }
+  };
+
+  const searchBySku = async () => {
+    const sku = skuInput.trim();
+    if (!sku) return;
+    setSkuSearching(true);
+    try {
+      const res = await inventoryAPI.getAll({ search: sku, page_size: 10 });
+      const data = (res.data || res).results || (res.data || res) || [];
+      // Шукаємо точний збіг по артикулу
+      const exact = data.find(p => (p.sku_code || '').toLowerCase() === sku.toLowerCase());
+      const found = exact || (data.length === 1 ? data[0] : null);
+      if (found) {
+        const opts = data.map(p => ({
+          value: p.id,
+          label: `${p.name}${p.brand ? ` (${p.brand})` : ''} [${p.sku_code || '—'}]`,
+          product: p,
+        }));
+        setProductOptions(opts);
+        receiveForm.setFieldValue('product', found.id);
+        setReceiveSelectedProduct(found);
+        if (!receiveForm.getFieldValue('purchase_price') && found.cost_price) {
+          receiveForm.setFieldValue('purchase_price', Number(found.cost_price));
+        }
+        setSkuInput('');
+      } else if (data.length > 1) {
+        // Кілька збігів — підвантажуємо в список, щоб юзер обрав
+        setProductOptions(data.map(p => ({
+          value: p.id,
+          label: `${p.name}${p.brand ? ` (${p.brand})` : ''} [${p.sku_code || '—'}]`,
+          product: p,
+        })));
+        message.info(`Знайдено ${data.length} товарів — оберіть зі списку`);
+      } else {
+        message.warning(`Товар з артикулом "${sku}" не знайдено`);
+      }
+    } catch {
+      message.error('Помилка пошуку');
+    } finally {
+      setSkuSearching(false);
     }
   };
 
@@ -113,10 +171,14 @@ function WholesaleTab() {
   const openReceive = () => {
     receiveForm.resetFields();
     setProductOptions([]);
+    setReceiveSelectedProduct(null);
+    setSkuInput('');
     if (selectedWarehouse) {
       receiveForm.setFieldsValue({ warehouse: selectedWarehouse });
     }
     setReceiveOpen(true);
+    // Фокус на SKU-полі після відкриття
+    setTimeout(() => skuInputRef.current?.focus(), 100);
   };
 
   const saveReceive = async () => {
@@ -330,12 +392,28 @@ function WholesaleTab() {
         confirmLoading={receiveSaving}
         okText="Зберегти"
         cancelText="Скасувати"
-        width={520}
+        width={540}
       >
         <Form form={receiveForm} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item name="warehouse" label="Склад" rules={[{ required: true, message: 'Оберіть склад' }]}>
             <WarehouseSelect />
           </Form.Item>
+
+          {/* Швидкий пошук по артикулу */}
+          <Form.Item label={<><BarcodeOutlined style={{ marginRight: 6 }} />Пошук по артикулу</>}>
+            <Input.Search
+              ref={skuInputRef}
+              value={skuInput}
+              onChange={e => setSkuInput(e.target.value)}
+              onSearch={searchBySku}
+              onPressEnter={searchBySku}
+              placeholder="Введіть артикул і натисніть Enter..."
+              loading={skuSearching}
+              enterButton="Знайти"
+              allowClear
+            />
+          </Form.Item>
+
           <Form.Item name="product" label="Товар" rules={[{ required: true, message: 'Оберіть товар' }]}>
             <Select
               showSearch
@@ -343,10 +421,44 @@ function WholesaleTab() {
               placeholder="Введіть назву або артикул (мін. 2 символи)..."
               filterOption={false}
               onSearch={searchProducts}
+              onSelect={handleReceiveProductSelect}
+              onChange={(val) => { if (!val) { setReceiveSelectedProduct(null); } }}
               options={productOptions}
               notFoundContent={productsLoading ? 'Пошук...' : 'Нічого не знайдено'}
             />
           </Form.Item>
+
+          {/* Інфо про вибраний товар */}
+          {receiveSelectedProduct && (
+            <div style={{
+              background: '#f7f7f7',
+              border: '1px solid #e8e8e8',
+              borderLeft: '4px solid #f5c518',
+              borderRadius: 6,
+              padding: '8px 12px',
+              marginBottom: 16,
+              fontSize: 13,
+            }}>
+              <Space wrap size={[16, 4]}>
+                {receiveSelectedProduct.brand && (
+                  <span><Text type="secondary">Бренд:</Text> <Text strong>{receiveSelectedProduct.brand}</Text></span>
+                )}
+                <span>
+                  <Text type="secondary">Залишок:</Text>{' '}
+                  <Tag color={(receiveSelectedProduct.current_stock || 0) > 0 ? 'green' : 'red'} style={{ margin: 0 }}>
+                    {receiveSelectedProduct.current_stock || 0} {receiveSelectedProduct.unit || 'шт'}
+                  </Tag>
+                </span>
+                {receiveSelectedProduct.cost_price && (
+                  <span><Text type="secondary">Собівартість:</Text> <Text strong>{receiveSelectedProduct.cost_price} грн</Text></span>
+                )}
+                {receiveSelectedProduct.selling_price && (
+                  <span><Text type="secondary">Продаж:</Text> <Text strong>{receiveSelectedProduct.selling_price} грн</Text></span>
+                )}
+              </Space>
+            </div>
+          )}
+
           <Form.Item name="quantity" label="Кількість" rules={[{ required: true, message: 'Введіть кількість' }]}>
             <InputNumber min={0.01} step={1} style={{ width: '100%' }} placeholder="1" />
           </Form.Item>
