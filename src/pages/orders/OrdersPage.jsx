@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip, Typography, Divider, Pagination, Empty } from 'antd';
+import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip, Typography, Divider, Pagination, Empty, DatePicker } from 'antd';
+import dayjs from 'dayjs';
 import {
   SearchOutlined,
   PlusOutlined,
@@ -13,7 +14,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { ordersAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
-import { formatDate } from '../../utils/formatters';
+import { formatDate, formatDateTime } from '../../utils/formatters';
 import { ORDER_STATUSES } from '../../utils/constants';
 
 const { Text } = Typography;
@@ -44,6 +45,10 @@ function OrdersPage() {
   const [editingValue, setEditingValue] = useState('');
   const [savingOrderId, setSavingOrderId] = useState(null);
 
+  const [editingClosedAtId, setEditingClosedAtId] = useState(null);
+  const [editingClosedAtValue, setEditingClosedAtValue] = useState(null);
+  const [savingClosedAtId, setSavingClosedAtId] = useState(null);
+
   const navigate = useNavigate();
 
   const handleOrderNumberSave = async (record) => {
@@ -65,6 +70,23 @@ function OrdersPage() {
     } finally {
       setSavingOrderId(null);
       setEditingOrderId(null);
+    }
+  };
+
+  const handleClosedAtSave = async (record, value) => {
+    setEditingClosedAtId(null);
+    const newVal = value ? value.toISOString() : '';
+    const oldVal = record.closed_at || '';
+    if (newVal === oldVal) return;
+    setSavingClosedAtId(record.id);
+    try {
+      await ordersAPI.update(record.id, { closed_at: newVal });
+      setOrders(prev => prev.map(o => o.id === record.id ? { ...o, closed_at: newVal || null } : o));
+      message.success('Дату закриття оновлено');
+    } catch {
+      message.error('Не вдалося зберегти дату закриття');
+    } finally {
+      setSavingClosedAtId(null);
     }
   };
 
@@ -309,6 +331,42 @@ function OrdersPage() {
       key: 'created_at',
       onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (date) => formatDate(date),
+    },
+    {
+      title: 'Закрито',
+      dataIndex: 'closed_at',
+      key: 'closed_at',
+      onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
+      render: (date, record) => (
+        <div onClick={e => e.stopPropagation()}>
+          {editingClosedAtId === record.id ? (
+            <DatePicker
+              autoFocus
+              size="small"
+              showTime={{ format: 'HH:mm' }}
+              format="DD.MM.YYYY HH:mm"
+              value={editingClosedAtValue}
+              onChange={val => setEditingClosedAtValue(val)}
+              onOk={val => handleClosedAtSave(record, val)}
+              onBlur={() => handleClosedAtSave(record, editingClosedAtValue)}
+              allowClear
+              style={{ width: 170 }}
+            />
+          ) : (
+            <Tooltip title="Двічі клікніть для редагування">
+              <span
+                style={{ cursor: 'pointer', color: date ? '#595959' : '#bfbfbf' }}
+                onDoubleClick={() => {
+                  setEditingClosedAtId(record.id);
+                  setEditingClosedAtValue(date ? dayjs(date) : null);
+                }}
+              >
+                {savingClosedAtId === record.id ? '...' : (date ? formatDateTime(date) : '—')}
+              </span>
+            </Tooltip>
+          )}
+        </div>
+      ),
     },
     {
       title: 'Дії',

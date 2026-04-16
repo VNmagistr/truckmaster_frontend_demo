@@ -1025,6 +1025,11 @@ function OrderDetailPage() {
               {formatMoney(order.total_cost)}
             </span>
           </Descriptions.Item>
+          {order.closed_at && (
+            <Descriptions.Item label="Дата закриття">
+              {formatDateTime(order.closed_at)}
+            </Descriptions.Item>
+          )}
           <Descriptions.Item label="Клієнт">
             {clientId ? (
               <Link to={`/clients/${clientId}`}>{getSafeName(order.client)}</Link>

@@ -84,6 +84,7 @@ function OrderFormPage() {
               recommendations: orderData.recommendations,
               status: orderData.status,
               created_at: orderData.created_at ? dayjs(orderData.created_at) : null,
+              closed_at: orderData.closed_at ? dayjs(orderData.closed_at) : null,
             });
             
             if (orderData.truck && orderData.current_mileage) {
@@ -281,9 +282,14 @@ function OrderFormPage() {
     try {
       const formData = new FormData();
 
-      // created_at приходить як dayjs-об'єкт — конвертуємо в ISO
+      // created_at / closed_at приходять як dayjs-об'єкти — конвертуємо в ISO
       if (values.created_at) {
         values.created_at = values.created_at.toISOString();
+      }
+      if (values.closed_at) {
+        values.closed_at = values.closed_at.toISOString();
+      } else {
+        values.closed_at = '';
       }
 
       Object.keys(values).forEach(key => {
@@ -400,6 +406,20 @@ function OrderFormPage() {
                   placeholder="Сьогодні за замовчуванням"
                 />
               </Form.Item>
+
+              {/* Дата закриття */}
+              {isEdit && (
+                <Form.Item name="closed_at" label="Дата закриття">
+                  <DatePicker
+                    showTime={{ format: 'HH:mm' }}
+                    format="DD.MM.YYYY HH:mm"
+                    size="large"
+                    style={{ width: '100%' }}
+                    placeholder="Встановлюється автоматично при закритті"
+                    allowClear
+                  />
+                </Form.Item>
+              )}
 
               {/* Пошук авто */}
               <Form.Item 
