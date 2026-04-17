@@ -298,6 +298,11 @@ function OrdersPage() {
           <div style={{ fontSize: '13px', color: '#888' }}>
             {record.truck?.specific_model_name || record.truck?.model || ''}
           </div>
+          {record.truck?.last_seven_vin && (
+            <div style={{ fontSize: '13px', color: '#888' }}>
+              {record.truck.last_seven_vin}
+            </div>
+          )}
         </div>
       ),
     },
