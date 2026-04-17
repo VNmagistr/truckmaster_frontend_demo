@@ -968,7 +968,7 @@ function OrderDetailPage() {
       )}
 
       <Card style={{ marginBottom: 16 }}>
-        <Row gutter={0}>
+        <Row gutter={0} style={{ alignItems: 'stretch' }}>
           {/* Ліва колонка: реквізити наряду та авто */}
           <Col xs={24} md={12} style={{ borderRight: '1px solid #f0f0f0', paddingRight: 0 }}>
             <Descriptions bordered column={1} size="small">
@@ -1033,8 +1033,8 @@ function OrderDetailPage() {
           </Col>
 
           {/* Права колонка: статус, проблема, рекомендації, сума */}
-          <Col xs={24} md={12}>
-            <Descriptions bordered column={1} size="small">
+          <Col xs={24} md={12} className="order-detail-right-col">
+            <Descriptions bordered column={1} size="small" className="order-detail-right-descriptions">
               <Descriptions.Item label="Статус">
                 <Dropdown
                   menu={{

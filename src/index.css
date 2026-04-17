@@ -210,3 +210,25 @@ html { scroll-behavior: smooth; }
   .ant-tabs-nav { overflow-x: auto; }
   .ant-tabs-nav-wrap { flex: none !important; }
 }
+
+/* Order detail: рівняння висоти правої колонки з лівою */
+.order-detail-right-col {
+  display: flex;
+  flex-direction: column;
+}
+.order-detail-right-descriptions {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+.order-detail-right-descriptions .ant-descriptions-view {
+  flex: 1;
+  height: 100%;
+}
+.order-detail-right-descriptions .ant-descriptions-view table {
+  height: 100%;
+}
+.order-detail-right-descriptions .ant-descriptions-row:nth-child(2),
+.order-detail-right-descriptions .ant-descriptions-row:nth-child(3) {
+  height: 100%;
+}
