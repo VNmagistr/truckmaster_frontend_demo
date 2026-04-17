@@ -968,201 +968,213 @@ function OrderDetailPage() {
       )}
 
       <Card style={{ marginBottom: 16 }}>
-        <Descriptions bordered column={{ xs: 1, sm: 2, md: 3 }} size="small">
-          <Descriptions.Item label="Номер">
-            {editingOrderNumber ? (
-              <Space.Compact>
-                <Input
-                  ref={orderNumberInputRef}
-                  size="small"
-                  value={orderNumberValue}
-                  onChange={e => setOrderNumberValue(e.target.value)}
-                  onPressEnter={handleSaveOrderNumber}
-                  onKeyDown={e => e.key === 'Escape' && setEditingOrderNumber(false)}
-                  style={{ width: 160 }}
-                />
-                <Button type="primary" size="small" loading={savingOrderNumber} onClick={handleSaveOrderNumber}>Зберегти</Button>
-                <Button size="small" onClick={() => setEditingOrderNumber(false)}>Скасувати</Button>
-              </Space.Compact>
-            ) : (
-              <Space size={4}>
-                <span>{order.order_number || '-'}</span>
-                {!isDeleted && (
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => {
-                      setOrderNumberValue(order.order_number || '');
-                      setEditingOrderNumber(true);
-                      setTimeout(() => orderNumberInputRef.current?.select(), 0);
-                    }}
-                  />
+        <Row gutter={0}>
+          {/* Ліва колонка: реквізити наряду та авто */}
+          <Col xs={24} md={12} style={{ borderRight: '1px solid #f0f0f0', paddingRight: 0 }}>
+            <Descriptions bordered column={1} size="small">
+              <Descriptions.Item label="Номер">
+                {editingOrderNumber ? (
+                  <Space.Compact>
+                    <Input
+                      ref={orderNumberInputRef}
+                      size="small"
+                      value={orderNumberValue}
+                      onChange={e => setOrderNumberValue(e.target.value)}
+                      onPressEnter={handleSaveOrderNumber}
+                      onKeyDown={e => e.key === 'Escape' && setEditingOrderNumber(false)}
+                      style={{ width: 160 }}
+                    />
+                    <Button type="primary" size="small" loading={savingOrderNumber} onClick={handleSaveOrderNumber}>Зберегти</Button>
+                    <Button size="small" onClick={() => setEditingOrderNumber(false)}>Скасувати</Button>
+                  </Space.Compact>
+                ) : (
+                  <Space size={4}>
+                    <span>{order.order_number || '-'}</span>
+                    {!isDeleted && (
+                      <Button
+                        type="text"
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => {
+                          setOrderNumberValue(order.order_number || '');
+                          setEditingOrderNumber(true);
+                          setTimeout(() => orderNumberInputRef.current?.select(), 0);
+                        }}
+                      />
+                    )}
+                  </Space>
                 )}
-              </Space>
-            )}
-          </Descriptions.Item>
-          <Descriptions.Item label="Статус">
-            <Dropdown 
-              menu={{ 
-                items: statusItems.map(item => ({
-                  ...item,
-                  onClick: () => handleStatusChange(item.key),
-                  disabled: order.status === item.key
-                }))
-              }}
-              trigger={['click']}
-              disabled={isDeleted}
-            >
-              <span style={{ cursor: isDeleted ? 'not-allowed' : 'pointer' }}>
-                <StatusTag status={order.status} />
-                {!isDeleted && <DownOutlined style={{ marginLeft: 4, fontSize: 10 }} />}
-              </span>
-            </Dropdown>
-          </Descriptions.Item>
-          <Descriptions.Item label="Сума">
-            <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
-              {formatMoney(order.total_cost)}
-            </span>
-          </Descriptions.Item>
-          {order.closed_at && (
-            <Descriptions.Item label="Дата закриття">
-              {formatDateTime(order.closed_at)}
-            </Descriptions.Item>
-          )}
-          <Descriptions.Item label="Клієнт">
-            {clientId ? (
-              <Link to={`/clients/${clientId}`}>{getSafeName(order.client)}</Link>
-            ) : getSafeName(order.client)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Вантажівка">
-            {truckId ? (
-              <Link to={`/trucks/${truckId}`}>
-                {order.truck?.license_plate || '-'}
-              </Link>
-            ) : (order.truck?.license_plate || '-')}
-          </Descriptions.Item>
-          <Descriptions.Item label="VIN (останні 7)">
-            {order.truck?.last_seven_vin || '-'}
-          </Descriptions.Item>
-          <Descriptions.Item label="Пробіг">
-            <span style={{ color: '#1890ff' }}>{formatMileage(order.current_mileage)}</span>
-          </Descriptions.Item>
-          <Descriptions.Item label="Опис проблеми" span={2}>
-            {editingProblem ? (
-              <div>
-                <Input.TextArea
-                  autoFocus
-                  rows={4}
-                  value={problemValue}
-                  style={{ marginBottom: 8 }}
-                  onChange={(e) => setProblemValue(e.target.value)}
-                  onFocus={() => {
-                    if (!problemValue || problemValue.trim() === '') {
-                      setProblemValue('- ');
-                    }
+              </Descriptions.Item>
+              <Descriptions.Item label="Клієнт">
+                {clientId ? (
+                  <Link to={`/clients/${clientId}`}>{getSafeName(order.client)}</Link>
+                ) : getSafeName(order.client)}
+              </Descriptions.Item>
+              <Descriptions.Item label="Модель">
+                {order.truck?.specific_model_name || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Держномер">
+                {truckId ? (
+                  <Link to={`/trucks/${truckId}`}>{order.truck?.license_plate || '-'}</Link>
+                ) : (order.truck?.license_plate || '-')}
+              </Descriptions.Item>
+              <Descriptions.Item label="VIN (останні 7)">
+                {order.truck?.last_seven_vin || '-'}
+              </Descriptions.Item>
+              <Descriptions.Item label="Пробіг">
+                <span style={{ color: '#1890ff' }}>{formatMileage(order.current_mileage)}</span>
+              </Descriptions.Item>
+              {order.closed_at && (
+                <Descriptions.Item label="Дата закриття">
+                  {formatDateTime(order.closed_at)}
+                </Descriptions.Item>
+              )}
+            </Descriptions>
+          </Col>
+
+          {/* Права колонка: статус, проблема, рекомендації, сума */}
+          <Col xs={24} md={12}>
+            <Descriptions bordered column={1} size="small">
+              <Descriptions.Item label="Статус">
+                <Dropdown
+                  menu={{
+                    items: statusItems.map(item => ({
+                      ...item,
+                      onClick: () => handleStatusChange(item.key),
+                      disabled: order.status === item.key
+                    }))
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const textarea = e.target;
-                      const start = textarea.selectionStart;
-                      const end = textarea.selectionEnd;
-                      const value = textarea.value;
-                      const newValue = value.substring(0, start) + '\n- ' + value.substring(end);
-                      setProblemValue(newValue);
-                      setTimeout(() => {
-                        textarea.selectionStart = start + 3;
-                        textarea.selectionEnd = start + 3;
-                      }, 0);
-                    }
-                  }}
-                />
-                <Space>
-                  <Button type="primary" size="small" loading={savingProblem} onClick={handleSaveProblem}>Зберегти</Button>
-                  <Button size="small" onClick={() => setEditingProblem(false)}>Скасувати</Button>
-                </Space>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{ flex: 1, whiteSpace: 'pre-wrap' }}>
-                  {order.problem_description || <span style={{ color: '#bfbfbf' }}>—</span>}
-                </div>
-                {!isDeleted && (
-                  <Button
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => {
-                      setProblemValue(order.problem_description || '');
-                      setEditingProblem(true);
-                    }}
-                  />
+                  trigger={['click']}
+                  disabled={isDeleted}
+                >
+                  <span style={{ cursor: isDeleted ? 'not-allowed' : 'pointer' }}>
+                    <StatusTag status={order.status} />
+                    {!isDeleted && <DownOutlined style={{ marginLeft: 4, fontSize: 10 }} />}
+                  </span>
+                </Dropdown>
+              </Descriptions.Item>
+              <Descriptions.Item label="Опис проблеми">
+                {editingProblem ? (
+                  <div>
+                    <Input.TextArea
+                      autoFocus
+                      rows={4}
+                      value={problemValue}
+                      style={{ marginBottom: 8 }}
+                      onChange={(e) => setProblemValue(e.target.value)}
+                      onFocus={() => {
+                        if (!problemValue || problemValue.trim() === '') {
+                          setProblemValue('- ');
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const textarea = e.target;
+                          const start = textarea.selectionStart;
+                          const end = textarea.selectionEnd;
+                          const value = textarea.value;
+                          const newValue = value.substring(0, start) + '\n- ' + value.substring(end);
+                          setProblemValue(newValue);
+                          setTimeout(() => {
+                            textarea.selectionStart = start + 3;
+                            textarea.selectionEnd = start + 3;
+                          }, 0);
+                        }
+                      }}
+                    />
+                    <Space>
+                      <Button type="primary" size="small" loading={savingProblem} onClick={handleSaveProblem}>Зберегти</Button>
+                      <Button size="small" onClick={() => setEditingProblem(false)}>Скасувати</Button>
+                    </Space>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <div style={{ flex: 1, whiteSpace: 'pre-wrap' }}>
+                      {order.problem_description || <span style={{ color: '#bfbfbf' }}>—</span>}
+                    </div>
+                    {!isDeleted && (
+                      <Button
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => {
+                          setProblemValue(order.problem_description || '');
+                          setEditingProblem(true);
+                        }}
+                      />
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
-          </Descriptions.Item>
-          <Descriptions.Item label="Рекомендації" span={3}>
-            {editingRecommendations ? (
-              <div>
-                <Input.TextArea
-                  autoFocus
-                  rows={4}
-                  value={recommendationsValue}
-                  style={{ backgroundColor: '#fffbe6', marginBottom: 8 }}
-                  onChange={(e) => setRecommendationsValue(e.target.value)}
-                  onFocus={() => {
-                    if (!recommendationsValue || recommendationsValue.trim() === '') {
-                      setRecommendationsValue('- ');
-                    }
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const textarea = e.target;
-                      const start = textarea.selectionStart;
-                      const end = textarea.selectionEnd;
-                      const value = textarea.value;
-                      const newValue = value.substring(0, start) + '\n- ' + value.substring(end);
-                      setRecommendationsValue(newValue);
-                      setTimeout(() => {
-                        textarea.selectionStart = start + 3;
-                        textarea.selectionEnd = start + 3;
-                      }, 0);
-                    }
-                  }}
-                />
-                <Space>
-                  <Button type="primary" size="small" loading={savingRecommendations} onClick={handleSaveRecommendations}>Зберегти</Button>
-                  <Button size="small" onClick={() => setEditingRecommendations(false)}>Скасувати</Button>
-                </Space>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                <div style={{
-                  flex: 1,
-                  background: '#fffbe6',
-                  padding: '8px 12px',
-                  borderRadius: 4,
-                  border: '1px solid #ffe58f',
-                  minHeight: 32,
-                  whiteSpace: 'pre-wrap',
-                }}>
-                  {order.recommendations || <span style={{ color: '#bfbfbf' }}>—</span>}
-                </div>
-                {!isDeleted && (
-                  <Button
-                    size="small"
-                    icon={<EditOutlined />}
-                    onClick={() => {
-                      setRecommendationsValue(order.recommendations || '');
-                      setEditingRecommendations(true);
-                    }}
-                  />
+              </Descriptions.Item>
+              <Descriptions.Item label="Рекомендації">
+                {editingRecommendations ? (
+                  <div>
+                    <Input.TextArea
+                      autoFocus
+                      rows={4}
+                      value={recommendationsValue}
+                      style={{ backgroundColor: '#fffbe6', marginBottom: 8 }}
+                      onChange={(e) => setRecommendationsValue(e.target.value)}
+                      onFocus={() => {
+                        if (!recommendationsValue || recommendationsValue.trim() === '') {
+                          setRecommendationsValue('- ');
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          const textarea = e.target;
+                          const start = textarea.selectionStart;
+                          const end = textarea.selectionEnd;
+                          const value = textarea.value;
+                          const newValue = value.substring(0, start) + '\n- ' + value.substring(end);
+                          setRecommendationsValue(newValue);
+                          setTimeout(() => {
+                            textarea.selectionStart = start + 3;
+                            textarea.selectionEnd = start + 3;
+                          }, 0);
+                        }
+                      }}
+                    />
+                    <Space>
+                      <Button type="primary" size="small" loading={savingRecommendations} onClick={handleSaveRecommendations}>Зберегти</Button>
+                      <Button size="small" onClick={() => setEditingRecommendations(false)}>Скасувати</Button>
+                    </Space>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                    <div style={{
+                      flex: 1,
+                      background: '#fffbe6',
+                      padding: '8px 12px',
+                      borderRadius: 4,
+                      border: '1px solid #ffe58f',
+                      minHeight: 32,
+                      whiteSpace: 'pre-wrap',
+                    }}>
+                      {order.recommendations || <span style={{ color: '#bfbfbf' }}>—</span>}
+                    </div>
+                    {!isDeleted && (
+                      <Button
+                        size="small"
+                        icon={<EditOutlined />}
+                        onClick={() => {
+                          setRecommendationsValue(order.recommendations || '');
+                          setEditingRecommendations(true);
+                        }}
+                      />
+                    )}
+                  </div>
                 )}
-              </div>
-            )}
-          </Descriptions.Item>
-        </Descriptions>
+              </Descriptions.Item>
+              <Descriptions.Item label="Сума">
+                <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
+                  {formatMoney(order.total_cost)}
+                </span>
+              </Descriptions.Item>
+            </Descriptions>
+          </Col>
+        </Row>
       </Card>
 
       {/* Відлік регламентних робіт */}
