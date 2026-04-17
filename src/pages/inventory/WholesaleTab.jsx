@@ -29,6 +29,8 @@ function WholesaleTab() {
   const [skuInput, setSkuInput] = useState('');
   const [skuSearching, setSkuSearching] = useState(false);
   const skuInputRef = useRef(null);
+  const productSelectRef = useRef(null);
+  const [productSelectOpen, setProductSelectOpen] = useState(false);
 
   // Transfer modal
   const [transferOpen, setTransferOpen] = useState(false);
@@ -121,13 +123,12 @@ function WholesaleTab() {
         }
         setSkuInput('');
       } else if (data.length > 1) {
-        // Кілька збігів — підвантажуємо в список, щоб юзер обрав
         setProductOptions(data.map(p => ({
           value: p.id,
           label: `${p.name}${p.brand ? ` (${p.brand})` : ''} [${p.sku_code || '—'}]`,
           product: p,
         })));
-        message.info(`Знайдено ${data.length} товарів — оберіть зі списку`);
+        setProductSelectOpen(true);
       } else {
         message.warning(`Товар з артикулом "${sku}" не знайдено`);
       }
@@ -416,6 +417,7 @@ function WholesaleTab() {
 
           <Form.Item name="product" label="Товар" rules={[{ required: true, message: 'Оберіть товар' }]}>
             <Select
+              ref={productSelectRef}
               showSearch
               loading={productsLoading}
               placeholder="Введіть назву або артикул (мін. 2 символи)..."
@@ -425,6 +427,8 @@ function WholesaleTab() {
               onChange={(val) => { if (!val) { setReceiveSelectedProduct(null); } }}
               options={productOptions}
               notFoundContent={productsLoading ? 'Пошук...' : 'Нічого не знайдено'}
+              open={productSelectOpen || undefined}
+              onDropdownVisibleChange={(v) => setProductSelectOpen(v)}
             />
           </Form.Item>
 
