@@ -4,7 +4,7 @@ import { SaveOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { trucksAPI, clientsAPI, baseModelsAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
-import { EURO_STANDARDS } from '../../utils/constants';
+import { EURO_STANDARDS, TRANSMISSION_TYPES } from '../../utils/constants';
 
 function TruckFormPage() {
   const [form] = Form.useForm();
@@ -211,6 +211,19 @@ function TruckFormPage() {
               {Object.values(EURO_STANDARDS).map(euro => (
                 <Select.Option key={euro.value} value={euro.value}>
                   {euro.label}
+                </Select.Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
+            name="transmission_type"
+            label="Тип КПП"
+          >
+            <Select placeholder="Оберіть тип КПП" allowClear>
+              {Object.values(TRANSMISSION_TYPES).map(t => (
+                <Select.Option key={t.value} value={t.value}>
+                  {t.label}
                 </Select.Option>
               ))}
             </Select>

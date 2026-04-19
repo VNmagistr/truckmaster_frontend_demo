@@ -7,6 +7,13 @@ export const ORDER_STATUSES = {
   CANCELED: { value: 'CANCELED', label: 'Скасовано', color: 'red' },
 };
 
+// Типи КПП
+export const TRANSMISSION_TYPES = {
+  manual:    { value: 'manual',    label: 'Механічна' },
+  automatic: { value: 'automatic', label: 'Автоматична' },
+  robotic:   { value: 'robotic',   label: 'Роботизована' },
+};
+
 // Євростандарти
 export const EURO_STANDARDS = {
   EURO3: { value: 'EURO3', label: 'Євро-3' },

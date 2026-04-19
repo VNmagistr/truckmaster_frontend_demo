@@ -1,26 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Descriptions, Button, Table, Tag, message, Tabs, Modal, Form, Select, Input, InputNumber, Space, Typography, Spin, Empty, Popconfirm, DatePicker, Row, Col } from 'antd';
 import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined, HistoryOutlined, DashboardOutlined, BellOutlined, CheckOutlined, StopOutlined, QrcodeOutlined, DownloadOutlined } from '@ant-design/icons';
 import { QRCodeCanvas } from 'qrcode.react';
 import dayjs from 'dayjs';
 
-const INTERVAL_TYPES = [
-  { key: 'engine_oil',    label: 'Олива двигуна' },
-  { key: 'gearbox_oil',   label: 'Олива КПП/АКПП' },
-  { key: 'rear_axle_oil', label: 'Олива заднього моста' },
-  { key: 'belts',         label: 'Ремені/ролики' },
-  { key: 'chains',        label: 'Ланцюги' },
-];
+function getIntervalTypes(transmissionType) {
+  let gearboxItems;
+  if (transmissionType === 'manual') {
+    gearboxItems = [{ key: 'gearbox_oil', label: 'Олива КПП' }];
+  } else if (transmissionType === 'automatic') {
+    gearboxItems = [{ key: 'auto_gearbox_oil', label: 'Олива АКПП' }];
+  } else if (transmissionType === 'robotic') {
+    gearboxItems = [{ key: 'auto_gearbox_oil', label: 'Олива роботизованої КПП' }];
+  } else {
+    gearboxItems = [
+      { key: 'gearbox_oil',      label: 'Олива КПП' },
+      { key: 'auto_gearbox_oil', label: 'Олива АКПП' },
+    ];
+  }
+  return [
+    { key: 'engine_oil',    label: 'Олива двигуна' },
+    ...gearboxItems,
+    { key: 'rear_axle_oil', label: 'Олива заднього моста' },
+    { key: 'belts',         label: 'Ремені/ролики' },
+    { key: 'chains',        label: 'Ланцюги' },
+  ];
+}
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { trucksAPI, ordersAPI, baseModelsAPI, clientsAPI, maintenanceAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatDate } from '../../utils/formatters';
-import { EURO_STANDARDS } from '../../utils/constants';
+import { EURO_STANDARDS, TRANSMISSION_TYPES } from '../../utils/constants';
 
 const { Text } = Typography;
 
 function TruckDetailPage() {
   const [truck, setTruck] = useState(null);
+  const intervalTypes = useMemo(() => getIntervalTypes(truck?.transmission_type), [truck?.transmission_type]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -169,7 +185,7 @@ function TruckDetailPage() {
       setIntervals(rec);
       if (rec) {
         const values = {};
-        INTERVAL_TYPES.forEach(({ key }) => {
+        intervalTypes.forEach(({ key }) => {
           values[`${key}_interval`] = rec[`${key}_interval`] ?? null;
           values[`${key}_last_km`]  = rec[`${key}_last_km`]  ?? null;
         });
@@ -697,7 +713,7 @@ function TruckDetailPage() {
         <Spin spinning={intervalsLoading}>
           <Form form={formIntervals} layout="vertical" onFinish={handleSaveIntervals}>
             <Table
-              dataSource={INTERVAL_TYPES}
+              dataSource={intervalTypes}
               rowKey="key"
               pagination={false}
               size="small"
@@ -801,6 +817,13 @@ function TruckDetailPage() {
             {truck.euro_standard ? (
               <Tag color="blue">
                 {EURO_STANDARDS[truck.euro_standard]?.label || truck.euro_standard}
+              </Tag>
+            ) : '-'}
+          </Descriptions.Item>
+          <Descriptions.Item label="Тип КПП">
+            {truck.transmission_type ? (
+              <Tag color="purple">
+                {TRANSMISSION_TYPES[truck.transmission_type]?.label || truck.transmission_type}
               </Tag>
             ) : '-'}
           </Descriptions.Item>
