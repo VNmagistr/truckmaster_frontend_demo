@@ -9,9 +9,15 @@ function getIntervalTypes(transmissionType) {
   if (transmissionType === 'manual') {
     gearboxItems = [{ key: 'gearbox_oil', label: 'Олива КПП' }];
   } else if (transmissionType === 'automatic') {
-    gearboxItems = [{ key: 'auto_gearbox_oil', label: 'Олива АКПП' }];
+    gearboxItems = [
+      { key: 'auto_gearbox_oil',    label: 'Олива АКПП' },
+      { key: 'auto_gearbox_filter', label: 'Фільтр АКПП' },
+    ];
   } else if (transmissionType === 'robotic') {
-    gearboxItems = [{ key: 'auto_gearbox_oil', label: 'Олива роботизованої КПП' }];
+    gearboxItems = [
+      { key: 'auto_gearbox_oil',    label: 'Олива роботизованої КПП' },
+      { key: 'auto_gearbox_filter', label: 'Фільтр роботизованої КПП' },
+    ];
   } else {
     gearboxItems = [
       { key: 'gearbox_oil',      label: 'Олива КПП' },
