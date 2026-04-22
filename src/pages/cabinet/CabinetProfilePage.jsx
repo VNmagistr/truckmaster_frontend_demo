@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { PhoneOutlined, UserOutlined, MailOutlined, EnvironmentOutlined } from '@ant-design/icons';
+import { QRCodeCanvas } from 'qrcode.react';
 import { cabinetAPI } from '../../api/cabinet';
 import useCabinetAuthStore from '../../store/cabinetAuthStore';
-import qrMapsImg from '../../assets/qr_maps.png';
 
 const Y = '#f5c518';
 const INK = '#1a1a1a';
@@ -71,11 +71,20 @@ export default function CabinetProfilePage() {
           Ми на карті
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
-          <a href={MAPS_URL} target="_blank" rel="noopener noreferrer">
-            <img
-              src={qrMapsImg}
-              alt="QR-код сервісного центру"
-              style={{ width: 120, height: 120, display: 'block', border: `2px solid ${Y}`, borderRadius: 4 }}
+          <a
+            href={MAPS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="QR-код сервісного центру"
+            style={{ display: 'inline-block', padding: 8, background: '#fff', border: `2px solid ${Y}`, borderRadius: 4, lineHeight: 0 }}
+          >
+            <QRCodeCanvas
+              value={MAPS_URL}
+              size={120}
+              level="H"
+              bgColor="#ffffff"
+              fgColor={INK}
+              includeMargin={false}
             />
           </a>
           <div>
