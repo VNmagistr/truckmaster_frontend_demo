@@ -28,6 +28,7 @@ jobs:
         npm run build
       env:
         VITE_API_URL: ${{ secrets.VITE_API_URL }}
+        VITE_GA_MEASUREMENT_ID: ${{ secrets.VITE_GA_MEASUREMENT_ID }}
 
     # 4. Завантажуємо файли в ТИМЧАСОВУ папку (куди у користувача точно є доступ)
     - name: Copy files to Temp Directory

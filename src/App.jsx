@@ -7,7 +7,7 @@ import 'dayjs/locale/uk';
 
 import { MainLayout, AuthLayout } from './layouts';
 import CabinetLayout from './layouts/CabinetLayout';
-import { ProtectedRoute, LoadingSpinner } from './components';
+import { ProtectedRoute, LoadingSpinner, AnalyticsTracker } from './components';
 import CabinetProtectedRoute from './components/CabinetProtectedRoute';
 import useAuthStore from './store/authStore';
 
@@ -178,6 +178,7 @@ function App() {
     <ConfigProvider locale={ukUA} theme={theme}>
       <AntApp>
         <BrowserRouter>
+          <AnalyticsTracker />
           <Suspense fallback={<LoadingSpinner />}>
             <AppRoutes />
           </Suspense>
