@@ -32,6 +32,7 @@ function OrdersPage() {
   
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
+  const [dateFilter, setDateFilter] = useState(null);
   const [showDeleted, setShowDeleted] = useState(false);
 
   const [stats, setStats] = useState(null);
@@ -92,7 +93,7 @@ function OrdersPage() {
 
   useEffect(() => {
     fetchOrders(pagination.current, pagination.pageSize, statusFilter, searchText);
-  }, [pagination.current, pagination.pageSize, statusFilter, showDeleted]);
+  }, [pagination.current, pagination.pageSize, statusFilter, showDeleted, dateFilter]);
 
   useEffect(() => {
     ordersAPI.getStats()
@@ -120,7 +121,8 @@ function OrdersPage() {
       
       if (status) params.status = status;
       if (search) params.search = search;
-      
+      if (dateFilter) params.created_date = dateFilter.format('YYYY-MM-DD');
+
       // Якщо показуємо видалені - додаємо фільтр
       if (showDeleted) {
         params.marked_for_deletion = true;
@@ -492,6 +494,18 @@ function OrdersPage() {
               ))}
             </Select>
 
+            <DatePicker
+              placeholder="Дата створення"
+              format="DD.MM.YYYY"
+              value={dateFilter}
+              onChange={(value) => {
+                setDateFilter(value);
+                setPagination(prev => ({ ...prev, current: 1 }));
+              }}
+              allowClear
+              style={{ width: 170 }}
+            />
+
             <Button
               type={showDeleted ? 'primary' : 'default'}
               danger={showDeleted}
@@ -515,7 +529,7 @@ function OrdersPage() {
       />
 
       <Card>
-        {!loading && pagination.total === 0 && !searchText && !statusFilter && !showDeleted ? (
+        {!loading && pagination.total === 0 && !searchText && !statusFilter && !dateFilter && !showDeleted ? (
           <Empty
             image={<FileTextOutlined style={{ fontSize: 64, color: '#d9d9d9' }} />}
             imageStyle={{ height: 80 }}
