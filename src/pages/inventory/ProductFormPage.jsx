@@ -183,7 +183,7 @@ function ProductFormPage() {
           }}
         >
           <Row gutter={24}>
-            <Col xs={24} md={12}>
+            <Col xs={24} md={8}>
               <Form.Item
                 name="sku_code"
                 label="Артикул"
@@ -192,7 +192,15 @@ function ProductFormPage() {
                 <Input placeholder="Унікальний код товару" />
               </Form.Item>
             </Col>
-            <Col xs={24} md={12}>
+            <Col xs={24} md={8}>
+              <Form.Item
+                name="barcode"
+                label="Штрих-код"
+              >
+                <Input placeholder="Штрих-код (EAN/UPC)" />
+              </Form.Item>
+            </Col>
+            <Col xs={24} md={8}>
               <Form.Item
                 name="brand"
                 label="Бренд"

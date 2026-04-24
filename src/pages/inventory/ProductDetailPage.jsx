@@ -254,6 +254,9 @@ function ProductDetailPage() {
           <Descriptions.Item label="Артикул">
             <code>{product.sku_code}</code>
           </Descriptions.Item>
+          <Descriptions.Item label="Штрих-код">
+            {product.barcode ? <code>{product.barcode}</code> : '-'}
+          </Descriptions.Item>
           <Descriptions.Item label="Бренд">
             {product.brand || '-'}
           </Descriptions.Item>
