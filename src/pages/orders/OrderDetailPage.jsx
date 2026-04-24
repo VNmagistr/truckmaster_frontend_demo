@@ -362,9 +362,13 @@ function OrderDetailPage() {
   const handleAddWork = async (values) => {
     setModalLoading(true);
     try {
+      const selectedWork = safeWorksList.find(w => w.id === values.work);
+      const defaultName = selectedWork?.name || '';
+      const customName = (values.custom_name || '').trim();
       await ordersAPI.addWork(id, {
         service_order: id,
         work: values.work,
+        custom_name: customName && customName !== defaultName ? customName : '',
         mechanic: values.employee || null,
         hours_spent: values.hours,
       });
@@ -438,10 +442,12 @@ function OrderDetailPage() {
     setEditingWork(record);
     const hours = parseFloat(record.hours_spent) || 1;
     const workId = record.work?.id || record.work;
+    const catalogName = record.work?.name || safeWorksList.find(w => w.id === workId)?.name || '';
     formEditWork.setFieldsValue({
       work: workId,
       mechanic: record.mechanic?.id || record.mechanic,
       hours_spent: hours,
+      custom_name: record.custom_name || catalogName,
       description: record.description || ''
     });
     // Живий розрахунок при відкритті
@@ -455,11 +461,15 @@ function OrderDetailPage() {
 
   const handleSaveEditWork = async (values) => {
     if (!editingWork) return;
-    
+
     setModalLoading(true);
     try {
+      const selectedWork = safeWorksList.find(w => w.id === values.work);
+      const defaultName = selectedWork?.name || '';
+      const customName = (values.custom_name || '').trim();
       await ordersAPI.updateWork(editingWork.id, {
         work: values.work,
+        custom_name: customName && customName !== defaultName ? customName : '',
         mechanic: values.mechanic || null,
         hours_spent: values.hours_spent,
         description: values.description || ''
@@ -561,7 +571,7 @@ function OrderDetailPage() {
       (work.used_parts || []).map(part => ({
         ...part,
         work_id: work.id,
-        work_name: work.work?.name || work.description || 'Невідома робота',
+        work_name: work.display_name || work.custom_name || work.work?.name || work.description || 'Невідома робота',
       }))
     ),
     ...(order.direct_parts || []).map(part => ({
@@ -592,6 +602,8 @@ function OrderDetailPage() {
       dataIndex: 'work',
       key: 'work',
       render: (val, record) => {
+        if (record.display_name) return record.display_name;
+        if (record.custom_name) return record.custom_name;
         if (typeof val === 'object' && val !== null) {
           return val.name || record.description || '-';
         }
@@ -1238,7 +1250,7 @@ function OrderDetailPage() {
         destroyOnClose
       >
         <Form form={formWork} layout="vertical" onFinish={handleAddWork}>
-            <Form.Item name="work" label="Послуга" rules={[{ required: true, message: 'Оберіть послугу' }]}>
+            <Form.Item name="work" label="Послуга з довідника" rules={[{ required: true, message: 'Оберіть послугу' }]}>
                  <Select
                     showSearch
                     placeholder="Оберіть послугу"
@@ -1249,10 +1261,17 @@ function OrderDetailPage() {
                       if (!w) return;
                       const hours = parseFloat(w.standard_hours) || 1;
                       const rate = parseFloat(w.hourly_rate) || 0;
-                      formWork.setFieldsValue({ hours });
+                      formWork.setFieldsValue({ hours, custom_name: w.name });
                       setLiveWorkPrice({ hours, rate, total: hours * rate });
                     }}
                  />
+            </Form.Item>
+            <Form.Item
+              name="custom_name"
+              label="Назва роботи в наряді"
+              tooltip="Можна відредагувати під конкретний наряд — довідник не зміниться"
+            >
+                <Input placeholder="Назва з довідника або власна" />
             </Form.Item>
             <Form.Item name="employee" label="Механік">
                  <Select
@@ -1299,9 +1318,9 @@ function OrderDetailPage() {
               >
                 <Select 
                   placeholder="Оберіть роботу"
-                  options={orderWorks.map(w => ({ 
-                    value: w.id, 
-                    label: w.work?.name || w.description || `Робота #${w.id}`
+                  options={orderWorks.map(w => ({
+                    value: w.id,
+                    label: w.display_name || w.custom_name || w.work?.name || w.description || `Робота #${w.id}`
                   }))}
                 />
               </Form.Item>
@@ -1451,7 +1470,7 @@ function OrderDetailPage() {
         destroyOnClose
       >
         <Form form={formEditWork} layout="vertical" onFinish={handleSaveEditWork}>
-            <Form.Item name="work" label="Послуга" rules={[{ required: true, message: 'Оберіть послугу' }]}>
+            <Form.Item name="work" label="Послуга з довідника" rules={[{ required: true, message: 'Оберіть послугу' }]}>
                  <Select
                     showSearch
                     placeholder="Оберіть послугу"
@@ -1462,10 +1481,17 @@ function OrderDetailPage() {
                       if (!w) return;
                       const hours = parseFloat(w.standard_hours) || 1;
                       const rate = parseFloat(w.hourly_rate) || 0;
-                      formEditWork.setFieldsValue({ hours_spent: hours });
+                      formEditWork.setFieldsValue({ hours_spent: hours, custom_name: w.name });
                       setLiveEditWorkPrice({ hours, rate, total: hours * rate });
                     }}
                  />
+            </Form.Item>
+            <Form.Item
+              name="custom_name"
+              label="Назва роботи в наряді"
+              tooltip="Можна відредагувати під конкретний наряд — довідник не зміниться"
+            >
+                <Input placeholder="Назва з довідника або власна" />
             </Form.Item>
             <Form.Item name="mechanic" label="Механік">
                  <Select
