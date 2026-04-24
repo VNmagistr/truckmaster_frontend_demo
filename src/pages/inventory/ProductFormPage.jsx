@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message, Space, Select, InputNumber, Switch, Row, Col, Modal } from 'antd';
-import { SaveOutlined, DeleteOutlined, ExclamationCircleOutlined } from '@ant-design/icons';
+import { SaveOutlined, DeleteOutlined, ExclamationCircleOutlined, ScanOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
+import BarcodeScanner from '../../components/BarcodeScanner';
 import { UNITS } from '../../utils/constants';
 
 function ProductFormPage() {
@@ -20,6 +21,13 @@ function ProductFormPage() {
   const navigate = useNavigate();
   const isEdit = Boolean(id);
   const [deleting, setDeleting] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  const handleBarcodeDetected = (code) => {
+    form.setFieldsValue({ barcode: code });
+    setIsScannerOpen(false);
+    message.success(`Штрих-код розпізнано: ${code}`);
+  };
 
   useEffect(() => {
     fetchCategories();
@@ -197,7 +205,16 @@ function ProductFormPage() {
                 name="barcode"
                 label="Штрих-код"
               >
-                <Input placeholder="Штрих-код (EAN/UPC)" />
+                <Input
+                  placeholder="Штрих-код (EAN/UPC)"
+                  addonAfter={
+                    <ScanOutlined
+                      onClick={() => setIsScannerOpen(true)}
+                      style={{ cursor: 'pointer', color: '#1a1a1a' }}
+                      title="Сканувати камерою"
+                    />
+                  }
+                />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
@@ -331,6 +348,12 @@ function ProductFormPage() {
           </Form.Item>
         </Form>
       </Card>
+
+      <BarcodeScanner
+        open={isScannerOpen}
+        onDetected={handleBarcodeDetected}
+        onClose={() => setIsScannerOpen(false)}
+      />
     </div>
   );
 }
