@@ -60,6 +60,62 @@ function OrdersPage() {
     }
     setSavingOrderId(record.id);
     try {
+      const checkResp = await ordersAPI.checkNumber({
+        order_number: trimmed,
+        truck_id: record.truck?.id,
+        exclude_id: record.id,
+      });
+      const checkData = checkResp.data || checkResp;
+
+      if (checkData.exists) {
+        setSavingOrderId(null);
+        setEditingOrderId(null);
+        if (!checkData.same_truck) {
+          const otherPlate = checkData.truck?.license_plate || '—';
+          message.error(`Номер вже використовується для авто ${otherPlate}`);
+          return;
+        }
+        const createdAt = checkData.created_at ? formatDate(checkData.created_at) : '—';
+        const willChangeStatus = checkData.status === 'DONE' || checkData.status === 'CLOSED';
+        Modal.confirm({
+          title: 'Такий номер наряду вже існує',
+          content: (
+            <div>
+              <p style={{ marginBottom: 8 }}>
+                Наряд №<Text strong>{checkData.order_number}</Text> від {createdAt}
+                <br />
+                Авто: <Text strong>{checkData.truck?.license_plate || '—'}</Text>
+                {checkData.truck?.model ? ` — ${checkData.truck.model}` : ''}
+                <br />
+                Статус: <Text strong>{checkData.status_display || checkData.status}</Text>
+              </p>
+              <p>Продовжуємо його?</p>
+              {willChangeStatus && (
+                <p style={{ color: '#d48806', marginBottom: 0 }}>
+                  Статус буде змінено на «В роботі».
+                </p>
+              )}
+            </div>
+          ),
+          okText: 'Продовжити',
+          cancelText: 'Скасувати',
+          onOk: async () => {
+            try {
+              await ordersAPI.continueOrder(checkData.order_id);
+              message.success(
+                willChangeStatus
+                  ? 'Наряд переведено в «В роботі»'
+                  : 'Відкриваємо існуючий наряд'
+              );
+              navigate(`/orders/${checkData.order_id}`);
+            } catch {
+              message.error('Не вдалося продовжити наряд');
+            }
+          },
+        });
+        return;
+      }
+
       await ordersAPI.update(record.id, { order_number: trimmed });
       setOrders(prev => prev.map(o => o.id === record.id ? { ...o, order_number: trimmed } : o));
       message.success('Номер наряду оновлено');

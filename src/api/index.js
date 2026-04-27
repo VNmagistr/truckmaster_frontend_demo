@@ -164,6 +164,8 @@ export const ordersAPI = {
   },
 
   searchTruck: (plate) => instance.get('/orders/search-truck/', { params: { plate } }),
+  checkNumber: (params) => instance.get('/orders/check-number/', { params }),
+  continueOrder: (id) => instance.post(`/orders/${id}/continue-order/`),
   checkMaintenance: (truckId, mileage) => instance.post('/orders/check-maintenance/', {
     truck_id: truckId,
     current_mileage: mileage,

@@ -4,6 +4,7 @@ import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, CarOutlined, U
 import { useNavigate, useParams } from 'react-router-dom';
 import { ordersAPI, clientsAPI, maintenanceAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
+import { formatDate } from '../../utils/formatters';
 import debounce from 'lodash/debounce';
 import dayjs from 'dayjs';
 
@@ -32,6 +33,7 @@ function OrderFormPage() {
   const [maintenanceRules, setMaintenanceRules] = useState([]);
   const [maintenanceModalLoading, setMaintenanceModalLoading] = useState(false);
   const [formMaintenance] = Form.useForm();
+  const [originalOrderNumber, setOriginalOrderNumber] = useState('');
   
   const { id } = useParams();
   const navigate = useNavigate();
@@ -75,6 +77,7 @@ function OrderFormPage() {
               setLockedClientName(orderData.client?.name || '');
             }
 
+            setOriginalOrderNumber(orderData.order_number || '');
             form.setFieldsValue({
               order_number: orderData.order_number,
               truck: orderData.truck?.id || orderData.truck,
@@ -277,8 +280,81 @@ function OrderFormPage() {
     }
   };
 
+  const checkOrderNumberConflict = (values) => {
+    const orderNumber = (values.order_number || '').trim();
+    if (!orderNumber) return Promise.resolve(true);
+    if (isEdit && orderNumber === originalOrderNumber) return Promise.resolve(true);
+
+    const truckId = values.truck;
+    return ordersAPI
+      .checkNumber({
+        order_number: orderNumber,
+        truck_id: truckId,
+        ...(isEdit ? { exclude_id: id } : {}),
+      })
+      .then((resp) => {
+        const data = resp.data || resp;
+        if (!data.exists) return true;
+
+        if (!data.same_truck) {
+          const otherPlate = data.truck?.license_plate || '—';
+          message.error(`Номер вже використовується для авто ${otherPlate}`);
+          return false;
+        }
+
+        const createdAt = data.created_at ? formatDate(data.created_at) : '—';
+        const willChangeStatus = data.status === 'DONE' || data.status === 'CLOSED';
+        return new Promise((resolve) => {
+          Modal.confirm({
+            title: 'Такий номер наряду вже існує',
+            content: (
+              <div>
+                <p style={{ marginBottom: 8 }}>
+                  Наряд №<Text strong>{data.order_number}</Text> від {createdAt}
+                  <br />
+                  Авто: <Text strong>{data.truck?.license_plate || '—'}</Text>
+                  {data.truck?.model ? ` — ${data.truck.model}` : ''}
+                  <br />
+                  Статус: <Text strong>{data.status_display || data.status}</Text>
+                </p>
+                <p>Продовжуємо його?</p>
+                {willChangeStatus && (
+                  <p style={{ color: '#d48806', marginBottom: 0 }}>
+                    Статус буде змінено на «В роботі».
+                  </p>
+                )}
+              </div>
+            ),
+            okText: 'Продовжити',
+            cancelText: 'Скасувати',
+            onOk: async () => {
+              try {
+                await ordersAPI.continueOrder(data.order_id);
+                message.success(
+                  willChangeStatus
+                    ? 'Наряд переведено в «В роботі»'
+                    : 'Відкриваємо існуючий наряд'
+                );
+                navigate(`/orders/${data.order_id}`);
+              } catch {
+                message.error('Не вдалося продовжити наряд');
+              }
+              resolve(false);
+            },
+            onCancel: () => resolve(false),
+          });
+        });
+      })
+      .catch(() => true);
+  };
+
   const onFinish = async (values) => {
     setSaving(true);
+    const canProceed = await checkOrderNumberConflict(values);
+    if (!canProceed) {
+      setSaving(false);
+      return;
+    }
     try {
       const formData = new FormData();
 
@@ -364,37 +440,36 @@ function OrderFormPage() {
               onFinish={onFinish}
               initialValues={{ status: 'OPEN' }}
             >
-              {/* Номер замовлення та Статус - тільки для редагування */}
-              {isEdit && (
-                <>
-                  <Row gutter={16}>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="order_number"
-                        label="Номер замовлення"
-                      >
-                        <Input
-                          size="large"
-                          placeholder="SO-20260213-0001"
-                        />
-                      </Form.Item>
-                    </Col>
-                    <Col xs={24} sm={12}>
-                      <Form.Item
-                        name="status"
-                        label="Статус"
-                        rules={[{ required: true, message: 'Оберіть статус' }]}
-                      >
-                        <Select
-                          size="large"
-                          options={statusOptions}
-                        />
-                      </Form.Item>
-                    </Col>
-                  </Row>
-                  <Divider />
-                </>
-              )}
+              {/* Номер замовлення та Статус */}
+              <Row gutter={16}>
+                <Col xs={24} sm={12}>
+                  <Form.Item
+                    name="order_number"
+                    label="Номер замовлення"
+                    extra={!isEdit ? 'Залиште порожнім — згенерується автоматично' : undefined}
+                  >
+                    <Input
+                      size="large"
+                      placeholder="SO-20260213-0001"
+                    />
+                  </Form.Item>
+                </Col>
+                {isEdit && (
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="status"
+                      label="Статус"
+                      rules={[{ required: true, message: 'Оберіть статус' }]}
+                    >
+                      <Select
+                        size="large"
+                        options={statusOptions}
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
+              </Row>
+              <Divider />
 
               {/* Дата створення */}
               <Form.Item name="created_at" label="Дата створення">
