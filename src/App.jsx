@@ -56,6 +56,7 @@ const AlprPage = lazy(() => import('./pages/alpr/AlprPage'));
 
 // Maintenance
 const RemindersPage = lazy(() => import('./pages/maintenance/RemindersPage'));
+const MaintenanceTemplatesPage = lazy(() => import('./pages/maintenance/TemplatesPage'));
 
 // Invoices
 const InvoicesPage      = lazy(() => import('./pages/invoices/InvoicesPage'));
@@ -145,6 +146,7 @@ function AppRoutes() {
         <Route path="/appointments" element={<AppointmentsPage />} />
         <Route path="/alpr" element={<AlprPage />} />
         <Route path="/reminders" element={<RemindersPage />} />
+        <Route path="/maintenance-templates" element={<MaintenanceTemplatesPage />} />
         <Route path="/invoices" element={<InvoicesPage />} />
         <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
       </Route>

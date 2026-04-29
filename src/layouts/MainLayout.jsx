@@ -5,6 +5,7 @@ import {
   AppstoreOutlined, RobotOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   LogoutOutlined, SettingOutlined, MenuOutlined, PlusOutlined, CalendarOutlined,
   CameraOutlined, BellOutlined, FileDoneOutlined, DownloadOutlined,
+  ToolOutlined,
 } from '@ant-design/icons';
 import PWAUpdatePrompt from '../components/PWAUpdatePrompt';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -88,6 +89,7 @@ function MainLayout() {
     { key: '/appointments', module: 'appointments',icon: <CalendarOutlined />,  label: 'Записи' },
     { key: '/bot',          module: 'bot',         icon: <RobotOutlined />,     label: 'Telegram бот' },
     { key: '/reminders',    module: 'maintenance', icon: <BellOutlined />,      label: 'Нагадування ТО' },
+    { key: '/maintenance-templates', module: 'maintenance', icon: <ToolOutlined />, label: 'Еталони ТО' },
     { key: '/invoices',     module: 'invoices',    icon: <FileDoneOutlined />,  label: 'Рахунки' },
     { key: '/alpr',         module: 'alpr',        icon: <CameraOutlined />,    label: 'Журнал авто' },
   ];

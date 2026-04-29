@@ -275,6 +275,14 @@ export const maintenanceAPI = {
 
   getIntervals: (truckId) => instance.get('/maintenance-intervals/', { params: { truck: truckId } }),
   saveIntervals: (truckId, data) => instance.put(`/maintenance-intervals/by-truck/${truckId}/`, data),
+
+  // Еталони інтервалів ТО (по комбінації base_model + euro + transmission)
+  getTemplates: (params) => instance.get('/maintenance-templates/', { params }),
+  getTemplateById: (id) => instance.get(`/maintenance-templates/${id}/`),
+  createTemplate: (data) => instance.post('/maintenance-templates/', data),
+  updateTemplate: (id, data) => instance.patch(`/maintenance-templates/${id}/`, data),
+  deleteTemplate: (id) => instance.delete(`/maintenance-templates/${id}/`),
+  applyTemplateToTruck: (id, truckId) => instance.post(`/maintenance-templates/${id}/apply-to-truck/${truckId}/`),
 };
 
 export const inventoryAPI = {
