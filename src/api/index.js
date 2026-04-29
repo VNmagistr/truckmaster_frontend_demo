@@ -374,6 +374,11 @@ export const botAPI = {
   // Reminder settings
   getReminders: (params) => instance.get('/bot/reminders/', { params }),
   updateReminder: (id, data) => instance.patch(`/bot/reminders/${id}/`, data),
+
+  // Unknown plate searches (бот шукав авто за номером, не знайшов — записує сюди)
+  getUnknownPlates: (params) => instance.get('/bot/unknown-plates/', { params }),
+  updateUnknownPlate: (id, data) => instance.patch(`/bot/unknown-plates/${id}/`, data),
+  deleteUnknownPlate: (id) => instance.delete(`/bot/unknown-plates/${id}/`),
 };
 
 export const modulesAPI = {

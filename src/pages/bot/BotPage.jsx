@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Row, Col, Card, Statistic, Table, Tag, Button, Space, Input,
-  Select, Modal, Form, Switch, Tabs, message, Tooltip, Avatar,
+  Select, Modal, Form, Switch, Tabs, message, Tooltip, Avatar, Popconfirm,
 } from 'antd';
 import {
   RobotOutlined, UserOutlined, TeamOutlined, StopOutlined,
   MessageOutlined, ArrowDownOutlined, ArrowUpOutlined,
   EditOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined,
-  PlusOutlined,
+  PlusOutlined, QuestionCircleOutlined, DeleteOutlined,
 } from '@ant-design/icons';
 import { botAPI, clientsAPI, trucksAPI } from '../../api';
 import { PageHeader } from '../../components';
@@ -33,6 +34,7 @@ const roleTag = (role) => {
 };
 
 function BotPage() {
+  const navigate = useNavigate();
   const [statsLoading, setStatsLoading]     = useState(true);
   const [stats, setStats]                   = useState({ total: 0, by_role: {}, active: 0, blocked: 0 });
   const [moduleUnavailable, setModuleUnavailable] = useState(false);
@@ -74,6 +76,15 @@ function BotPage() {
   const [messagesPage, setMessagesPage]       = useState(1);
   const [messageSearch, setMessageSearch]     = useState('');
   const [directionFilter, setDirectionFilter] = useState('');
+
+  // ── Вкладка "Невідомі номери" ────────────────────────────────────────────
+  const [unknownLoading, setUnknownLoading] = useState(false);
+  const [unknownList, setUnknownList]       = useState([]);
+  const [unknownTotal, setUnknownTotal]     = useState(0);
+  const [unknownPage, setUnknownPage]       = useState(1);
+  const [unknownSearch, setUnknownSearch]   = useState('');
+  const [editNotesId, setEditNotesId]       = useState(null);
+  const [editNotesValue, setEditNotesValue] = useState('');
 
   const [activeTab, setActiveTab] = useState('users');
 
@@ -135,11 +146,55 @@ function BotPage() {
     }
   }, [messageSearch, directionFilter]);
 
+  // ── Невідомі номери ───────────────────────────────────────────────────────
+  const fetchUnknownPlates = useCallback(async (page = 1, search = unknownSearch) => {
+    setUnknownLoading(true);
+    try {
+      const params = { page, page_size: 20, ordering: '-last_searched_at' };
+      if (search) params.search = search;
+      const res  = await botAPI.getUnknownPlates(params);
+      const data = res.data || res;
+      setUnknownList(data.results || []);
+      setUnknownTotal(data.count || 0);
+      setUnknownPage(page);
+    } catch {
+      message.error('Не вдалося завантажити список невідомих номерів');
+    } finally {
+      setUnknownLoading(false);
+    }
+  }, [unknownSearch]);
+
+  const handleAddUnknownToBase = (row) => {
+    navigate(`/trucks/new?license_plate=${encodeURIComponent(row.plate)}&unknown_plate_id=${row.id}`);
+  };
+
+  const handleDeleteUnknown = async (row) => {
+    try {
+      await botAPI.deleteUnknownPlate(row.id);
+      message.success('Видалено зі списку');
+      fetchUnknownPlates(unknownPage);
+    } catch {
+      message.error('Не вдалося видалити');
+    }
+  };
+
+  const handleSaveNotes = async (row) => {
+    try {
+      await botAPI.updateUnknownPlate(row.id, { notes: editNotesValue });
+      message.success('Нотатку збережено');
+      setEditNotesId(null);
+      fetchUnknownPlates(unknownPage);
+    } catch {
+      message.error('Не вдалося зберегти');
+    }
+  };
+
   useEffect(() => { fetchStats(); }, [fetchStats]);
 
   useEffect(() => {
     if (activeTab === 'users')    fetchUsers(1);
     if (activeTab === 'messages') fetchMessages(1);
+    if (activeTab === 'unknown')  fetchUnknownPlates(1);
   }, [activeTab, roleFilter, statusFilter, directionFilter]);
 
   // ── Клієнти для select власника ───────────────────────────────────────────
@@ -351,6 +406,96 @@ function BotPage() {
     },
   ];
 
+  // ── Колонки таблиці невідомих номерів ─────────────────────────────────────
+  const unknownColumns = [
+    {
+      title: 'Номер',
+      dataIndex: 'plate',
+      key: 'plate',
+      width: 140,
+      render: (v) => (
+        <code style={{ fontSize: 13, fontWeight: 600, background: '#fffbe6',
+                       padding: '2px 8px', borderRadius: 3, border: '1px solid #ffe58f' }}>
+          {v}
+        </code>
+      ),
+    },
+    {
+      title: 'К-ть пошуків',
+      dataIndex: 'search_count',
+      key: 'search_count',
+      width: 120,
+      render: (v) => <Tag color={v > 1 ? 'orange' : 'default'}>{v}</Tag>,
+    },
+    {
+      title: 'Останній пошук',
+      dataIndex: 'last_searched_at',
+      key: 'last_searched_at',
+      width: 150,
+      render: (v) => v ? formatDateTime(v) : '—',
+    },
+    {
+      title: 'Хто шукав',
+      dataIndex: 'last_searched_by_name',
+      key: 'last_searched_by_name',
+      width: 160,
+      render: (v) => v || <span style={{ color: '#ccc' }}>—</span>,
+    },
+    {
+      title: 'Нотатка',
+      dataIndex: 'notes',
+      key: 'notes',
+      render: (v, r) => editNotesId === r.id ? (
+        <Space.Compact style={{ width: '100%' }}>
+          <Input
+            size="small"
+            value={editNotesValue}
+            onChange={(e) => setEditNotesValue(e.target.value)}
+            onPressEnter={() => handleSaveNotes(r)}
+            autoFocus
+          />
+          <Button size="small" type="primary" onClick={() => handleSaveNotes(r)}>OK</Button>
+          <Button size="small" onClick={() => setEditNotesId(null)}>×</Button>
+        </Space.Compact>
+      ) : (
+        <span
+          style={{ cursor: 'pointer', color: v ? undefined : '#ccc' }}
+          onClick={() => { setEditNotesId(r.id); setEditNotesValue(v || ''); }}
+          title="Натисніть, щоб редагувати"
+        >
+          {v || '— додати нотатку —'}
+        </span>
+      ),
+    },
+    {
+      title: '',
+      key: 'actions',
+      width: 280,
+      render: (_, r) => (
+        <Space size={4}>
+          <Button
+            size="small"
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => handleAddUnknownToBase(r)}
+          >
+            Додати в базу
+          </Button>
+          <Popconfirm
+            title="Видалити номер зі списку?"
+            okText="Так"
+            cancelText="Ні"
+            onConfirm={() => handleDeleteUnknown(r)}
+          >
+            <Button size="small" danger icon={<DeleteOutlined />}>
+              Видалити
+            </Button>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
   // ── Колонки таблиці журналу ───────────────────────────────────────────────
   const messagesColumns = [
     {
@@ -528,6 +673,50 @@ function BotPage() {
                     pageSize: 20,
                     total: messagesTotal,
                     onChange: (page) => fetchMessages(page),
+                    showTotal: (total) => `Всього: ${total}`,
+                    showSizeChanger: false,
+                  }}
+                />
+              </>
+            ),
+          },
+
+          // ── Невідомі номери ──────────────────────────────────────────────
+          {
+            key: 'unknown',
+            label: <span><QuestionCircleOutlined /> Невідомі номери</span>,
+            children: (
+              <>
+                <div style={{ marginBottom: 12, color: '#888', fontSize: 13 }}>
+                  Сюди потрапляють номери, які адміністратор шукав через бот, але вони не знайдені в базі.
+                </div>
+                <Space wrap style={{ marginBottom: 16 }}>
+                  <Input.Search
+                    placeholder="Номер або нотатка..."
+                    style={{ width: 280 }}
+                    allowClear
+                    onSearch={(v) => { setUnknownSearch(v); fetchUnknownPlates(1, v); }}
+                    onChange={(e) => {
+                      if (!e.target.value) { setUnknownSearch(''); fetchUnknownPlates(1, ''); }
+                    }}
+                  />
+                  <Button icon={<ReloadOutlined />} onClick={() => fetchUnknownPlates(1)}>
+                    Оновити
+                  </Button>
+                </Space>
+
+                <Table
+                  dataSource={unknownList}
+                  columns={unknownColumns}
+                  rowKey="id"
+                  loading={unknownLoading}
+                  size="small"
+                  scroll={{ x: 'max-content' }}
+                  pagination={{
+                    current: unknownPage,
+                    pageSize: 20,
+                    total: unknownTotal,
+                    onChange: (page) => fetchUnknownPlates(page),
                     showTotal: (total) => `Всього: ${total}`,
                     showSizeChanger: false,
                   }}

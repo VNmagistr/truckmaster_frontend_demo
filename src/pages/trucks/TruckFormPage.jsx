@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Form, Input, Button, Card, message, Space, Select } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
-import { useNavigate, useParams } from 'react-router-dom';
-import { trucksAPI, clientsAPI, baseModelsAPI } from '../../api';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { trucksAPI, clientsAPI, baseModelsAPI, botAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import { EURO_STANDARDS, TRANSMISSION_TYPES } from '../../utils/constants';
 
@@ -19,7 +19,10 @@ function TruckFormPage() {
   
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isEdit = Boolean(id);
+  const prefillPlate = searchParams.get('license_plate') || '';
+  const unknownPlateId = searchParams.get('unknown_plate_id') || '';
 
   // Завантажуємо дані послідовно
   useEffect(() => {
@@ -28,10 +31,13 @@ function TruckFormPage() {
       try {
         // 1. Спочатку вантажимо довідники (клієнти, моделі)
         const loadedClients = await fetchDictionaries();
-        
+
         // 2. Якщо це редагування - вантажимо вантажівку
         if (isEdit) {
-          await fetchTruck(loadedClients); 
+          await fetchTruck(loadedClients);
+        } else if (prefillPlate) {
+          // Pre-fill номеру при додаванні з невідомих номерів бота
+          form.setFieldsValue({ license_plate: prefillPlate.toUpperCase() });
         }
       } catch (error) {
         message.error('Помилка ініціалізації');
@@ -131,8 +137,12 @@ function TruckFormPage() {
       } else {
         await trucksAPI.create(values);
         message.success('Вантажівку створено');
+        // Якщо створили з списку невідомих номерів — видаляємо запис
+        if (unknownPlateId) {
+          try { await botAPI.deleteUnknownPlate(unknownPlateId); } catch { /* ignore */ }
+        }
       }
-      navigate('/trucks');
+      navigate(unknownPlateId ? '/bot' : '/trucks');
     } catch (error) {
       if (error.response?.data) {
         const errors = error.response.data;
