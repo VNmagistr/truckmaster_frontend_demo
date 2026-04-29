@@ -10,7 +10,7 @@ import {
 import { maintenanceAPI, baseModelsAPI } from '../../api';
 import { PageHeader } from '../../components';
 import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
-import { EURO_STANDARDS, TRANSMISSION_TYPES } from '../../utils/constants';
+import useEnumsStore from '../../store/enumsStore';
 
 const INTERVAL_FIELDS = [
   { key: 'engine_oil_interval',          label: 'Олива двигуна' },
@@ -23,6 +23,11 @@ const INTERVAL_FIELDS = [
 ];
 
 function TemplatesPage() {
+  const euroStandards       = useEnumsStore((s) => s.euroStandards);
+  const euroByValue         = useEnumsStore((s) => s.euroByValue);
+  const transmissionTypes   = useEnumsStore((s) => s.transmissionTypes);
+  const transmissionByValue = useEnumsStore((s) => s.transmissionByValue);
+
   const [loading, setLoading]     = useState(false);
   const [templates, setTemplates] = useState([]);
   const [baseModels, setBaseModels] = useState([]);
@@ -137,14 +142,14 @@ function TemplatesPage() {
       dataIndex: 'euro_standard',
       key: 'euro_standard',
       width: 90,
-      render: (v) => v ? <Tag color="blue">{EURO_STANDARDS[v]?.label || v}</Tag> : <span style={{ color: '#ccc' }}>будь-який</span>,
+      render: (v) => v ? <Tag color="blue">{euroByValue[v]?.label || v}</Tag> : <span style={{ color: '#ccc' }}>будь-який</span>,
     },
     {
       title: 'КПП',
       dataIndex: 'transmission_type',
       key: 'transmission_type',
       width: 130,
-      render: (v) => v ? <Tag color="purple">{TRANSMISSION_TYPES[v]?.label || v}</Tag> : <span style={{ color: '#ccc' }}>будь-яка</span>,
+      render: (v) => v ? <Tag color="purple">{transmissionByValue[v]?.label || v}</Tag> : <span style={{ color: '#ccc' }}>будь-яка</span>,
     },
     {
       title: 'Режим',
@@ -242,14 +247,14 @@ function TemplatesPage() {
             <Col span={8}>
               <Form.Item name="euro_standard" label="Євростандарт">
                 <Select allowClear placeholder="будь-який"
-                  options={[{ value: '', label: 'будь-який' }, ...Object.values(EURO_STANDARDS)]}
+                  options={[{ value: '', label: 'будь-який' }, ...euroStandards]}
                 />
               </Form.Item>
             </Col>
             <Col span={8}>
               <Form.Item name="transmission_type" label="Тип КПП">
                 <Select allowClear placeholder="будь-яка"
-                  options={[{ value: '', label: 'будь-яка' }, ...Object.values(TRANSMISSION_TYPES)]}
+                  options={[{ value: '', label: 'будь-яка' }, ...transmissionTypes]}
                 />
               </Form.Item>
             </Col>

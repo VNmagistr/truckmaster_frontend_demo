@@ -12,6 +12,7 @@ import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 import useUIStore from '../store/uiStore';
 import useModulesStore from '../store/modulesStore';
+import useEnumsStore from '../store/enumsStore';
 import logoImg from '../assets/logo.jpg';
 
 const { Header, Sider, Content } = Layout;
@@ -26,6 +27,7 @@ function MainLayout() {
   const { logout, user } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
   const { fetchModules, isEnabled } = useModulesStore();
+  const fetchEnums = useEnumsStore((s) => s.fetchEnums);
   const screens = Grid.useBreakpoint();
   const isMobile = !screens.md;
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -56,7 +58,7 @@ function MainLayout() {
     }
   };
 
-  useEffect(() => { fetchModules(); }, []);
+  useEffect(() => { fetchModules(); fetchEnums(); }, []);
 
   const handleMenuClick = ({ key }) => {
     navigate(key);

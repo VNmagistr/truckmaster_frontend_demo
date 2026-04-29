@@ -4,12 +4,15 @@ import { SaveOutlined } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { trucksAPI, clientsAPI, baseModelsAPI, botAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
-import { EURO_STANDARDS, TRANSMISSION_TYPES } from '../../utils/constants';
+import useEnumsStore from '../../store/enumsStore';
 
 function TruckFormPage() {
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  const euroStandards     = useEnumsStore((s) => s.euroStandards);
+  const transmissionTypes = useEnumsStore((s) => s.transmissionTypes);
 
   // Списки для вибору
   const [clients, setClients] = useState([]);
@@ -218,7 +221,7 @@ function TruckFormPage() {
             label="Євростандарт"
           >
             <Select placeholder="Оберіть євростандарт" allowClear>
-              {Object.values(EURO_STANDARDS).map(euro => (
+              {euroStandards.map(euro => (
                 <Select.Option key={euro.value} value={euro.value}>
                   {euro.label}
                 </Select.Option>
@@ -231,7 +234,7 @@ function TruckFormPage() {
             label="Тип КПП"
           >
             <Select placeholder="Оберіть тип КПП" allowClear>
-              {Object.values(TRANSMISSION_TYPES).map(t => (
+              {transmissionTypes.map(t => (
                 <Select.Option key={t.value} value={t.value}>
                   {t.label}
                 </Select.Option>

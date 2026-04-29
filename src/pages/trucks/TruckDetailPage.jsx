@@ -36,11 +36,14 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { trucksAPI, ordersAPI, baseModelsAPI, clientsAPI, maintenanceAPI, inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatDate } from '../../utils/formatters';
-import { EURO_STANDARDS, TRANSMISSION_TYPES } from '../../utils/constants';
+import useEnumsStore from '../../store/enumsStore';
 
 const { Text } = Typography;
 
 function TruckDetailPage() {
+  const euroByValue         = useEnumsStore((s) => s.euroByValue);
+  const transmissionByValue = useEnumsStore((s) => s.transmissionByValue);
+
   const [truck, setTruck] = useState(null);
   const intervalTypes = useMemo(() => getIntervalTypes(truck?.transmission_type), [truck?.transmission_type]);
   const [orders, setOrders] = useState([]);
@@ -855,14 +858,14 @@ function TruckDetailPage() {
           <Descriptions.Item label="Євростандарт">
             {truck.euro_standard ? (
               <Tag color="blue">
-                {EURO_STANDARDS[truck.euro_standard]?.label || truck.euro_standard}
+                {euroByValue[truck.euro_standard]?.label || truck.euro_standard}
               </Tag>
             ) : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Тип КПП">
             {truck.transmission_type ? (
               <Tag color="purple">
-                {TRANSMISSION_TYPES[truck.transmission_type]?.label || truck.transmission_type}
+                {transmissionByValue[truck.transmission_type]?.label || truck.transmission_type}
               </Tag>
             ) : '-'}
           </Descriptions.Item>

@@ -7,20 +7,8 @@ export const ORDER_STATUSES = {
   CANCELED: { value: 'CANCELED', label: 'Скасовано', color: 'red' },
 };
 
-// Типи КПП
-export const TRANSMISSION_TYPES = {
-  manual:    { value: 'manual',    label: 'Механічна' },
-  automatic: { value: 'automatic', label: 'Автоматична' },
-  robotic:   { value: 'robotic',   label: 'Роботизована' },
-};
-
-// Євростандарти
-export const EURO_STANDARDS = {
-  EURO3: { value: 'EURO3', label: 'Євро-3' },
-  EURO4: { value: 'EURO4', label: 'Євро-4' },
-  EURO5: { value: 'EURO5', label: 'Євро-5' },
-  EURO6: { value: 'EURO6', label: 'Євро-6' },
-};
+// Типи КПП та Євростандарти переїхали в `useEnumsStore` (джерело — GET /api/enums/).
+// Імпортуй з `src/store/enumsStore.js` через хук, не дублюй тут.
 
 // Одиниці виміру
 export const UNITS = {
