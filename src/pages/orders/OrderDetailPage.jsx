@@ -1036,6 +1036,13 @@ function OrderDetailPage() {
               <Descriptions.Item label="Пробіг">
                 <span style={{ color: '#1890ff' }}>{formatMileage(order.current_mileage)}</span>
               </Descriptions.Item>
+              {(order.engine_hours != null || /trakker/i.test(order.truck?.base_model_name || '')) && (
+                <Descriptions.Item label="Мотогодини">
+                  <span style={{ color: '#1890ff' }}>
+                    {order.engine_hours != null ? `${Number(order.engine_hours).toLocaleString('uk').replace(/,/g, ' ')} мг` : '—'}
+                  </span>
+                </Descriptions.Item>
+              )}
               {order.closed_at && (
                 <Descriptions.Item label="Дата закриття">
                   {formatDateTime(order.closed_at)}

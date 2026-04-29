@@ -39,6 +39,13 @@ function OrderFormPage() {
   const navigate = useNavigate();
   const isEdit = Boolean(id);
 
+  // Trakker — спецтехніка з лічильником мотогодин (показуємо додаткове поле)
+  const isTrakker = useMemo(() => {
+    const base = selectedTruck?.base_model_name || '';
+    const specific = selectedTruck?.specific_model_name || selectedTruck?.model || '';
+    return /trakker/i.test(base) || /trakker/i.test(specific);
+  }, [selectedTruck]);
+
   // Статуси замовлення
   const statusOptions = [
     { value: 'OPEN', label: 'Відкрито' },
@@ -67,6 +74,7 @@ function OrderFormPage() {
                 id: orderData.truck.id,
                 license_plate: orderData.truck.license_plate,
                 specific_model_name: orderData.truck.specific_model_name || orderData.truck.model,
+                base_model_name: orderData.truck.base_model_name || null,
                 vin: orderData.truck.last_seven_vin,
                 client_id: orderData.client?.id,
                 client_name: orderData.client?.name
@@ -83,6 +91,7 @@ function OrderFormPage() {
               truck: orderData.truck?.id || orderData.truck,
               client: orderData.client?.id || orderData.client,
               current_mileage: orderData.current_mileage,
+              engine_hours: orderData.engine_hours,
               problem_description: orderData.problem_description,
               recommendations: orderData.recommendations,
               status: orderData.status,
@@ -368,6 +377,11 @@ function OrderFormPage() {
         values.closed_at = '';
       }
 
+      // Опціональне ціле — порожній рядок DRF не сприймає, нехай поле просто не йде
+      if (values.engine_hours === '' || values.engine_hours === undefined) {
+        delete values.engine_hours;
+      }
+
       Object.keys(values).forEach(key => {
         if (values[key] !== undefined && values[key] !== null) {
           formData.append(key, values[key]);
@@ -642,21 +656,42 @@ function OrderFormPage() {
 
               <Divider />
 
-              {/* Пробіг */}
-              <Form.Item 
-                name="current_mileage" 
-                label="Поточний пробіг" 
-                rules={[{ required: true, message: 'Вкажіть пробіг' }]}
-              >
-                <Input 
-                  type="number" 
-                  onBlur={handleMileageBlur} 
-                  suffix="км" 
-                  size="large"
-                  placeholder="Наприклад: 450000"
-                  min={0}
-                />
-              </Form.Item>
+              {/* Пробіг + Мотогодини (Мотогодини — лише для Trakker) */}
+              <Row gutter={16}>
+                <Col xs={24} sm={isTrakker ? 12 : 24}>
+                  <Form.Item
+                    name="current_mileage"
+                    label="Поточний пробіг"
+                    rules={[{ required: true, message: 'Вкажіть пробіг' }]}
+                  >
+                    <Input
+                      type="number"
+                      onBlur={handleMileageBlur}
+                      suffix="км"
+                      size="large"
+                      placeholder="Наприклад: 450000"
+                      min={0}
+                    />
+                  </Form.Item>
+                </Col>
+                {isTrakker && (
+                  <Col xs={24} sm={12}>
+                    <Form.Item
+                      name="engine_hours"
+                      label="Мотогодини"
+                      tooltip="Лічильник мотогодин для спецтехніки Trakker"
+                    >
+                      <Input
+                        type="number"
+                        suffix="мг"
+                        size="large"
+                        placeholder="Наприклад: 12500"
+                        min={0}
+                      />
+                    </Form.Item>
+                  </Col>
+                )}
+              </Row>
 
               {/* Алерти про регламенти */}
               {alerts.length > 0 && (
