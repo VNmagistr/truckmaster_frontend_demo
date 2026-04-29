@@ -92,6 +92,15 @@ function TruckDetailPage() {
   const [intervalsLoading, setIntervalsLoading] = useState(false);
   const [intervalsLoaded, setIntervalsLoaded] = useState(false);
   const [intervalsSaving, setIntervalsSaving] = useState(false);
+  const [trackingMode, setTrackingMode] = useState('mileage');
+
+  const isTrakker = useMemo(() => {
+    const base = baseModelName || '';
+    const specific = truck?.specific_model_name || '';
+    return /trakker/i.test(base) || /trakker/i.test(specific);
+  }, [baseModelName, truck?.specific_model_name]);
+
+  const unitLabel = trackingMode === 'engine_hours' ? 'мг' : 'км';
 
   const { id } = useParams();
   const navigate = useNavigate();
@@ -189,13 +198,17 @@ function TruckDetailPage() {
       const list = Array.isArray(data) ? data : (data.results || []);
       const rec = list.length > 0 ? list[0] : null;
       setIntervals(rec);
+      const mode = rec?.tracking_mode || 'mileage';
+      setTrackingMode(mode);
       if (rec) {
-        const values = {};
+        const values = { tracking_mode: mode };
         intervalTypes.forEach(({ key }) => {
           values[`${key}_interval`] = rec[`${key}_interval`] ?? null;
           values[`${key}_last_km`]  = rec[`${key}_last_km`]  ?? null;
         });
         formIntervals.setFieldsValue(values);
+      } else {
+        formIntervals.setFieldsValue({ tracking_mode: mode });
       }
       setIntervalsLoaded(true);
     } catch {
@@ -208,7 +221,9 @@ function TruckDetailPage() {
   const handleSaveIntervals = async (values) => {
     setIntervalsSaving(true);
     try {
-      await maintenanceAPI.saveIntervals(id, values);
+      // Для не-Trakker примусово ставимо mileage (поле в формі може бути не показане)
+      const payload = { ...values, tracking_mode: isTrakker ? (values.tracking_mode || trackingMode) : 'mileage' };
+      await maintenanceAPI.saveIntervals(id, payload);
       message.success('Інтервали збережено');
       setIntervalsLoaded(false); // скинути кеш щоб наступне відкриття перезавантажило
     } catch {
@@ -718,6 +733,22 @@ function TruckDetailPage() {
       children: (
         <Spin spinning={intervalsLoading}>
           <Form form={formIntervals} layout="vertical" onFinish={handleSaveIntervals}>
+            {isTrakker && (
+              <Form.Item
+                name="tracking_mode"
+                label="Режим обліку"
+                tooltip="Для спецтехніки Trakker регламент може вестись по пробігу або по мотогодинах"
+                style={{ maxWidth: 360 }}
+              >
+                <Select
+                  onChange={(v) => setTrackingMode(v)}
+                  options={[
+                    { value: 'mileage',      label: 'По кілометражу (км)' },
+                    { value: 'engine_hours', label: 'По мотогодинах (мг)' },
+                  ]}
+                />
+              </Form.Item>
+            )}
             <Table
               dataSource={intervalTypes}
               rowKey="key"
@@ -731,23 +762,25 @@ function TruckDetailPage() {
                   key: 'label',
                 },
                 {
-                  title: 'Інтервал (км)',
+                  title: `Інтервал (${unitLabel})`,
                   key: 'interval',
                   width: 180,
                   render: (_, record) => (
                     <Form.Item name={`${record.key}_interval`} noStyle>
                       <InputNumber
                         min={0}
-                        step={1000}
+                        step={trackingMode === 'engine_hours' ? 100 : 1000}
                         style={{ width: '100%' }}
-                        addonAfter="км"
-                        placeholder="напр. 15000"
+                        addonAfter={unitLabel}
+                        placeholder={trackingMode === 'engine_hours' ? 'напр. 500' : 'напр. 15000'}
                       />
                     </Form.Item>
                   ),
                 },
                 {
-                  title: 'Пробіг останньої заміни (км)',
+                  title: trackingMode === 'engine_hours'
+                    ? 'Мотогодини останньої заміни (мг)'
+                    : 'Пробіг останньої заміни (км)',
                   key: 'last_km',
                   width: 220,
                   render: (_, record) => (
@@ -755,8 +788,8 @@ function TruckDetailPage() {
                       <InputNumber
                         min={0}
                         style={{ width: '100%' }}
-                        addonAfter="км"
-                        placeholder="напр. 450000"
+                        addonAfter={unitLabel}
+                        placeholder={trackingMode === 'engine_hours' ? 'напр. 12500' : 'напр. 450000'}
                       />
                     </Form.Item>
                   ),
