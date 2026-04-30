@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Descriptions, Button, Table, Tag, message, Tabs, Modal, Form, Select, Input, InputNumber, Space, Typography, Spin, Empty, Popconfirm, DatePicker, Row, Col } from 'antd';
-import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, DeleteOutlined, ExclamationCircleOutlined, HistoryOutlined, DashboardOutlined, BellOutlined, CheckOutlined, StopOutlined, QrcodeOutlined, DownloadOutlined } from '@ant-design/icons';
+import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, HistoryOutlined, DashboardOutlined, BellOutlined, CheckOutlined, StopOutlined, QrcodeOutlined, DownloadOutlined } from '@ant-design/icons';
 import { QRCodeCanvas } from 'qrcode.react';
 import dayjs from 'dayjs';
 
@@ -33,7 +33,7 @@ function getIntervalTypes(transmissionType) {
   ];
 }
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { trucksAPI, ordersAPI, baseModelsAPI, clientsAPI, maintenanceAPI, inventoryAPI } from '../../api';
+import { trucksAPI, ordersAPI, baseModelsAPI, clientsAPI, maintenanceAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatDate } from '../../utils/formatters';
 import useEnumsStore from '../../store/enumsStore';
@@ -54,9 +54,10 @@ function TruckDetailPage() {
 
   const [kit, setKit] = useState(null);
   const [kitLoading, setKitLoading] = useState(false);
-  const [oilProducts, setOilProducts] = useState([]);
-  const [filterProducts, setFilterProducts] = useState([]);
-  const [productsLoading, setProductsLoading] = useState(false);
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState(null);
+  const [templateApplying, setTemplateApplying] = useState(false);
 
   const [isQrModalOpen, setIsQrModalOpen] = useState(false);
 
@@ -70,17 +71,11 @@ function TruckDetailPage() {
     a.click();
   };
 
-  const [isOilModalOpen, setIsOilModalOpen] = useState(false);
-  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [oilSaving, setOilSaving] = useState(false);
-  const [filterSaving, setFilterSaving] = useState(false);
 
   const [logs, setLogs] = useState([]);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsLoaded, setLogsLoaded] = useState(false);
 
-  const [formOil] = Form.useForm();
-  const [formFilter] = Form.useForm();
   const [formIntervals] = Form.useForm();
 
   const [reminders, setReminders] = useState([]);
@@ -316,119 +311,40 @@ function TruckDetailPage() {
   };
 
   const handleTabChange = (key) => {
+    if (key === 'maintenance') loadTemplates();
     if (key === 'history') loadLogs();
     if (key === 'intervals') loadIntervals();
     if (key === 'reminders') loadReminders();
   };
 
-  const loadOilProducts = async () => {
-    if (oilProducts.length > 0) return;
-    setProductsLoading(true);
+  const loadTemplates = async () => {
+    if (templates.length > 0) return;
+    setTemplatesLoading(true);
     try {
-      const res = await inventoryAPI.getAll({ page_size: 500, oil_only: 'true' });
+      const res = await maintenanceAPI.getTemplates({ page_size: 200 });
       const data = res.data || res;
-      setOilProducts(data.results || data || []);
+      setTemplates(data.results || data || []);
     } catch {
-      message.error('Не вдалося завантажити оливи');
+      message.error('Не вдалося завантажити еталони ТО');
     } finally {
-      setProductsLoading(false);
+      setTemplatesLoading(false);
     }
   };
 
-  const loadFilterProducts = async () => {
-    if (filterProducts.length > 0) return;
-    setProductsLoading(true);
+  const handleApplyTemplate = async () => {
+    if (!selectedTemplateId) return;
+    setTemplateApplying(true);
     try {
-      const res = await inventoryAPI.getAll({ page_size: 500, filter_only: 'true' });
-      const data = res.data || res;
-      setFilterProducts(data.results || data || []);
-    } catch {
-      message.error('Не вдалося завантажити фільтри');
-    } finally {
-      setProductsLoading(false);
-    }
-  };
-
-  const handleOpenOilModal = async () => {
-    await loadOilProducts();
-    if (kit) {
-      formOil.setFieldsValue({
-        oil: kit.oil?.id || kit.oil,
-        oil_quantity: parseFloat(kit.oil_quantity) || 1,
-        oil_change_interval_km: kit.oil_change_interval_km || null,
-      });
-    }
-    setIsOilModalOpen(true);
-  };
-
-  const handleSaveOil = async (values) => {
-    setOilSaving(true);
-    try {
-      const payload = {
-        oil: values.oil,
-        oil_quantity: values.oil_quantity,
-        oil_change_interval_km: values.oil_change_interval_km || null,
-      };
-      if (kit) {
-        await maintenanceAPI.updateKit(kit.id, payload);
-        message.success('Оливу оновлено');
-      } else {
-        await maintenanceAPI.createKit({ truck: id, ...payload });
-        message.success('Комплект ТО створено');
-      }
-      setIsOilModalOpen(false);
-      formOil.resetFields();
+      await maintenanceAPI.applyTemplateToTruck(selectedTemplateId, id);
+      message.success('Еталон застосовано');
+      setSelectedTemplateId(null);
       loadKit();
     } catch (error) {
-      const detail = error.response?.data?.detail || error.response?.data?.oil?.[0] || 'Помилка збереження';
+      const detail = error.response?.data?.detail || 'Помилка застосування еталону';
       message.error(detail);
     } finally {
-      setOilSaving(false);
+      setTemplateApplying(false);
     }
-  };
-
-  const handleOpenFilterModal = async () => {
-    await loadFilterProducts();
-    setIsFilterModalOpen(true);
-  };
-
-  const handleAddFilter = async (values) => {
-    setFilterSaving(true);
-    try {
-      await maintenanceAPI.addKitFilter(kit.id, {
-        part: values.part,
-        quantity: values.quantity,
-        change_interval_km: values.change_interval_km || null,
-      });
-      message.success('Фільтр додано');
-      setIsFilterModalOpen(false);
-      formFilter.resetFields();
-      loadKit();
-    } catch (error) {
-      const detail = error.response?.data?.detail || 'Помилка додавання фільтра';
-      message.error(detail);
-    } finally {
-      setFilterSaving(false);
-    }
-  };
-
-  const handleDeleteFilter = (filterId) => {
-    Modal.confirm({
-      title: 'Видалити фільтр?',
-      icon: <ExclamationCircleOutlined />,
-      okText: 'Видалити',
-      okType: 'danger',
-      cancelText: 'Скасувати',
-      onOk: async () => {
-        try {
-          await maintenanceAPI.removeKitFilter(kit.id, filterId);
-          message.success('Фільтр видалено');
-          loadKit();
-        } catch {
-          message.error('Помилка видалення фільтра');
-        }
-      },
-    });
   };
 
   const ordersColumns = [
@@ -536,43 +452,72 @@ function TruckDetailPage() {
       ),
       children: (
         <Spin spinning={kitLoading}>
+          <Card size="small" title="Застосувати еталон ТО" style={{ marginBottom: 16 }}>
+            <Space.Compact style={{ width: '100%' }}>
+              <Select
+                showSearch
+                allowClear
+                placeholder="Оберіть еталон регламенту ТО"
+                loading={templatesLoading}
+                optionFilterProp="label"
+                value={selectedTemplateId}
+                onChange={setSelectedTemplateId}
+                onFocus={loadTemplates}
+                style={{ flex: 1 }}
+                options={templates.map(t => {
+                  const euro = euroByValue?.[t.euro_standard] || t.euro_standard || 'Будь-який євро';
+                  const trans = transmissionByValue?.[t.transmission_type] || t.transmission_type || 'Будь-яка КПП';
+                  return {
+                    value: t.id,
+                    label: `${t.base_model_name} / ${euro} / ${trans}`,
+                  };
+                })}
+              />
+              <Button
+                type="primary"
+                loading={templateApplying}
+                disabled={!selectedTemplateId}
+                onClick={handleApplyTemplate}
+              >
+                Застосувати
+              </Button>
+            </Space.Compact>
+          </Card>
+
           {kit ? (
             <div>
-              {/* Олива */}
-              <Card
-                size="small"
-                title="Олива"
-                extra={
-                  <Button size="small" icon={<EditOutlined />} onClick={handleOpenOilModal}>
-                    Змінити
-                  </Button>
-                }
-                style={{ marginBottom: 16 }}
-              >
-                <Space>
-                  <Text strong>{kit.oil_name ? `[${kit.oil_sku}] ${kit.oil_name}` : '-'}</Text>
-                  <Text type="secondary">—</Text>
-                  <Text>{kit.oil_quantity} л</Text>
-                  {kit.oil_change_interval_km && (
-                    <>
-                      <Text type="secondary">—</Text>
-                      <Text type="secondary">кожні {kit.oil_change_interval_km.toLocaleString()} км</Text>
-                    </>
+              <Card size="small" title="Мастила" style={{ marginBottom: 16 }}>
+                <Descriptions size="small" column={1} bordered>
+                  {kit.oil_name && (
+                    <Descriptions.Item label="Олива двигуна">
+                      [{kit.oil_sku}] {kit.oil_name} — {kit.oil_quantity} л
+                    </Descriptions.Item>
                   )}
-                </Space>
+                  {kit.rear_axle_oil_name && (
+                    <Descriptions.Item label="Олива заднього моста">
+                      [{kit.rear_axle_oil_sku}] {kit.rear_axle_oil_name} — {kit.rear_axle_oil_quantity} л
+                    </Descriptions.Item>
+                  )}
+                  {kit.gearbox_oil_name && (
+                    <Descriptions.Item label="Олива КПП">
+                      [{kit.gearbox_oil_sku}] {kit.gearbox_oil_name} — {kit.gearbox_oil_quantity} л
+                    </Descriptions.Item>
+                  )}
+                  {kit.auto_gearbox_oil_name && (
+                    <Descriptions.Item label="Олива АКПП">
+                      [{kit.auto_gearbox_oil_sku}] {kit.auto_gearbox_oil_name} — {kit.auto_gearbox_oil_quantity} л
+                    </Descriptions.Item>
+                  )}
+                  {kit.auto_gearbox_filter_name && (
+                    <Descriptions.Item label="Фільтр АКПП">
+                      [{kit.auto_gearbox_filter_sku}] {kit.auto_gearbox_filter_name} — {kit.auto_gearbox_filter_quantity} шт
+                    </Descriptions.Item>
+                  )}
+                </Descriptions>
               </Card>
 
-              {/* Фільтри */}
-              <Card
-                size="small"
-                title="Фільтри"
-                extra={
-                  <Button size="small" icon={<PlusOutlined />} onClick={handleOpenFilterModal}>
-                    Додати фільтр
-                  </Button>
-                }
-              >
-                {kit.filters && kit.filters.length > 0 ? (
+              {kit.filters && kit.filters.length > 0 && (
+                <Card size="small" title="Фільтри">
                   <Table
                     dataSource={kit.filters}
                     rowKey="id"
@@ -598,36 +543,16 @@ function TruckDetailPage() {
                         width: 120,
                         render: (val) => val ? `${val.toLocaleString()} км` : '—',
                       },
-                      {
-                        title: '',
-                        key: 'actions',
-                        width: 48,
-                        render: (_, record) => (
-                          <Button
-                            type="link"
-                            size="small"
-                            danger
-                            icon={<DeleteOutlined />}
-                            onClick={() => handleDeleteFilter(record.id)}
-                          />
-                        ),
-                      },
                     ]}
                   />
-                ) : (
-                  <Empty description="Фільтри не додано" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-                )}
-              </Card>
+                </Card>
+              )}
             </div>
           ) : (
             <Empty
-              description="Комплект ТО не налаштовано"
+              description="Комплект ТО не налаштовано — оберіть еталон вище"
               image={Empty.PRESENTED_IMAGE_SIMPLE}
-            >
-              <Button type="primary" icon={<PlusOutlined />} onClick={handleOpenOilModal}>
-                Налаштувати комплект ТО
-              </Button>
-            </Empty>
+            />
           )}
         </Spin>
       ),
@@ -886,48 +811,6 @@ function TruckDetailPage() {
         <Tabs items={tabItems} onChange={handleTabChange} />
       </Card>
 
-      {/* Модалка оливи */}
-      <Modal
-        title={kit ? 'Змінити оливу' : 'Налаштувати комплект ТО'}
-        open={isOilModalOpen}
-        onCancel={() => { setIsOilModalOpen(false); formOil.resetFields(); }}
-        footer={null}
-        destroyOnClose
-      >
-        <Form form={formOil} layout="vertical" onFinish={handleSaveOil}>
-          <Form.Item
-            label="Олива"
-            name="oil"
-            rules={[{ required: true, message: 'Оберіть оливу' }]}
-          >
-            <Select
-              showSearch
-              placeholder="Оберіть оливу зі складу"
-              loading={productsLoading}
-              optionFilterProp="label"
-              options={oilProducts.map(p => ({ value: p.id, label: `${p.name}${p.viscosity ? ' ' + p.viscosity : ''}` }))}
-            />
-          </Form.Item>
-          <Form.Item
-            label="Кількість (л)"
-            name="oil_quantity"
-            initialValue={10}
-            rules={[{ required: true, message: 'Вкажіть кількість' }]}
-          >
-            <InputNumber min={0.1} step={0.5} style={{ width: '100%' }} addonAfter="л" />
-          </Form.Item>
-          <Form.Item
-            label="Інтервал заміни оливи"
-            name="oil_change_interval_km"
-          >
-            <InputNumber min={1000} step={1000} style={{ width: '100%' }} addonAfter="км" placeholder="20000" />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" loading={oilSaving} block>
-            {kit ? 'Зберегти' : 'Створити комплект'}
-          </Button>
-        </Form>
-      </Modal>
-
       {/* Модалка нагадування */}
       <Modal
         title={editingReminder ? 'Редагувати нагадування' : 'Нове нагадування'}
@@ -996,47 +879,6 @@ function TruckDetailPage() {
         </Form>
       </Modal>
 
-      {/* Модалка фільтра */}
-      <Modal
-        title="Додати фільтр"
-        open={isFilterModalOpen}
-        onCancel={() => { setIsFilterModalOpen(false); formFilter.resetFields(); }}
-        footer={null}
-        destroyOnClose
-      >
-        <Form form={formFilter} layout="vertical" onFinish={handleAddFilter}>
-          <Form.Item
-            label="Запчастина"
-            name="part"
-            rules={[{ required: true, message: 'Оберіть запчастину' }]}
-          >
-            <Select
-              showSearch
-              placeholder="Оберіть фільтр зі складу"
-              loading={productsLoading}
-              optionFilterProp="label"
-              options={filterProducts.map(p => ({ value: p.id, label: `${p.sku_code ? p.sku_code + ' — ' : ''}${p.name}` }))}
-            />
-          </Form.Item>
-          <Form.Item
-            label="Кількість"
-            name="quantity"
-            initialValue={1}
-            rules={[{ required: true, message: 'Вкажіть кількість' }]}
-          >
-            <InputNumber min={1} style={{ width: '100%' }} />
-          </Form.Item>
-          <Form.Item
-            label="Інтервал заміни фільтра"
-            name="change_interval_km"
-          >
-            <InputNumber min={1000} step={1000} style={{ width: '100%' }} addonAfter="км" placeholder="20000" />
-          </Form.Item>
-          <Button type="primary" htmlType="submit" loading={filterSaving} block>
-            Додати
-          </Button>
-        </Form>
-      </Modal>
 
       {/* QR Code Modal */}
       <Modal
