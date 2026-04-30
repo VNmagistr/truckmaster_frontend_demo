@@ -465,8 +465,8 @@ function TruckDetailPage() {
                 onFocus={loadTemplates}
                 style={{ flex: 1 }}
                 options={templates.map(t => {
-                  const euro = euroByValue?.[t.euro_standard] || t.euro_standard || 'Будь-який євро';
-                  const trans = transmissionByValue?.[t.transmission_type] || t.transmission_type || 'Будь-яка КПП';
+                  const euro = euroByValue?.[t.euro_standard]?.label || t.euro_standard || 'Будь-який євро';
+                  const trans = transmissionByValue?.[t.transmission_type]?.label || t.transmission_type || 'Будь-яка КПП';
                   return {
                     value: t.id,
                     label: `${t.base_model_name} / ${euro} / ${trans}`,
