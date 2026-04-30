@@ -1209,6 +1209,7 @@ function OrderDetailPage() {
           pagination={false}
           size="small"
           scroll={{ x: 600 }}
+          style={{ maxWidth: 800 }}
           columns={[
             {
               title: 'Вид роботи',
