@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Card, Descriptions, Button, Table, Tag, message, Tabs } from 'antd';
 import { EditOutlined, CarOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { clientsAPI, trucksAPI, ordersAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatPhone, formatDate, formatMoney } from '../../utils/formatters';
 
 function ClientDetailPage() {
+  const { t } = useTranslation();
   const [client, setClient] = useState(null);
   const [trucks, setTrucks] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -51,7 +53,7 @@ function ClientDetailPage() {
       setOrdersTotal(ordersData.count || (ordersData.results ? ordersData.results.length : ordersData.length) || 0);
 
     } catch (error) {
-      message.error('Не вдалося завантажити дані клієнта');
+      message.error(t('clients.loadDetailError'));
       navigate('/clients');
     } finally {
       setLoading(false);
@@ -60,7 +62,7 @@ function ClientDetailPage() {
 
   const trucksColumns = [
     {
-      title: 'Номерний знак',
+      title: t('trucks.licensePlate'),
       dataIndex: 'license_plate',
       key: 'license_plate',
       render: (text, record) => (
@@ -68,18 +70,18 @@ function ClientDetailPage() {
       ),
     },
     {
-      title: 'Модель',
+      title: t('trucks.model'),
       dataIndex: 'specific_model_name',
       key: 'model',
     },
     {
-      title: 'VIN',
+      title: t('trucks.vin'),
       dataIndex: 'last_seven_vin',
       key: 'vin',
       render: (vin) => vin ? `...${vin}` : '-',
     },
     {
-      title: 'Євростандарт',
+      title: t('trucks.euroStandard'),
       dataIndex: 'euro_standard',
       key: 'euro',
       render: (euro) => euro ? <Tag>{euro}</Tag> : '-',
@@ -88,7 +90,7 @@ function ClientDetailPage() {
 
   const ordersColumns = [
     {
-      title: '№ Замовлення',
+      title: t('orders.orderNumber'),
       dataIndex: 'order_number',
       key: 'order_number',
       render: (text, record) => (
@@ -96,25 +98,25 @@ function ClientDetailPage() {
       ),
     },
     {
-      title: 'Вантажівка',
+      title: t('common.truck'),
       dataIndex: 'truck',
       key: 'truck',
       render: (truck) => truck?.license_plate || '-',
     },
     {
-      title: 'Статус',
+      title: t('common.status'),
       dataIndex: 'status',
       key: 'status',
       render: (status) => <StatusTag status={status} type="order" />,
     },
-    { 
-      title: 'Сума', 
-      dataIndex: 'total_amount', 
+    {
+      title: t('common.amount'),
+      dataIndex: 'total_amount',
       key: 'total_amount',
       render: (amount) => formatMoney(amount)
     },
     {
-      title: 'Дата',
+      title: t('common.date'),
       dataIndex: 'created_at',
       key: 'date',
       render: (date) => formatDate(date),
@@ -130,7 +132,7 @@ function ClientDetailPage() {
       label: (
         <span>
           <CarOutlined />
-          Вантажівки ({trucks.length})
+          {t('clients.trucksCount', { count: trucks.length })}
         </span>
       ),
       children: (
@@ -140,7 +142,7 @@ function ClientDetailPage() {
           rowKey="id"
           pagination={false}
           scroll={{ x: 'max-content' }}
-          locale={{ emptyText: 'Немає вантажівок' }}
+          locale={{ emptyText: t('clients.noTrucks') }}
         />
       ),
     },
@@ -150,7 +152,7 @@ function ClientDetailPage() {
         <span>
           <FileTextOutlined />
           {/* Використовуємо загальну кількість, а не довжину масиву */}
-          Замовлення ({ordersTotal})
+          {t('clients.ordersCount', { count: ordersTotal })}
         </span>
       ),
       children: (
@@ -160,9 +162,9 @@ function ClientDetailPage() {
           rowKey="id"
           scroll={{ x: 'max-content' }}
           // Показуємо, що це не всі дані (можна додати повноцінну пагінацію пізніше)
-          footer={() => ordersTotal > 20 ? <div style={{textAlign: 'center', color: '#999'}}>Показано останні 20 замовлень</div> : null}
+          footer={() => ordersTotal > 20 ? <div style={{textAlign: 'center', color: '#999'}}>{t('clients.last20')}</div> : null}
           pagination={false}
-          locale={{ emptyText: 'Немає замовлень' }}
+          locale={{ emptyText: t('clients.noOrders') }}
         />
       ),
     },
@@ -179,27 +181,27 @@ function ClientDetailPage() {
             icon={<EditOutlined />}
             onClick={() => navigate(`/clients/${id}/edit`)}
           >
-            Редагувати
+            {t('common.edit')}
           </Button>
         }
       />
 
       <Card style={{ marginBottom: 16 }}>
         <Descriptions column={{ xs: 1, sm: 2, md: 3 }}>
-          <Descriptions.Item label="Телефон">
+          <Descriptions.Item label={t('common.phone')}>
             {formatPhone(client.phone)}
           </Descriptions.Item>
-          <Descriptions.Item label="Email">
+          <Descriptions.Item label={t('common.email')}>
             {client.email || '-'}
           </Descriptions.Item>
-          <Descriptions.Item label="Telegram">
+          <Descriptions.Item label={t('clients.telegram')}>
             {client.telegram_chat_id ? (
-              <Tag color="blue">Підключено</Tag>
+              <Tag color="blue">{t('clients.connected')}</Tag>
             ) : (
-              <Tag>Не підключено</Tag>
+              <Tag>{t('clients.notConnected')}</Tag>
             )}
           </Descriptions.Item>
-          <Descriptions.Item label="Адреса" span={3}>
+          <Descriptions.Item label={t('common.address')} span={3}>
             {client.address || '-'}
           </Descriptions.Item>
         </Descriptions>

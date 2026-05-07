@@ -1,16 +1,9 @@
 import axios from 'axios';
 import { notification } from 'antd';
 import useAuthStore from '../store/authStore';
+import i18n from '../i18n';
 
-const MODULE_LABELS = {
-  inventory:    'Склад',
-  bot:          'Telegram бот',
-  analytics:    'Аналітика',
-  appointments: 'Записи',
-  invoices:     'Рахунки',
-  alpr:         'Журнал авто',
-  maintenance:  'Нагадування ТО',
-};
+const getModuleLabel = (name) => i18n.t(`modules.${name}`, { defaultValue: name });
 
 const baseURL = import.meta.env.VITE_API_URL;
 
@@ -54,7 +47,7 @@ instance.interceptors.response.use(
 
     // Network error (server unavailable)
     if (!error.response) {
-      return Promise.reject(new Error('Сервер недоступний. Перевірте підключення до мережі.'));
+      return Promise.reject(new Error(i18n.t('errors.serverUnavailable')));
     }
 
     // Skip token refresh for auth endpoints
@@ -115,16 +108,16 @@ instance.interceptors.response.use(
     if (error.response?.status === 503) {
       const data = error.response.data || {};
       const moduleName = data.module_name || data.module || null;
-      const label = moduleName ? (MODULE_LABELS[moduleName] || moduleName) : 'Цей модуль';
+      const label = moduleName ? getModuleLabel(moduleName) : moduleName;
 
       notification.warning({
-        message: 'Модуль недоступний',
-        description: `«${label}» наразі недоступний у вашому пакеті. Зверніться до адміністратора для підключення.`,
+        message: i18n.t('errors.moduleUnavailable'),
+        description: i18n.t('errors.moduleUnavailableDesc', { label: label || i18n.t('errors.moduleUnavailable') }),
         placement: 'topRight',
         duration: 8,
       });
 
-      const moduleError = new Error(`Модуль недоступний: ${label}`);
+      const moduleError = new Error(`${i18n.t('errors.moduleUnavailable')}: ${label}`);
       moduleError.isModuleUnavailable = true;
       moduleError.moduleName = moduleName;
       moduleError.moduleLabel = label;
@@ -173,6 +166,7 @@ export const ordersAPI = {
   markForDeletion: (id, reason) => instance.post(`/orders/${id}/mark_for_deletion/`, { reason }),
   unmarkForDeletion: (id) => instance.post(`/orders/${id}/unmark_for_deletion/`),
   getDashboardStats: () => instance.get('/orders/dashboard_stats/'),
+  getStaleInProgress: () => instance.get('/orders/stale_in_progress/'),
   exportPdf: (id) => instance.get(`/orders/${id}/pdf/`, { responseType: 'blob' }),
   getStats: () => instance.get('/orders/stats/'),
   getWeekDetail: () => instance.get('/orders/week_detail/'),

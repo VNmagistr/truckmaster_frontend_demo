@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message, Space } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { clientsAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 
 function ClientFormPage() {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -27,7 +29,7 @@ function ClientFormPage() {
       const data = response.data || response;
       form.setFieldsValue(data);
     } catch (error) {
-      message.error('Не вдалося завантажити дані клієнта');
+      message.error(t('clients.loadDetailError'));
       navigate('/clients');
     } finally {
       setLoading(false);
@@ -39,10 +41,10 @@ function ClientFormPage() {
     try {
       if (isEdit) {
         await clientsAPI.update(id, values);
-        message.success('Клієнта оновлено');
+        message.success(t('clients.updateSuccess'));
       } else {
         await clientsAPI.create(values);
-        message.success('Клієнта створено');
+        message.success(t('clients.createSuccess'));
       }
       navigate('/clients');
     } catch (error) {
@@ -55,7 +57,7 @@ function ClientFormPage() {
              message.error(`${key}: ${errorMsg}`);
           });
       } else {
-          message.error('Не вдалося зберегти клієнта');
+          message.error(t('clients.saveError'));
       }
     } finally {
       setSaving(false);
@@ -67,7 +69,7 @@ function ClientFormPage() {
   return (
     <div>
       <PageHeader
-        title={isEdit ? 'Редагувати клієнта' : 'Новий клієнт'}
+        title={isEdit ? t('clients.editClient') : t('clients.newClient')}
         showBack
       />
 
@@ -85,32 +87,32 @@ function ClientFormPage() {
         >
           <Form.Item
             name="name"
-            label="Ім'я / Назва компанії"
-            rules={[{ required: true, message: "Введіть ім'я клієнта" }]}
+            label={t('clients.nameOrCompanyFull')}
+            rules={[{ required: true, message: t('clients.nameOrCompanyPlaceholder') }]}
           >
-            <Input placeholder="Введіть ім'я або назву компанії" />
+            <Input placeholder={t('clients.nameOrCompanyHelp')} />
           </Form.Item>
 
           <Form.Item
             name="phone"
-            label="Телефон"
+            label={t('common.phone')}
             rules={[
-              { pattern: /^\+?[\d\s\-()]+$/, message: 'Невірний формат телефону' },
+              { pattern: /^\+?[\d\s\-()]+$/, message: t('clients.phoneError') },
             ]}
           >
-            <Input placeholder="+380XXXXXXXXX" />
+            <Input placeholder={t('clients.phonePlaceholder')} />
           </Form.Item>
 
           <Form.Item
             name="email"
-            label="Email"
-            rules={[{ type: 'email', message: 'Невірний формат email' }]}
+            label={t('common.email')}
+            rules={[{ type: 'email', message: t('clients.emailError') }]}
           >
-            <Input placeholder="email@example.com" />
+            <Input placeholder={t('clients.emailPlaceholder')} />
           </Form.Item>
 
-          <Form.Item name="address" label="Адреса">
-            <Input.TextArea rows={3} placeholder="Введіть адресу" />
+          <Form.Item name="address" label={t('common.address')}>
+            <Input.TextArea rows={3} placeholder={t('clients.addressPlaceholder')} />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
@@ -121,9 +123,9 @@ function ClientFormPage() {
                 loading={saving}
                 icon={<SaveOutlined />}
               >
-                {isEdit ? 'Зберегти зміни' : 'Створити клієнта'}
+                {isEdit ? t('common.saveChanges') : t('clients.addClient')}
               </Button>
-              <Button onClick={() => navigate('/clients')}>Скасувати</Button>
+              <Button onClick={() => navigate('/clients')}>{t('common.cancel')}</Button>
             </Space>
           </Form.Item>
         </Form>

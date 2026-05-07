@@ -1,5 +1,6 @@
 import React from 'react';
 import { Button, Result } from 'antd';
+import i18n from '../i18n';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -20,11 +21,11 @@ class ErrorBoundary extends React.Component {
       return (
         <Result
           status="error"
-          title="Щось пішло не так"
-          subTitle={this.state.error?.message || 'Невідома помилка'}
+          title={i18n.t('errors.somethingWentWrong')}
+          subTitle={this.state.error?.message || i18n.t('errors.unknownError')}
           extra={
             <Button type="primary" onClick={() => window.location.reload()}>
-              Перезавантажити сторінку
+              {i18n.t('errors.reloadPage')}
             </Button>
           }
         />

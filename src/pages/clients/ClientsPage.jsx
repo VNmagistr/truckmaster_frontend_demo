@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Input, Select, message, Popconfirm, Card, Empty, Typography } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UserOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { clientsAPI } from '../../api';
 import { PageHeader } from '../../components';
 import { formatPhone } from '../../utils/formatters';
@@ -14,6 +15,7 @@ const CITIES = [
 ];
 
 function ClientsPage() {
+  const { t } = useTranslation();
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [pagination, setPagination] = useState({ current: 1, pageSize: 20, total: 0 });
@@ -53,7 +55,7 @@ function ClientsPage() {
       setClients(data.results || []);
       setPagination(p => ({ ...p, current: page, total: data.count || 0 }));
     } catch {
-      message.error('Не вдалося завантажити клієнтів');
+      message.error(t('clients.loadError'));
     } finally {
       setLoading(false);
     }
@@ -62,46 +64,46 @@ function ClientsPage() {
   const handleDelete = async (id) => {
     try {
       await clientsAPI.delete(id);
-      message.success('Клієнта видалено');
+      message.success(t('clients.deleteSuccess'));
       fetchClients(pagination.current);
     } catch {
-      message.error('Не вдалося видалити клієнта');
+      message.error(t('clients.deleteError'));
     }
   };
 
   const columns = [
     {
-      title: "Ім'я / Назва",
+      title: t('clients.nameOrCompany'),
       dataIndex: 'name',
       key: 'name',
       render: (text) => <strong>{text}</strong>,
     },
     {
-      title: 'Телефон',
+      title: t('common.phone'),
       dataIndex: 'phone',
       key: 'phone',
       render: (phone) => formatPhone(phone),
     },
     {
-      title: 'Місто',
+      title: t('clients.city'),
       dataIndex: 'address',
       key: 'address',
       render: (addr) => addr || '-',
     },
     {
-      title: 'Email',
+      title: t('common.email'),
       dataIndex: 'email',
       key: 'email',
       render: (email) => email || '-',
     },
     {
-      title: 'Дії',
+      title: t('common.actions'),
       key: 'actions',
       render: (_, record) => (
         <Space size="small" onClick={(e) => e.stopPropagation()}>
           <Button size="small" icon={<EyeOutlined />} onClick={() => navigate(`/clients/${record.id}`)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/clients/${record.id}/edit`)} />
-          <Popconfirm title="Видалити клієнта?" onConfirm={() => handleDelete(record.id)}>
+          <Popconfirm title={t('clients.deleteConfirm')} onConfirm={() => handleDelete(record.id)}>
             <Button size="small" icon={<DeleteOutlined />} danger />
           </Popconfirm>
         </Space>
@@ -112,10 +114,10 @@ function ClientsPage() {
   return (
     <div>
       <PageHeader
-        title="Клієнти"
+        title={t('clients.title')}
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/clients/new')}>
-            Новий клієнт
+            {t('clients.newClient')}
           </Button>
         }
       />
@@ -123,7 +125,7 @@ function ClientsPage() {
       <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 16px' }}>
         <Space wrap>
           <Input
-            placeholder="Пошук (ім'я, телефон, email)..."
+            placeholder={t('clients.searchPlaceholder')}
             prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
@@ -131,7 +133,7 @@ function ClientsPage() {
             allowClear
           />
           <Select
-            placeholder="Місто"
+            placeholder={t('clients.city')}
             allowClear
             style={{ width: 180 }}
             value={cityFilter}
@@ -141,7 +143,7 @@ function ClientsPage() {
           />
           {(searchText || cityFilter) && (
             <Button onClick={() => { setSearchText(''); setCityFilter(null); }}>
-              Скинути
+              {t('common.reset')}
             </Button>
           )}
         </Space>
@@ -155,23 +157,23 @@ function ClientsPage() {
             description={
               <div>
                 <Typography.Text style={{ fontSize: 16, display: 'block', marginBottom: 4 }}>
-                  Клієнтів ще немає
+                  {t('clients.emptyTitle')}
                 </Typography.Text>
                 <Typography.Text type="secondary">
-                  Додайте першого клієнта, щоб почати роботу з CRM
+                  {t('clients.emptyDesc')}
                 </Typography.Text>
               </div>
             }
           >
             <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/clients/new')}>
-              Додати клієнта
+              {t('clients.addClient')}
             </Button>
           </Empty>
         ) : !loading && pagination.total === 0 ? (
           <Empty
             description={
               <Typography.Text type="secondary">
-                Нічого не знайдено за вашим запитом
+                {t('common.notFound')}
               </Typography.Text>
             }
           />
@@ -187,7 +189,7 @@ function ClientsPage() {
               pageSize: 20,
               total: pagination.total,
               showSizeChanger: false,
-              showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`,
+              showTotal: (total, range) => `${range[0]}-${range[1]} ${t('common.of')} ${total}`,
             }}
             onChange={(p) => setPagination(prev => ({ ...prev, current: p.current }))}
             rowClassName="row-clickable"

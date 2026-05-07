@@ -10,31 +10,33 @@ import {
   EditOutlined, ReloadOutlined, CheckCircleOutlined, CloseCircleOutlined,
   PlusOutlined, QuestionCircleOutlined, DeleteOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { botAPI, clientsAPI, trucksAPI } from '../../api';
 import { PageHeader } from '../../components';
 import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import { formatDateTime, formatPhone } from '../../utils/formatters';
 
-const ROLE_OPTIONS = [
-  { value: 'guest',  label: 'Гість' },
-  { value: 'driver', label: 'Водій' },
-  { value: 'owner',  label: 'Власник' },
-  { value: 'admin',  label: 'Адміністратор' },
-];
-
-const roleTag = (role) => {
-  const map = {
-    guest:  { color: 'default', label: 'Гість' },
-    driver: { color: 'cyan',    label: 'Водій' },
-    owner:  { color: 'blue',    label: 'Власник' },
-    admin:  { color: 'gold',    label: 'Адміністратор' },
-  };
-  const { color, label } = map[role] || { color: 'default', label: role };
-  return <Tag color={color}>{label}</Tag>;
-};
-
 function BotPage() {
   const navigate = useNavigate();
+  const { t } = useTranslation();
+
+  const ROLE_OPTIONS = [
+    { value: 'guest',  label: t('bot.roleGuest') },
+    { value: 'driver', label: t('bot.roleDriver') },
+    { value: 'owner',  label: t('bot.roleOwner') },
+    { value: 'admin',  label: t('bot.roleAdmin') },
+  ];
+
+  const roleTag = (role) => {
+    const map = {
+      guest:  { color: 'default', label: t('bot.roleGuest') },
+      driver: { color: 'cyan',    label: t('bot.roleDriver') },
+      owner:  { color: 'blue',    label: t('bot.roleOwner') },
+      admin:  { color: 'gold',    label: t('bot.roleAdmin') },
+    };
+    const { color, label } = map[role] || { color: 'default', label: role };
+    return <Tag color={color}>{label}</Tag>;
+  };
   const [statsLoading, setStatsLoading]     = useState(true);
   const [stats, setStats]                   = useState({ total: 0, by_role: {}, active: 0, blocked: 0 });
   const [moduleUnavailable, setModuleUnavailable] = useState(false);
@@ -97,7 +99,7 @@ function BotPage() {
       setStats(data);
     } catch (err) {
       if (err.isModuleUnavailable) { setModuleUnavailable(true); return; }
-      message.error('Не вдалося завантажити статистику');
+      message.error(t('bot.statsError'));
     } finally {
       setStatsLoading(false);
     }
@@ -119,7 +121,7 @@ function BotPage() {
       setUsersTotal(data.count || 0);
       setUsersPage(page);
     } catch {
-      message.error('Не вдалося завантажити користувачів');
+      message.error(t('bot.usersError'));
     } finally {
       setUsersLoading(false);
     }
@@ -140,7 +142,7 @@ function BotPage() {
       setMessagesTotal(data.count || 0);
       setMessagesPage(page);
     } catch {
-      message.error('Не вдалося завантажити повідомлення');
+      message.error(t('bot.messagesError'));
     } finally {
       setMessagesLoading(false);
     }
@@ -158,7 +160,7 @@ function BotPage() {
       setUnknownTotal(data.count || 0);
       setUnknownPage(page);
     } catch {
-      message.error('Не вдалося завантажити список невідомих номерів');
+      message.error(t('bot.unknownPlatesError'));
     } finally {
       setUnknownLoading(false);
     }
@@ -171,21 +173,21 @@ function BotPage() {
   const handleDeleteUnknown = async (row) => {
     try {
       await botAPI.deleteUnknownPlate(row.id);
-      message.success('Видалено зі списку');
+      message.success(t('bot.deleteSuccess'));
       fetchUnknownPlates(unknownPage);
     } catch {
-      message.error('Не вдалося видалити');
+      message.error(t('bot.deleteError'));
     }
   };
 
   const handleSaveNotes = async (row) => {
     try {
       await botAPI.updateUnknownPlate(row.id, { notes: editNotesValue });
-      message.success('Нотатку збережено');
+      message.success(t('bot.noteSaved'));
       setEditNotesId(null);
       fetchUnknownPlates(unknownPage);
     } catch {
-      message.error('Не вдалося зберегти');
+      message.error(t('bot.noteSaveError'));
     }
   };
 
@@ -252,12 +254,12 @@ function BotPage() {
         values.assigned_trucks = [];
       }
       await botAPI.updateUser(editingUser.id, values);
-      message.success('Збережено');
+      message.success(t('bot.userSaved'));
       setEditModalOpen(false);
       fetchUsers(usersPage);
       fetchStats();
     } catch {
-      message.error('Помилка збереження');
+      message.error(t('bot.userSaveError'));
     } finally {
       setSaving(false);
     }
@@ -281,17 +283,17 @@ function BotPage() {
         values.assigned_trucks = [];
       }
       await botAPI.createUser(values);
-      message.success('Користувача додано');
+      message.success(t('bot.userAdded'));
       setCreateModalOpen(false);
       fetchUsers(1);
       fetchStats();
     } catch (err) {
       if (err?.response?.data?.telegram_id) {
-        message.error('Користувач з таким Telegram ID вже існує');
+        message.error(t('bot.userExistsError'));
       } else if (err?.errorFields) {
         // валідація форми — antd підсвічує поля автоматично
       } else {
-        message.error('Не вдалося створити користувача');
+        message.error(t('bot.userAddError'));
       }
     } finally {
       setCreating(false);
@@ -301,18 +303,18 @@ function BotPage() {
   const toggleBlock = async (user) => {
     try {
       await botAPI.updateUser(user.id, { is_blocked: !user.is_blocked });
-      message.success(user.is_blocked ? 'Розблоковано' : 'Заблоковано');
+      message.success(user.is_blocked ? t('bot.unblocked') : t('bot.blocked'));
       fetchUsers(usersPage);
       fetchStats();
     } catch {
-      message.error('Не вдалося змінити статус');
+      message.error(t('bot.blockError'));
     }
   };
 
   // ── Колонки таблиці користувачів ─────────────────────────────────────────
   const usersColumns = [
     {
-      title: 'Користувач',
+      title: t('bot.userColumn'),
       key: 'user',
       render: (_, r) => (
         <Space>
@@ -330,7 +332,7 @@ function BotPage() {
             <div style={{ fontWeight: 500, lineHeight: 1.3 }}>
               {r.first_name || ''} {r.last_name || ''}
               {!r.first_name && !r.last_name && (
-                <span style={{ color: '#aaa' }}>Без імені</span>
+                <span style={{ color: '#aaa' }}>{t('bot.noName')}</span>
               )}
             </div>
             {r.username && (
@@ -341,7 +343,7 @@ function BotPage() {
       ),
     },
     {
-      title: 'Telegram ID',
+      title: t('bot.telegramId'),
       dataIndex: 'telegram_id',
       key: 'telegram_id',
       render: (v) => (
@@ -351,36 +353,36 @@ function BotPage() {
       ),
     },
     {
-      title: 'Телефон',
+      title: t('common.phone'),
       dataIndex: 'phone_number',
       key: 'phone',
       render: (v) => v ? formatPhone(v) : <span style={{ color: '#ccc' }}>—</span>,
     },
     {
-      title: 'Роль',
+      title: t('bot.roleColumn'),
       dataIndex: 'role',
       key: 'role',
       render: roleTag,
     },
     {
-      title: 'Клієнт',
+      title: t('bot.clientColumn'),
       dataIndex: 'client_name',
       key: 'client',
       render: (v) => v || <span style={{ color: '#ccc' }}>—</span>,
     },
     {
-      title: 'Остання активність',
+      title: t('bot.lastActivity'),
       dataIndex: 'last_activity',
       key: 'last_activity',
       render: (v) => v ? formatDateTime(v) : '—',
     },
     {
-      title: 'Статус',
+      title: t('common.status'),
       key: 'status',
       render: (_, r) => {
-        if (r.is_blocked) return <Tag color="red"     icon={<StopOutlined />}>Заблокований</Tag>;
-        if (r.is_active)  return <Tag color="green"   icon={<CheckCircleOutlined />}>Активний</Tag>;
-        return                   <Tag color="default" icon={<CloseCircleOutlined />}>Неактивний</Tag>;
+        if (r.is_blocked) return <Tag color="red"     icon={<StopOutlined />}>{t('bot.statusBlocked')}</Tag>;
+        if (r.is_active)  return <Tag color="green"   icon={<CheckCircleOutlined />}>{t('bot.statusActive')}</Tag>;
+        return                   <Tag color="default" icon={<CloseCircleOutlined />}>{t('bot.statusInactive')}</Tag>;
       },
     },
     {
@@ -389,10 +391,10 @@ function BotPage() {
       width: 80,
       render: (_, r) => (
         <Space size={4}>
-          <Tooltip title="Редагувати">
+          <Tooltip title={t('common.edit')}>
             <Button size="small" icon={<EditOutlined />} onClick={() => openEditModal(r)} />
           </Tooltip>
-          <Tooltip title={r.is_blocked ? 'Розблокувати' : 'Заблокувати'}>
+          <Tooltip title={r.is_blocked ? t('bot.unblock') : t('bot.block')}>
             <Button
               size="small"
               danger={!r.is_blocked}
@@ -409,7 +411,7 @@ function BotPage() {
   // ── Колонки таблиці невідомих номерів ─────────────────────────────────────
   const unknownColumns = [
     {
-      title: 'Номер',
+      title: t('bot.plateNumber'),
       dataIndex: 'plate',
       key: 'plate',
       width: 140,
@@ -421,28 +423,28 @@ function BotPage() {
       ),
     },
     {
-      title: 'К-ть пошуків',
+      title: t('bot.searchCount'),
       dataIndex: 'search_count',
       key: 'search_count',
       width: 120,
       render: (v) => <Tag color={v > 1 ? 'orange' : 'default'}>{v}</Tag>,
     },
     {
-      title: 'Останній пошук',
+      title: t('bot.lastSearch'),
       dataIndex: 'last_searched_at',
       key: 'last_searched_at',
       width: 150,
       render: (v) => v ? formatDateTime(v) : '—',
     },
     {
-      title: 'Хто шукав',
+      title: t('bot.searchedBy'),
       dataIndex: 'last_searched_by_name',
       key: 'last_searched_by_name',
       width: 160,
       render: (v) => v || <span style={{ color: '#ccc' }}>—</span>,
     },
     {
-      title: 'Нотатка',
+      title: t('bot.note'),
       dataIndex: 'notes',
       key: 'notes',
       render: (v, r) => editNotesId === r.id ? (
@@ -461,9 +463,9 @@ function BotPage() {
         <span
           style={{ cursor: 'pointer', color: v ? undefined : '#ccc' }}
           onClick={() => { setEditNotesId(r.id); setEditNotesValue(v || ''); }}
-          title="Натисніть, щоб редагувати"
+          title={t('bot.editNoteTooltip')}
         >
-          {v || '— додати нотатку —'}
+          {v || t('bot.addNote')}
         </span>
       ),
     },
@@ -479,16 +481,16 @@ function BotPage() {
             icon={<PlusOutlined />}
             onClick={() => handleAddUnknownToBase(r)}
           >
-            Додати в базу
+            {t('bot.addToDatabase')}
           </Button>
           <Popconfirm
-            title="Видалити номер зі списку?"
-            okText="Так"
-            cancelText="Ні"
+            title={t('bot.deletePlateConfirm')}
+            okText={t('common.yes')}
+            cancelText={t('common.no')}
             onConfirm={() => handleDeleteUnknown(r)}
           >
             <Button size="small" danger icon={<DeleteOutlined />}>
-              Видалити
+              {t('common.delete')}
             </Button>
           </Popconfirm>
         </Space>
@@ -499,30 +501,30 @@ function BotPage() {
   // ── Колонки таблиці журналу ───────────────────────────────────────────────
   const messagesColumns = [
     {
-      title: 'Час',
+      title: t('bot.messageTime'),
       dataIndex: 'created_at',
       key: 'created_at',
       width: 140,
       render: (v) => formatDateTime(v),
     },
     {
-      title: 'Користувач',
+      title: t('bot.messageUser'),
       dataIndex: 'bot_user_name',
       key: 'user',
       width: 160,
       render: (v) => v || '—',
     },
     {
-      title: 'Напрямок',
+      title: t('bot.messageDirection'),
       dataIndex: 'is_incoming',
       key: 'direction',
       width: 130,
       render: (v) => v
-        ? <Tag color="green" icon={<ArrowDownOutlined />}>Від юзера</Tag>
-        : <Tag color="blue"  icon={<ArrowUpOutlined />}>Від бота</Tag>,
+        ? <Tag color="green" icon={<ArrowDownOutlined />}>{t('bot.fromUser')}</Tag>
+        : <Tag color="blue"  icon={<ArrowUpOutlined />}>{t('bot.fromBot')}</Tag>,
     },
     {
-      title: 'Повідомлення',
+      title: t('bot.messageText'),
       dataIndex: 'message_text',
       key: 'message',
       render: (v) => v
@@ -530,7 +532,7 @@ function BotPage() {
         : <span style={{ color: '#ccc' }}>—</span>,
     },
     {
-      title: 'Відповідь бота',
+      title: t('bot.botResponse'),
       dataIndex: 'bot_response',
       key: 'response',
       render: (v) => v
@@ -543,20 +545,20 @@ function BotPage() {
     ? (`${editingUser.first_name || ''} ${editingUser.last_name || ''}`.trim() || `ID ${editingUser.telegram_id}`)
     : '';
 
-  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Telegram бот" />;
+  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName={t('bot.title')} />;
 
   return (
     <div>
-      <PageHeader title="Telegram бот" />
+      <PageHeader title={t('bot.title')} />
 
       {/* ── Статистика ─────────────────────────────────────────────────────── */}
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
         {[
-          { title: 'Всього',      value: stats.total,               icon: <TeamOutlined />,  color: undefined },
-          { title: 'Власники',    value: stats.by_role?.owner  || 0, icon: <UserOutlined />,  color: '#1890ff' },
-          { title: 'Водії',       value: stats.by_role?.driver || 0, icon: <TeamOutlined />,  color: '#13c2c2' },
-          { title: 'Гості',       value: stats.by_role?.guest  || 0, icon: <RobotOutlined />, color: '#888' },
-          { title: 'Заблоковані', value: stats.blocked         || 0, icon: <StopOutlined />,  color: stats.blocked > 0 ? '#ff4d4f' : undefined },
+          { title: t('bot.statsTotal'),   value: stats.total,               icon: <TeamOutlined />,  color: undefined },
+          { title: t('bot.statsOwners'),  value: stats.by_role?.owner  || 0, icon: <UserOutlined />,  color: '#1890ff' },
+          { title: t('bot.statsDrivers'), value: stats.by_role?.driver || 0, icon: <TeamOutlined />,  color: '#13c2c2' },
+          { title: t('bot.statsGuests'),  value: stats.by_role?.guest  || 0, icon: <RobotOutlined />, color: '#888' },
+          { title: t('bot.statsBlocked'), value: stats.blocked         || 0, icon: <StopOutlined />,  color: stats.blocked > 0 ? '#ff4d4f' : undefined },
         ].map(({ title, value, icon, color }) => (
           <div key={title} style={{ flex: '1 1 160px', minWidth: 140 }}>
             <Card loading={statsLoading}>
@@ -574,12 +576,12 @@ function BotPage() {
           // ── Користувачі ─────────────────────────────────────────────────
           {
             key: 'users',
-            label: <span><TeamOutlined /> Користувачі</span>,
+            label: <span><TeamOutlined /> {t('bot.usersTab')}</span>,
             children: (
               <>
                 <Space wrap style={{ marginBottom: 16 }}>
                   <Input.Search
-                    placeholder="Ім'я, @username, телефон..."
+                    placeholder={t('bot.searchPlaceholder')}
                     style={{ width: 250 }}
                     allowClear
                     onSearch={(v) => { setUserSearch(v); fetchUsers(1, v); }}
@@ -588,14 +590,14 @@ function BotPage() {
                     }}
                   />
                   <Select
-                    placeholder="Роль"
+                    placeholder={t('bot.filterRole')}
                     style={{ width: 130 }}
                     allowClear
                     options={ROLE_OPTIONS}
                     onChange={(v) => setRoleFilter(v || '')}
                   />
                   <Select
-                    placeholder="Статус"
+                    placeholder={t('bot.filterStatus')}
                     style={{ width: 150 }}
                     allowClear
                     options={[
@@ -634,7 +636,7 @@ function BotPage() {
           // ── Журнал повідомлень ───────────────────────────────────────────
           {
             key: 'messages',
-            label: <span><MessageOutlined /> Журнал повідомлень</span>,
+            label: <span><MessageOutlined /> {t('bot.messagesTab')}</span>,
             children: (
               <>
                 <Space wrap style={{ marginBottom: 16 }}>
@@ -684,7 +686,7 @@ function BotPage() {
           // ── Невідомі номери ──────────────────────────────────────────────
           {
             key: 'unknown',
-            label: <span><QuestionCircleOutlined /> Невідомі номери</span>,
+            label: <span><QuestionCircleOutlined /> {t('bot.unknownPlatesTab')}</span>,
             children: (
               <>
                 <div style={{ marginBottom: 12, color: '#888', fontSize: 13 }}>

@@ -12,19 +12,13 @@ import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '../../components';
 import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import { formatDateTime } from '../../utils/formatters';
+import { useTranslation } from 'react-i18next';
 import {
   getArrivals, getIgnored, createIgnored, updateIgnored, deleteIgnored,
 } from '../../api/alpr';
 
 const Y = '#f5c518';
 const INK = '#1a1a1a';
-
-const REASON_OPTIONS = [
-  { value: 'staff',    label: 'Персонал СТО' },
-  { value: 'delivery', label: 'Доставка запчастин' },
-  { value: 'neighbor', label: 'Сусідня організація' },
-  { value: 'other',    label: 'Інше' },
-];
 
 const REASON_COLOR = {
   staff:    'blue',
@@ -36,6 +30,7 @@ const REASON_COLOR = {
 // ─── Журнал заїздів ──────────────────────────────────────────────────────────
 
 function ArrivalsTab() {
+  const { t } = useTranslation();
   const [data, setData]         = useState([]);
   const [loading, setLoading]   = useState(false);
   const [total, setTotal]       = useState(0);
@@ -61,7 +56,7 @@ function ArrivalsTab() {
       setTotal(d.count ?? (d.results ? d.count : d.length));
     } catch (err) {
       if (err.isModuleUnavailable) { setModuleUnavailable(true); return; }
-      message.error('Не вдалося завантажити журнал');
+      message.error(t('alpr.loadError'));
     } finally {
       setLoading(false);
     }
@@ -72,14 +67,14 @@ function ArrivalsTab() {
 
   const columns = [
     {
-      title: 'Час заїзду',
+      title: t('alpr.arrivalTime'),
       dataIndex: 'detected_at',
       key: 'detected_at',
       width: 160,
       render: (v) => formatDateTime(v),
     },
     {
-      title: 'Номер',
+      title: t('alpr.plateNumber'),
       dataIndex: 'license_plate',
       key: 'license_plate',
       width: 130,
@@ -88,12 +83,12 @@ function ArrivalsTab() {
           <Tag color={row.ignored ? 'default' : Y} style={{ color: row.ignored ? undefined : INK, fontWeight: 700, fontSize: 13 }}>
             {v}
           </Tag>
-          {row.ignored && <Tag color="red">Ігнор</Tag>}
+          {row.ignored && <Tag color="red">{t('alpr.ignored')}</Tag>}
         </Space>
       ),
     },
     {
-      title: 'Клієнт',
+      title: t('common.client'),
       dataIndex: 'client_name',
       key: 'client_name',
       render: (v, row) => {
@@ -103,11 +98,11 @@ function ArrivalsTab() {
             {v}
           </Button>
         );
-        return <span style={{ color: '#999' }}>Невідомий</span>;
+        return <span style={{ color: '#999' }}>{t('alpr.unknown')}</span>;
       },
     },
     {
-      title: 'Авто',
+      title: t('common.truck'),
       dataIndex: 'truck_info',
       key: 'truck_info',
       render: (v, row) => {
@@ -120,13 +115,13 @@ function ArrivalsTab() {
       },
     },
     {
-      title: 'Запис на СТО',
+      title: t('alpr.appointment'),
       dataIndex: 'appointment_info',
       key: 'appointment_info',
       render: (v) => {
         if (!v) return '—';
         const STATUS = { pending: 'orange', confirmed: 'green', cancelled: 'red', completed: 'blue', no_show: 'default' };
-        const LABELS = { pending: 'Очікує', confirmed: 'Підтверджено', cancelled: 'Скасовано', completed: 'Завершено', no_show: 'Не з\'явився' };
+        const LABELS = { pending: t('appointments.statusPending'), confirmed: t('appointments.statusConfirmed'), cancelled: t('appointments.statusCanceled'), completed: t('appointments.statusCompleted'), no_show: t('appointments.statusNoShow') };
         return (
           <Space direction="vertical" size={2}>
             <span>{dayjs(v.scheduled_dt).format('DD.MM.YYYY HH:mm')}</span>
@@ -136,14 +131,14 @@ function ArrivalsTab() {
       },
     },
     {
-      title: 'Камера',
+      title: t('alpr.camera'),
       dataIndex: 'camera_id',
       key: 'camera_id',
       width: 100,
       render: (v) => v || '—',
     },
     {
-      title: 'Впевн.%',
+      title: t('alpr.confidence'),
       dataIndex: 'confidence',
       key: 'confidence',
       width: 90,
@@ -151,13 +146,13 @@ function ArrivalsTab() {
     },
   ];
 
-  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Журнал авто" />;
+  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName={t('alpr.title')} />;
 
   return (
     <>
       <Flex gap={8} wrap="wrap" style={{ marginBottom: 12 }}>
         <DatePicker
-          placeholder="Фільтр за датою"
+          placeholder={t('alpr.dateFilter')}
           value={dateFilter}
           onChange={setDate}
           format="DD.MM.YYYY"
@@ -165,7 +160,7 @@ function ArrivalsTab() {
           style={{ width: 160 }}
         />
         <Input
-          placeholder="Пошук за номером"
+          placeholder={t('alpr.searchByPlate')}
           prefix={<SearchOutlined />}
           value={plate}
           onChange={(e) => setPlate(e.target.value)}
@@ -173,18 +168,18 @@ function ArrivalsTab() {
           style={{ width: 180 }}
         />
         <Select
-          placeholder="Всі статуси"
+          placeholder={t('common.allStatuses')}
           value={ignoredFilter}
           onChange={setIgnoredFilter}
           options={[
-            { value: '',      label: 'Всі' },
-            { value: 'false', label: 'Тільки нові' },
-            { value: 'true',  label: 'Тільки ігноровані' },
+            { value: '',      label: t('alpr.filterAll') },
+            { value: 'false', label: t('alpr.filterNew') },
+            { value: 'true',  label: t('alpr.filterIgnored') },
           ]}
           style={{ width: 170 }}
           allowClear={false}
         />
-        <Button icon={<ReloadOutlined />} onClick={() => fetch(page)}>Оновити</Button>
+        <Button icon={<ReloadOutlined />} onClick={() => fetch(page)}>{t('common.refresh')}</Button>
       </Flex>
 
       <Table
@@ -199,7 +194,7 @@ function ArrivalsTab() {
           pageSize,
           total,
           showSizeChanger: false,
-          showTotal: (t) => `Всього: ${t}`,
+          showTotal: (v) => `${t('common.total')}: ${v}`,
           onChange: setPage,
         }}
       />
@@ -210,11 +205,19 @@ function ArrivalsTab() {
 // ─── Список ігнору ────────────────────────────────────────────────────────────
 
 function IgnoredTab() {
+  const { t } = useTranslation();
   const [data, setData]       = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
+
+  const REASON_OPTIONS = [
+    { value: 'staff',    label: t('alpr.catStaff') },
+    { value: 'delivery', label: t('alpr.catDelivery') },
+    { value: 'neighbor', label: t('alpr.catNeighbor') },
+    { value: 'other',    label: t('alpr.catOther') },
+  ];
 
   const fetch = useCallback(async () => {
     setLoading(true);
@@ -222,7 +225,7 @@ function IgnoredTab() {
       const res = await getIgnored();
       setData(res.data);
     } catch {
-      message.error('Не вдалося завантажити список ігнору');
+      message.error(t('alpr.ignoreLoadError'));
     } finally {
       setLoading(false);
     }
@@ -248,17 +251,17 @@ function IgnoredTab() {
       const values = await form.validateFields();
       if (editingId) {
         await updateIgnored(editingId, values);
-        message.success('Оновлено');
+        message.success(t('alpr.updated'));
       } else {
         await createIgnored(values);
-        message.success('Додано');
+        message.success(t('alpr.added'));
       }
       setModalOpen(false);
       fetch();
     } catch (err) {
       if (err?.response?.data) {
         const detail = Object.values(err.response.data).flat().join(' ');
-        message.error(detail || 'Помилка збереження');
+        message.error(detail || t('common.error'));
       }
     }
   };
@@ -266,16 +269,16 @@ function IgnoredTab() {
   const handleDelete = async (id) => {
     try {
       await deleteIgnored(id);
-      message.success('Видалено');
+      message.success(t('alpr.deleteSuccess'));
       fetch();
     } catch {
-      message.error('Помилка видалення');
+      message.error(t('alpr.deleteError'));
     }
   };
 
   const columns = [
     {
-      title: 'Держномер',
+      title: t('alpr.plateNumber'),
       dataIndex: 'license_plate',
       key: 'license_plate',
       width: 130,
@@ -284,7 +287,7 @@ function IgnoredTab() {
       ),
     },
     {
-      title: 'Категорія',
+      title: t('alpr.ignoreCategory'),
       dataIndex: 'reason_type',
       key: 'reason_type',
       width: 160,
@@ -293,22 +296,22 @@ function IgnoredTab() {
       ),
     },
     {
-      title: 'Опис',
+      title: t('common.description'),
       dataIndex: 'description',
       key: 'description',
       render: (v) => v || '—',
     },
     {
-      title: 'Статус',
+      title: t('common.status'),
       dataIndex: 'is_active',
       key: 'is_active',
       width: 90,
       render: (v) => v
-        ? <Badge status="success" text="Активний" />
-        : <Badge status="default" text="Вимкнено" />,
+        ? <Badge status="success" text={t('common.active')} />
+        : <Badge status="default" text={t('alpr.disabled')} />,
     },
     {
-      title: 'Додав',
+      title: t('alpr.addedBy'),
       dataIndex: 'added_by_name',
       key: 'added_by_name',
       width: 130,
@@ -322,9 +325,9 @@ function IgnoredTab() {
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)} />
           <Popconfirm
-            title="Видалити з ігнор-листа?"
+            title={t('alpr.deleteFromIgnore')}
             onConfirm={() => handleDelete(record.id)}
-            okText="Так" cancelText="Ні"
+            okText={t('common.yes')} cancelText={t('common.no')}
           >
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
@@ -337,7 +340,7 @@ function IgnoredTab() {
     <>
       <Flex justify="space-between" align="center" style={{ marginBottom: 12 }}>
         <Typography.Text type="secondary">
-          Автомобілі з цього списку не викликають сповіщень персоналу
+          {t('alpr.ignoreListDesc')}
         </Typography.Text>
         <Button
           type="primary"
@@ -345,7 +348,7 @@ function IgnoredTab() {
           onClick={openAdd}
           style={{ background: Y, color: INK, borderColor: Y, fontWeight: 600 }}
         >
-          Додати
+          {t('alpr.addToIgnore')}
         </Button>
       </Flex>
 
@@ -360,20 +363,20 @@ function IgnoredTab() {
       />
 
       <Modal
-        title={editingId ? 'Редагувати запис' : 'Додати в ігнор-лист'}
+        title={editingId ? t('alpr.editIgnore') : t('alpr.addToIgnoreTitle')}
         open={modalOpen}
         onOk={handleSave}
         onCancel={() => setModalOpen(false)}
-        okText="Зберегти"
-        cancelText="Скасувати"
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
         okButtonProps={{ style: { background: Y, color: INK, borderColor: Y } }}
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
           <Form.Item
             name="license_plate"
-            label="Держномер"
-            rules={[{ required: true, message: 'Введіть держномер' }]}
+            label={t('alpr.plateNumber')}
+            rules={[{ required: true, message: t('alpr.platePlaceholder') }]}
           >
             <Input
               placeholder="AA1234BB"
@@ -383,15 +386,15 @@ function IgnoredTab() {
           </Form.Item>
           <Form.Item
             name="reason_type"
-            label="Категорія"
-            rules={[{ required: true, message: 'Оберіть категорію' }]}
+            label={t('alpr.ignoreCategory')}
+            rules={[{ required: true, message: t('alpr.selectCategory') }]}
           >
-            <Select options={REASON_OPTIONS} placeholder="Оберіть категорію" />
+            <Select options={REASON_OPTIONS} placeholder={t('alpr.selectCategory')} />
           </Form.Item>
-          <Form.Item name="description" label="Опис">
-            <Input placeholder="Наприклад: Форд Транзіт — Автолідер запчастини" maxLength={255} />
+          <Form.Item name="description" label={t('common.description')}>
+            <Input placeholder={t('alpr.descPlaceholder')} maxLength={255} />
           </Form.Item>
-          <Form.Item name="is_active" label="Активний" valuePropName="checked">
+          <Form.Item name="is_active" label={t('alpr.isActive')} valuePropName="checked">
             <Switch />
           </Form.Item>
         </Form>
@@ -403,13 +406,14 @@ function IgnoredTab() {
 // ─── Головна сторінка ALPR ───────────────────────────────────────────────────
 
 export default function AlprPage() {
+  const { t } = useTranslation();
   const tabItems = [
     {
       key: 'arrivals',
       label: (
         <Space>
           <CarOutlined />
-          Журнал заїздів
+          {t('alpr.journalTab')}
         </Space>
       ),
       children: <ArrivalsTab />,
@@ -419,7 +423,7 @@ export default function AlprPage() {
       label: (
         <Space>
           <EyeInvisibleOutlined />
-          Список ігнору
+          {t('alpr.ignoreListTab')}
         </Space>
       ),
       children: <IgnoredTab />,
@@ -429,8 +433,8 @@ export default function AlprPage() {
   return (
     <div style={{ padding: '0 0 24px' }}>
       <PageHeader
-        title="Журнал автомобілів"
-        subtitle="Фіксація заїздів за номерними знаками"
+        title={t('alpr.title')}
+        subtitle={t('alpr.subtitle')}
       />
       <div
         style={{

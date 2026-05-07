@@ -1,7 +1,7 @@
 import dayjs from 'dayjs';
 import 'dayjs/locale/uk';
-
-dayjs.locale('uk');
+import 'dayjs/locale/en';
+import i18n from '../i18n';
 
 // Форматування дати
 export const formatDate = (date, format = 'DD.MM.YYYY') => {
@@ -22,18 +22,21 @@ export const formatRelativeTime = (date) => {
 };
 
 // Форматування грошей
-export const formatMoney = (amount, currency = 'грн') => {
+export const formatMoney = (amount, currency) => {
   if (amount === null || amount === undefined) return '-';
-  return `${Number(amount).toLocaleString('uk-UA', {
+  const cur = currency || i18n.t('common.uah');
+  const locale = i18n.language?.startsWith('en') ? 'en-US' : 'uk-UA';
+  return `${Number(amount).toLocaleString(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  })} ${currency}`;
+  })} ${cur}`;
 };
 
 // Форматування пробігу
 export const formatMileage = (mileage) => {
   if (mileage === null || mileage === undefined) return '-';
-  return `${Number(mileage).toLocaleString('uk-UA')} км`;
+  const locale = i18n.language?.startsWith('en') ? 'en-US' : 'uk-UA';
+  return `${Number(mileage).toLocaleString(locale)} ${i18n.t('common.km')}`;
 };
 
 // Форматування телефону

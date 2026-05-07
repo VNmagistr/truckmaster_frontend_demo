@@ -1,8 +1,10 @@
 import { useEffect } from 'react';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { notification, Button } from 'antd';
+import { useTranslation } from 'react-i18next';
 
 export default function PWAUpdatePrompt() {
+  const { t } = useTranslation();
   const {
     needRefresh: [needRefresh, setNeedRefresh],
     updateServiceWorker,
@@ -20,8 +22,8 @@ export default function PWAUpdatePrompt() {
 
     notification.info({
       key: 'pwa-update',
-      message: 'Доступне оновлення',
-      description: 'Нова версія застосунку готова до встановлення.',
+      message: t('pwa.updateAvailable'),
+      description: t('pwa.updateDescription'),
       duration: 0,
       btn: (
         <Button
@@ -32,7 +34,7 @@ export default function PWAUpdatePrompt() {
             notification.destroy('pwa-update');
           }}
         >
-          Оновити
+          {t('pwa.update')}
         </Button>
       ),
       onClose: () => setNeedRefresh(false),

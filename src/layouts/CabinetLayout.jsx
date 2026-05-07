@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import logoImg from '../assets/logo.jpg';
 import {
   CarOutlined, FileTextOutlined, UserOutlined, LogoutOutlined, HomeOutlined,
@@ -10,16 +11,17 @@ const Y = '#f5c518';
 const INK = '#1a1a1a';
 const BG = '#f7f7f7';
 
-const NAV_ITEMS = [
-  { path: '/cabinet', icon: <HomeOutlined />, label: 'Головна' },
-  { path: '/cabinet/trucks', icon: <CarOutlined />, label: 'Авто' },
-  { path: '/cabinet/orders', icon: <FileTextOutlined />, label: 'Замовлення' },
-  { path: '/cabinet/profile', icon: <UserOutlined />, label: 'Профіль' },
+const NAV_KEYS = [
+  { path: '/cabinet', icon: <HomeOutlined />, key: 'cabinet.nav.home' },
+  { path: '/cabinet/trucks', icon: <CarOutlined />, key: 'cabinet.nav.trucks' },
+  { path: '/cabinet/orders', icon: <FileTextOutlined />, key: 'cabinet.nav.orders' },
+  { path: '/cabinet/profile', icon: <UserOutlined />, key: 'cabinet.nav.profile' },
 ];
 
 export default function CabinetLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t } = useTranslation();
   const { user, logout } = useCabinetAuthStore();
 
   const handleLogout = () => {
@@ -52,10 +54,10 @@ export default function CabinetLayout() {
             style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
             onClick={() => navigate('/cabinet')}
           >
-            <img src={logoImg} alt="Італ Трак" style={{ width: 42, height: 42, objectFit: 'contain' }} />
+            <img src={logoImg} alt={t('brand.name')} style={{ width: 42, height: 42, objectFit: 'contain' }} />
             <div>
-              <div style={{ fontWeight: 800, fontSize: 15, color: INK, lineHeight: 1.1 }}>Італ Трак</div>
-              <div style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 1.5 }}>Кабінет клієнта</div>
+              <div style={{ fontWeight: 800, fontSize: 15, color: INK, lineHeight: 1.1 }}>{t('brand.name')}</div>
+              <div style={{ fontSize: 10, color: '#999', textTransform: 'uppercase', letterSpacing: 1.5 }}>{t('brand.clientCabinet')}</div>
             </div>
           </div>
 
@@ -75,7 +77,7 @@ export default function CabinetLayout() {
               onMouseEnter={e => { e.currentTarget.style.borderColor = Y; e.currentTarget.style.color = INK; }}
               onMouseLeave={e => { e.currentTarget.style.borderColor = '#e0e0e0'; e.currentTarget.style.color = '#666'; }}
             >
-              <LogoutOutlined /> Вийти
+              <LogoutOutlined /> {t('nav.logout')}
             </button>
           </div>
         </div>
@@ -93,7 +95,7 @@ export default function CabinetLayout() {
         boxShadow: '0 -2px 12px rgba(0,0,0,0.08)',
         display: 'flex',
       }}>
-        {NAV_ITEMS.map(({ path, icon, label }) => {
+        {NAV_KEYS.map(({ path, icon, key }) => {
           const active = isActive(path);
           return (
             <button
@@ -109,7 +111,7 @@ export default function CabinetLayout() {
               }}
             >
               <span style={{ fontSize: 20 }}>{icon}</span>
-              <span style={{ fontSize: 11, fontWeight: active ? 700 : 500 }}>{label}</span>
+              <span style={{ fontSize: 11, fontWeight: active ? 700 : 500 }}>{t(key)}</span>
             </button>
           );
         })}

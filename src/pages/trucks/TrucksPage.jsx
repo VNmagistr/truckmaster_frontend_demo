@@ -2,17 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Input, Select, message, Popconfirm, Card, Empty, Typography } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, EyeOutlined, CarOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { trucksAPI, baseModelsAPI } from '../../api';
 import { PageHeader } from '../../components';
 
 const EURO_OPTIONS = [
-  { value: 'EURO3', label: 'Євро-3' },
-  { value: 'EURO4', label: 'Євро-4' },
-  { value: 'EURO5', label: 'Євро-5' },
-  { value: 'EURO6', label: 'Євро-6' },
+  { value: 'EURO3', label: 'Euro-3' },
+  { value: 'EURO4', label: 'Euro-4' },
+  { value: 'EURO5', label: 'Euro-5' },
+  { value: 'EURO6', label: 'Euro-6' },
 ];
 
 function TrucksPage() {
+  const { t } = useTranslation();
   const [trucks, setTrucks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [baseModels, setBaseModels] = useState([]);
@@ -62,7 +64,7 @@ function TrucksPage() {
       setTrucks(data.results || []);
       setPagination(p => ({ ...p, current: page, total: data.count || 0 }));
     } catch {
-      message.error('Не вдалося завантажити вантажівки');
+      message.error(t('trucks.loadError'));
     } finally {
       setLoading(false);
     }
@@ -71,22 +73,22 @@ function TrucksPage() {
   const handleDelete = async (id) => {
     try {
       await trucksAPI.delete(id);
-      message.success('Вантажівку видалено');
+      message.success(t('trucks.deleteSuccess'));
       fetchTrucks(pagination.current);
     } catch {
-      message.error('Не вдалося видалити вантажівку');
+      message.error(t('trucks.deleteError'));
     }
   };
 
   const columns = [
     {
-      title: 'Номерний знак',
+      title: t('trucks.licensePlate'),
       dataIndex: 'license_plate',
       key: 'license_plate',
       render: (text) => <strong>{text}</strong>,
     },
     {
-      title: 'Модель',
+      title: t('trucks.model'),
       dataIndex: 'specific_model_name',
       key: 'model',
       render: (text, record) => (
@@ -97,19 +99,19 @@ function TrucksPage() {
       ),
     },
     {
-      title: 'Євростандарт',
+      title: t('trucks.euroStandard'),
       dataIndex: 'euro_standard_display',
       key: 'euro',
       render: (text) => text || '-',
     },
     {
-      title: 'VIN (останні 7)',
+      title: t('trucks.lastSevenVin'),
       dataIndex: 'last_seven_vin',
       key: 'vin',
       render: (vin) => vin ? <code style={{ fontSize: 12 }}>...{vin}</code> : '-',
     },
     {
-      title: 'Клієнт',
+      title: t('common.client'),
       dataIndex: ['client', 'name'],
       key: 'client',
       render: (text, record) => record.client ? (
@@ -119,13 +121,13 @@ function TrucksPage() {
       ) : '-',
     },
     {
-      title: 'Дії',
+      title: t('common.actions'),
       key: 'actions',
       render: (_, record) => (
         <Space size="small" onClick={(e) => e.stopPropagation()}>
           <Button size="small" icon={<EyeOutlined />} onClick={() => navigate(`/trucks/${record.id}`)} />
           <Button size="small" icon={<EditOutlined />} onClick={() => navigate(`/trucks/${record.id}/edit`)} />
-          <Popconfirm title="Видалити вантажівку?" onConfirm={() => handleDelete(record.id)}>
+          <Popconfirm title={t('trucks.deleteConfirm')} onConfirm={() => handleDelete(record.id)}>
             <Button size="small" icon={<DeleteOutlined />} danger />
           </Popconfirm>
         </Space>
@@ -136,10 +138,10 @@ function TrucksPage() {
   return (
     <div>
       <PageHeader
-        title="Вантажівки"
+        title={t('trucks.title')}
         extra={
           <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/trucks/new')}>
-            Додати авто
+            {t('trucks.addTruck')}
           </Button>
         }
       />
@@ -147,7 +149,7 @@ function TrucksPage() {
       <Card style={{ marginBottom: 16 }} bodyStyle={{ padding: '12px 16px' }}>
         <Space wrap>
           <Input
-            placeholder="Пошук (номер, VIN, модель)..."
+            placeholder={t('trucks.searchPlaceholder')}
             prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
             value={searchText}
             onChange={e => setSearchText(e.target.value)}
@@ -155,7 +157,7 @@ function TrucksPage() {
             allowClear
           />
           <Select
-            placeholder="Євростандарт"
+            placeholder={t('trucks.euroStandard')}
             allowClear
             style={{ width: 140 }}
             value={euroFilter}
@@ -163,7 +165,7 @@ function TrucksPage() {
             options={EURO_OPTIONS}
           />
           <Select
-            placeholder="Базова модель"
+            placeholder={t('trucks.baseModel')}
             allowClear
             style={{ width: 160 }}
             value={modelFilter}
@@ -172,7 +174,7 @@ function TrucksPage() {
           />
           {(searchText || euroFilter || modelFilter) && (
             <Button onClick={() => { setSearchText(''); setEuroFilter(null); setModelFilter(null); }}>
-              Скинути
+              {t('common.reset')}
             </Button>
           )}
         </Space>
@@ -186,23 +188,23 @@ function TrucksPage() {
             description={
               <div>
                 <Typography.Text style={{ fontSize: 16, display: 'block', marginBottom: 4 }}>
-                  Вантажівок ще немає
+                  {t('trucks.emptyTitle')}
                 </Typography.Text>
                 <Typography.Text type="secondary">
-                  Додайте перше авто та прив&apos;яжіть його до клієнта
+                  {t('trucks.emptyDesc')}
                 </Typography.Text>
               </div>
             }
           >
             <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/trucks/new')}>
-              Додати авто
+              {t('trucks.addTruck')}
             </Button>
           </Empty>
         ) : !loading && pagination.total === 0 ? (
           <Empty
             description={
               <Typography.Text type="secondary">
-                Нічого не знайдено за вашим запитом
+                {t('common.notFound')}
               </Typography.Text>
             }
           />
@@ -218,7 +220,7 @@ function TrucksPage() {
               pageSize: 20,
               total: pagination.total,
               showSizeChanger: false,
-              showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`,
+              showTotal: (total, range) => `${range[0]}-${range[1]} ${t('common.of')} ${total}`,
             }}
             onChange={(p) => setPagination(prev => ({ ...prev, current: p.current }))}
             rowClassName="row-clickable"

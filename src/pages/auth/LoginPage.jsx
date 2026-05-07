@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Form, Input, Button, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { authAPI } from '../../api';
 import useAuthStore from '../../store/authStore';
 
@@ -9,6 +10,7 @@ function LoginPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { setAuth } = useAuthStore();
+  const { t } = useTranslation();
 
   const onFinish = async (values) => {
     setLoading(true);
@@ -28,10 +30,10 @@ function LoginPage() {
       
       setAuth(userData, access, refresh);
       
-      message.success('Успішний вхід!');
+      message.success(t('auth.loginSuccess'));
       navigate('/dashboard', { replace: true });
     } catch (error) {
-      message.error('Невірний логін або пароль');
+      message.error(t('auth.loginError'));
     } finally {
       setLoading(false);
     }
@@ -53,7 +55,7 @@ function LoginPage() {
       }}
     >
       <div style={{ textAlign: 'center', marginBottom: 28 }}>
-        <div style={{ fontWeight: 800, fontSize: 20, color: INK }}>Вхід для співробітників</div>
+        <div style={{ fontWeight: 800, fontSize: 20, color: INK }}>{t('auth.loginTitle')}</div>
       </div>
       <Form
         name="login"
@@ -63,23 +65,23 @@ function LoginPage() {
       >
         <Form.Item
           name="username"
-          rules={[{ required: true, message: 'Введіть логін' }]}
+          rules={[{ required: true, message: t('auth.loginPlaceholder') }]}
         >
           <Input
             prefix={<UserOutlined style={{ color: '#bbb' }} />}
-            placeholder="Логін"
+            placeholder={t('auth.login')}
             autoComplete="username"
           />
         </Form.Item>
 
         <Form.Item
           name="password"
-          rules={[{ required: true, message: 'Введіть пароль' }]}
+          rules={[{ required: true, message: t('auth.passwordPlaceholder') }]}
           style={{ marginBottom: 24 }}
         >
           <Input.Password
             prefix={<LockOutlined style={{ color: '#bbb' }} />}
-            placeholder="Пароль"
+            placeholder={t('auth.password')}
             autoComplete="current-password"
           />
         </Form.Item>
@@ -88,7 +90,7 @@ function LoginPage() {
           <Button type="primary" htmlType="submit" loading={loading} block
             style={{ height: 44, fontWeight: 700, fontSize: 15 }}
           >
-            Увійти
+            {t('auth.loginButton')}
           </Button>
         </Form.Item>
       </Form>

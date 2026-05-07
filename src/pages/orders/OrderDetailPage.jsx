@@ -3,6 +3,7 @@ import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, S
 const { Text } = Typography;
 import { EditOutlined, FilePdfOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined, ScanOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI, maintenanceAPI, repairPhotosAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import BarcodeScanner from '../../components/BarcodeScanner';

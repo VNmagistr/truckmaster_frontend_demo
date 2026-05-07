@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Input, message, Card, Tag, Tabs, Select, Popconfirm, Tooltip } from 'antd';
 import { SearchOutlined, PlusOutlined, WarningOutlined, EditOutlined, DeleteOutlined, EyeOutlined, UndoOutlined, ShoppingCartOutlined, DatabaseOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner, EmptyState } from '../../components';
 import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
@@ -10,6 +11,7 @@ import OrderListTab from './OrderListTab';
 import WholesaleTab from './WholesaleTab';
 
 function InventoryPage() {
+  const { t } = useTranslation();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -90,7 +92,7 @@ function InventoryPage() {
 
     } catch (error) {
       if (error.isModuleUnavailable) { setModuleUnavailable(true); return; }
-      message.error('Не вдалося завантажити склад');
+      message.error(t('inventory.loadError'));
     } finally {
       setLoading(false);
     }
@@ -99,20 +101,20 @@ function InventoryPage() {
   const handleDelete = async (id) => {
     try {
       await inventoryAPI.markForDeletion(id);
-      message.success('Товар видалено');
+      message.success(t('inventory.deleteSuccess'));
       fetchProducts(pagination.current, searchQuery);
     } catch (error) {
-      message.error('Не вдалося видалити товар');
+      message.error(t('inventory.deleteError'));
     }
   };
 
   const handleUnmarkForDeletion = async (id) => {
     try {
       await inventoryAPI.unmarkForDeletion(id);
-      message.success('Товар відновлено');
+      message.success(t('inventory.restoreSuccess'));
       fetchProducts(pagination.current, searchQuery);
     } catch (error) {
-      message.error('Не вдалося відновити товар');
+      message.error(t('inventory.restoreError'));
     }
   };
 
@@ -122,31 +124,31 @@ function InventoryPage() {
 
   const columns = [
     {
-      title: 'Артикул',
+      title: t('inventory.sku'),
       dataIndex: 'sku_code',
       key: 'sku_code',
       render: (text) => text || '-',
     },
     {
-      title: 'Назва',
+      title: t('common.name'),
       dataIndex: 'name',
       key: 'name',
       render: (text, record) => (
         <span>
           <span style={{ fontWeight: 500 }}>{text}</span>
           {record.marked_for_deletion && (
-            <Tag color="error" style={{ marginLeft: 8 }}>Видалено</Tag>
+            <Tag color="error" style={{ marginLeft: 8 }}>{t('inventory.deleted')}</Tag>
           )}
         </span>
       ),
     },
     {
-      title: 'Бренд',
+      title: t('common.brand'),
       dataIndex: 'brand',
       key: 'brand',
     },
     {
-      title: 'Категорія',
+      title: t('common.category'),
       key: 'category',
       render: (_, record) => {
         const catName = record.subcategory_name || record.category_name || record.subcategory?.name || record.category?.name || '-';
@@ -154,7 +156,7 @@ function InventoryPage() {
       },
     },
     {
-      title: 'Кількість',
+      title: t('common.quantity'),
       dataIndex: 'current_stock', // На бекенді часто current_stock або quantity
       key: 'quantity',
       render: (qty, record) => {
@@ -162,25 +164,25 @@ function InventoryPage() {
         const quantity = qty !== undefined ? qty : record.quantity;
         return (
             <Tag color={(quantity || 0) <= (record.min_stock_level || 0) ? 'red' : 'green'}>
-            {quantity > 0 ? `${quantity} шт.` : 'Немає'}
+            {quantity > 0 ? `${quantity} ${t('common.pcsShort')}` : t('inventory.noStock')}
             </Tag>
         );
       },
     },
     {
-      title: 'Ціна продажу',
+      title: t('inventory.salePrice'),
       dataIndex: 'selling_price',
       key: 'price',
       render: (price) => formatMoney(price),
     },
     {
-      title: 'Дії',
+      title: t('common.actions'),
       key: 'actions',
       render: (_, record) => (
         <Space size="middle" onClick={(e) => e.stopPropagation()}>
           <Button icon={<EyeOutlined />} onClick={() => navigate(`/inventory/${record.id}`)} />
           {record.marked_for_deletion ? (
-            <Tooltip title="Відновити товар">
+            <Tooltip title={t('inventory.restore')}>
               <Button
                 icon={<UndoOutlined />}
                 onClick={() => handleUnmarkForDeletion(record.id)}
@@ -190,7 +192,7 @@ function InventoryPage() {
           ) : (
             <>
               <Button icon={<EditOutlined />} onClick={() => navigate(`/inventory/${record.id}/edit`)} />
-              <Popconfirm title="Видалити товар?" onConfirm={() => handleDelete(record.id)}>
+              <Popconfirm title={t('inventory.deleteConfirm')} onConfirm={() => handleDelete(record.id)}>
                 <Button icon={<DeleteOutlined />} danger />
               </Popconfirm>
             </>
@@ -201,12 +203,12 @@ function InventoryPage() {
   ];
 
   const tabItems = [
-    { key: 'all', label: 'Всі товари' },
+    { key: 'all', label: t('inventory.allProducts') },
     {
       key: 'low_stock',
       label: (
         <span>
-          <WarningOutlined /> Закінчуються
+          <WarningOutlined /> {t('inventory.lowStock')}
         </span>
       )
     },
@@ -214,7 +216,7 @@ function InventoryPage() {
       key: 'wholesale',
       label: (
         <span>
-          <DatabaseOutlined /> Оптовий
+          <DatabaseOutlined /> {t('inventory.wholesale')}
         </span>
       )
     },
@@ -222,24 +224,24 @@ function InventoryPage() {
       key: 'order_list',
       label: (
         <span>
-          <ShoppingCartOutlined /> Замовити
+          <ShoppingCartOutlined /> {t('inventory.orderList')}
         </span>
       )
     },
   ];
 
-  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Склад" />;
+  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName={t('modules.inventory')} />;
   if (loading && products.length === 0 && activeTab !== 'order_list' && activeTab !== 'wholesale') return <LoadingSpinner />;
 
   return (
     <div>
       <PageHeader
-        title="Склад запчастин"
+        title={t('inventory.title')}
         extra={
           activeTab !== 'order_list' && activeTab !== 'wholesale' && (
             <Space>
               <Input
-                placeholder="Назва або артикул (будь-яка частина)..."
+                placeholder={t('inventory.searchPlaceholder')}
                 prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
                 onChange={e => setSearchText(e.target.value)}
                 style={{ width: 220 }}
@@ -247,7 +249,7 @@ function InventoryPage() {
               />
 
               <Select
-                placeholder="Категорія"
+                placeholder={t('common.category')}
                 allowClear
                 style={{ width: 150 }}
                 value={selectedCategory}
@@ -268,7 +270,7 @@ function InventoryPage() {
                   setPagination(prev => ({ ...prev, current: 1 }));
                 }}
               >
-                {showDeleted ? 'Приховати видалені' : 'Показати видалені'}
+                {showDeleted ? t('inventory.hideDeleted') : t('inventory.showDeleted')}
               </Button>
 
               <Button
@@ -276,7 +278,7 @@ function InventoryPage() {
                 icon={<PlusOutlined />}
                 onClick={() => navigate('/inventory/new')}
               >
-                Додати товар
+                {t('inventory.addProduct')}
               </Button>
             </Space>
           )
@@ -306,7 +308,7 @@ function InventoryPage() {
               pageSize: pagination.pageSize,
               total: pagination.total,
               showSizeChanger: false,
-              showTotal: (total, range) => `${range[0]}-${range[1]} з ${total}`
+              showTotal: (total, range) => `${range[0]}-${range[1]} ${t('common.of')} ${total}`
             }}
             onChange={(newPag) => setPagination(prev => ({ ...prev, current: newPag.current }))}
             size="middle"
@@ -320,8 +322,8 @@ function InventoryPage() {
           />
         ) : (
           <EmptyState
-            description={activeTab === 'low_stock' ? 'Товарів з низьким залишком немає' : 'Товарів поки немає'}
-            buttonText={activeTab !== 'low_stock' ? 'Додати товар' : null}
+            description={activeTab === 'low_stock' ? t('inventory.lowStockEmpty') : t('inventory.emptyTitle')}
+            buttonText={activeTab !== 'low_stock' ? t('inventory.addProduct') : null}
             onButtonClick={activeTab !== 'low_stock' ? () => navigate('/inventory/new') : undefined}
           />
         )}

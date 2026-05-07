@@ -2,11 +2,13 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Form, Input, Button, Card, message, Space, Select } from 'antd';
 import { SaveOutlined } from '@ant-design/icons';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { trucksAPI, clientsAPI, baseModelsAPI, botAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import useEnumsStore from '../../store/enumsStore';
 
 function TruckFormPage() {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -43,7 +45,7 @@ function TruckFormPage() {
           form.setFieldsValue({ license_plate: prefillPlate.toUpperCase() });
         }
       } catch (error) {
-        message.error('Помилка ініціалізації');
+        message.error(t('common.initError'));
       } finally {
         setLoading(false);
       }
@@ -126,7 +128,7 @@ function TruckFormPage() {
       });
 
     } catch (error) {
-      message.error('Не вдалося завантажити дані вантажівки');
+      message.error(t('trucks.loadError'));
       navigate('/trucks');
     }
   };
@@ -136,10 +138,10 @@ function TruckFormPage() {
     try {
       if (isEdit) {
         await trucksAPI.update(id, values);
-        message.success('Вантажівку оновлено');
+        message.success(t('trucks.updateSuccess'));
       } else {
         await trucksAPI.create(values);
-        message.success('Вантажівку створено');
+        message.success(t('trucks.createSuccess'));
         // Якщо створили з списку невідомих номерів — видаляємо запис
         if (unknownPlateId) {
           try { await botAPI.deleteUnknownPlate(unknownPlateId); } catch { /* ignore */ }

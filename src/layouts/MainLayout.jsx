@@ -5,10 +5,11 @@ import {
   AppstoreOutlined, RobotOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   LogoutOutlined, SettingOutlined, MenuOutlined, PlusOutlined, CalendarOutlined,
   CameraOutlined, BellOutlined, FileDoneOutlined, DownloadOutlined,
-  ToolOutlined,
+  ToolOutlined, GlobalOutlined,
 } from '@ant-design/icons';
 import PWAUpdatePrompt from '../components/PWAUpdatePrompt';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import useAuthStore from '../store/authStore';
 import useUIStore from '../store/uiStore';
 import useModulesStore from '../store/modulesStore';
@@ -24,8 +25,14 @@ const SIDEBAR_BG = '#1a1a1a';
 function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { t, i18n } = useTranslation();
   const { logout, user } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
+
+  const toggleLanguage = () => {
+    const next = i18n.language?.startsWith('en') ? 'uk' : 'en';
+    i18n.changeLanguage(next);
+  };
   const { fetchModules, isEnabled } = useModulesStore();
   const fetchEnums = useEnumsStore((s) => s.fetchEnums);
   const screens = Grid.useBreakpoint();
@@ -68,7 +75,7 @@ function MainLayout() {
   const quickAddLabel = (text, newPath) => (
     <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
       <span>{text}</span>
-      <Tooltip title="Додати" placement="right" mouseEnterDelay={0.5}>
+      <Tooltip title={t('nav.addTooltip')} placement="right" mouseEnterDelay={0.5}>
         <PlusOutlined
           style={{ fontSize: 11, opacity: 0.55, padding: '2px 2px 2px 6px' }}
           onClick={(e) => {
@@ -83,17 +90,17 @@ function MainLayout() {
 
   // Прив'язка пунктів меню до назв модулів (null = core, завжди видимий)
   const ALL_MENU_ITEMS = [
-    { key: '/dashboard',    module: null,          icon: <DashboardOutlined />, label: 'Головна' },
-    { key: '/clients',      module: null,          icon: <UserOutlined />,      label: quickAddLabel('Клієнти',    '/clients/new') },
-    { key: '/trucks',       module: null,          icon: <CarOutlined />,       label: quickAddLabel('Вантажівки', '/trucks/new') },
-    { key: '/orders',       module: null,          icon: <FileTextOutlined />,  label: quickAddLabel('Замовлення', '/orders/new') },
-    { key: '/inventory',    module: 'inventory',   icon: <AppstoreOutlined />,  label: quickAddLabel('Склад',      '/inventory/new') },
-    { key: '/appointments', module: 'appointments',icon: <CalendarOutlined />,  label: 'Записи' },
-    { key: '/bot',          module: 'bot',         icon: <RobotOutlined />,     label: 'Telegram бот' },
-    { key: '/reminders',    module: 'maintenance', icon: <BellOutlined />,      label: 'Нагадування ТО' },
-    { key: '/maintenance-templates', module: 'maintenance', icon: <ToolOutlined />, label: 'Еталони ТО' },
-    { key: '/invoices',     module: 'invoices',    icon: <FileDoneOutlined />,  label: 'Рахунки' },
-    { key: '/alpr',         module: 'alpr',        icon: <CameraOutlined />,    label: 'Журнал авто' },
+    { key: '/dashboard',    module: null,          icon: <DashboardOutlined />, label: t('nav.dashboard') },
+    { key: '/clients',      module: null,          icon: <UserOutlined />,      label: quickAddLabel(t('nav.clients'),    '/clients/new') },
+    { key: '/trucks',       module: null,          icon: <CarOutlined />,       label: quickAddLabel(t('nav.trucks'), '/trucks/new') },
+    { key: '/orders',       module: null,          icon: <FileTextOutlined />,  label: quickAddLabel(t('nav.orders'), '/orders/new') },
+    { key: '/inventory',    module: 'inventory',   icon: <AppstoreOutlined />,  label: quickAddLabel(t('nav.inventory'),      '/inventory/new') },
+    { key: '/appointments', module: 'appointments',icon: <CalendarOutlined />,  label: t('nav.appointments') },
+    { key: '/bot',          module: 'bot',         icon: <RobotOutlined />,     label: t('nav.bot') },
+    { key: '/reminders',    module: 'maintenance', icon: <BellOutlined />,      label: t('nav.reminders') },
+    { key: '/maintenance-templates', module: 'maintenance', icon: <ToolOutlined />, label: t('nav.templates') },
+    { key: '/invoices',     module: 'invoices',    icon: <FileDoneOutlined />,  label: t('nav.invoices') },
+    { key: '/alpr',         module: 'alpr',        icon: <CameraOutlined />,    label: t('nav.alpr') },
   ];
 
   const menuItems = ALL_MENU_ITEMS
@@ -108,9 +115,9 @@ function MainLayout() {
   };
 
   const userMenuItems = [
-    { key: 'settings', icon: <SettingOutlined />, label: 'Налаштування' },
+    { key: 'settings', icon: <SettingOutlined />, label: t('nav.settings') },
     { type: 'divider' },
-    { key: 'logout', icon: <LogoutOutlined />, label: 'Вийти', danger: true },
+    { key: 'logout', icon: <LogoutOutlined />, label: t('nav.logout'), danger: true },
   ];
 
   const LogoBlock = ({ collapsed }) => (
@@ -212,8 +219,18 @@ function MainLayout() {
           )}
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <Tooltip title={i18n.language?.startsWith('en') ? 'Українська' : 'English'}>
+            <Button
+              type="text"
+              icon={<GlobalOutlined />}
+              onClick={toggleLanguage}
+              style={{ color: INK, fontSize: 16 }}
+            >
+              {!isMobile && (i18n.language?.startsWith('en') ? 'EN' : 'UK')}
+            </Button>
+          </Tooltip>
           {canInstall && (
-            <Tooltip title="Встановити додаток">
+            <Tooltip title={t('nav.installApp')}>
               <Button
                 type="text"
                 icon={<DownloadOutlined />}
@@ -225,7 +242,7 @@ function MainLayout() {
           <Dropdown menu={{ items: userMenuItems, onClick: handleUserMenuClick }} placement="bottomRight" arrow>
             <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: isMobile ? 6 : 12, padding: '0 8px' }}>
               {!isMobile && (
-                <span style={{ fontWeight: 600, fontSize: 14, color: INK }}>{user?.username || 'Користувач'}</span>
+                <span style={{ fontWeight: 600, fontSize: 14, color: INK }}>{user?.username || t('nav.user')}</span>
               )}
               <Avatar icon={<UserOutlined />} style={{ background: Y, color: INK, fontWeight: 700 }} />
             </div>
@@ -238,12 +255,7 @@ function MainLayout() {
           <Alert
             banner
             type="warning"
-            message={
-              <span>
-                <strong>Демо-режим</strong> — дані тестові та не відображають реальну роботу підприємства.
-                Зверніться до нас, щоб отримати повну версію системи.
-              </span>
-            }
+            message={<span>{t('demo.banner')}</span>}
             closable
             onClose={() => {
               localStorage.setItem('demo_banner_dismissed', '1');

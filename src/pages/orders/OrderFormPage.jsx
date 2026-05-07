@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Form, Input, Button, Card, message, Space, Select, Upload, Alert, Row, Col, Typography, Divider, Modal, DatePicker } from 'antd';
 import { SaveOutlined, UploadOutlined, ExclamationCircleOutlined, CarOutlined, UserOutlined, CheckCircleOutlined, ToolOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ordersAPI, clientsAPI, maintenanceAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import { formatDate } from '../../utils/formatters';

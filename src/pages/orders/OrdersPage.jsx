@@ -12,6 +12,7 @@ import {
   FileTextOutlined,
 } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ordersAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import { formatDate, formatDateTime } from '../../utils/formatters';
@@ -20,6 +21,7 @@ import { ORDER_STATUSES } from '../../utils/constants';
 const { Text } = Typography;
 
 function OrdersPage() {
+  const { t } = useTranslation();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   
@@ -72,13 +74,13 @@ function OrdersPage() {
         setEditingOrderId(null);
         if (!checkData.same_truck) {
           const otherPlate = checkData.truck?.license_plate || '—';
-          message.error(`Номер вже використовується для авто ${otherPlate}`);
+          message.error(`${t('orders.numberUsed')} ${otherPlate}`);
           return;
         }
         const createdAt = checkData.created_at ? formatDate(checkData.created_at) : '—';
         const willChangeStatus = checkData.status === 'DONE' || checkData.status === 'CLOSED';
         Modal.confirm({
-          title: 'Такий номер наряду вже існує',
+          title: t('orders.numberExists'),
           content: (
             <div>
               <p style={{ marginBottom: 8 }}>
@@ -89,7 +91,7 @@ function OrdersPage() {
                 <br />
                 Статус: <Text strong>{checkData.status_display || checkData.status}</Text>
               </p>
-              <p>Продовжуємо його?</p>
+              <p>{t('orders.continueQuestion')}</p>
               {willChangeStatus && (
                 <p style={{ color: '#d48806', marginBottom: 0 }}>
                   Статус буде змінено на «В роботі».
@@ -97,19 +99,19 @@ function OrdersPage() {
               )}
             </div>
           ),
-          okText: 'Продовжити',
-          cancelText: 'Скасувати',
+          okText: t('orders.continueBtn'),
+          cancelText: t('common.cancel'),
           onOk: async () => {
             try {
               await ordersAPI.continueOrder(checkData.order_id);
               message.success(
                 willChangeStatus
-                  ? 'Наряд переведено в «В роботі»'
-                  : 'Відкриваємо існуючий наряд'
+                  ? t('orders.continueSuccess')
+                  : t('orders.continueOpenExisting')
               );
               navigate(`/orders/${checkData.order_id}`);
             } catch {
-              message.error('Не вдалося продовжити наряд');
+              message.error(t('orders.continueError'));
             }
           },
         });
@@ -118,11 +120,11 @@ function OrdersPage() {
 
       await ordersAPI.update(record.id, { order_number: trimmed });
       setOrders(prev => prev.map(o => o.id === record.id ? { ...o, order_number: trimmed } : o));
-      message.success('Номер наряду оновлено');
+      message.success(t('orders.orderNumberSaved'));
     } catch (err) {
       const detail = err?.response?.data?.order_number?.[0]
         || err?.response?.data?.detail
-        || 'Не вдалося зберегти';
+        || t('orders.orderNumberError');
       message.error(detail);
     } finally {
       setSavingOrderId(null);
@@ -139,9 +141,9 @@ function OrdersPage() {
     try {
       await ordersAPI.update(record.id, { closed_at: newVal });
       setOrders(prev => prev.map(o => o.id === record.id ? { ...o, closed_at: newVal || null } : o));
-      message.success('Дату закриття оновлено');
+      message.success(t('orders.closedDateSaved'));
     } catch {
-      message.error('Не вдалося зберегти дату закриття');
+      message.error(t('orders.closedDateError'));
     } finally {
       setSavingClosedAtId(null);
     }
@@ -194,7 +196,7 @@ function OrdersPage() {
         total: data.count || 0,
       }));
     } catch (error) {
-      message.error('Помилка завантаження замовлень');
+      message.error(t('orders.loadError'));
     } finally {
       setLoading(false);
     }
@@ -221,14 +223,14 @@ function OrdersPage() {
     try {
       await ordersAPI.markForDeletion(orderToDelete.id, values.reason);
       
-      message.success('Замовлення позначено на видалення. Адміністратор перевірить запит.');
+      message.success(t('orders.deleteMarkedSuccess'));
       setIsDeleteModalOpen(false);
       setOrderToDelete(null);
       deleteForm.resetFields();
       
       fetchOrders(pagination.current, pagination.pageSize, statusFilter, searchText);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Не вдалося позначити на видалення';
+      const errorMsg = error.response?.data?.detail || t('orders.deleteMarkedError');
       message.error(errorMsg);
     } finally {
       setActionLoading(false);
@@ -242,11 +244,11 @@ function OrdersPage() {
     try {
       await ordersAPI.unmarkForDeletion(order.id);
       
-      message.success('Позначення на видалення скасовано');
+      message.success(t('orders.deleteCancelledSuccess'));
       
       fetchOrders(pagination.current, pagination.pageSize, statusFilter, searchText);
     } catch (error) {
-      const errorMsg = error.response?.data?.detail || 'Не вдалося скасувати позначення';
+      const errorMsg = error.response?.data?.detail || t('orders.deleteCancelledError');
       message.error(errorMsg);
     } finally {
       setActionLoading(false);
@@ -259,16 +261,8 @@ function OrdersPage() {
     navigate(`/orders/${record.id}/edit`);
   };
 
-  const formatDayHeader = (dayStr) => {
-    const [year, month, day] = dayStr.split('-');
-    const monthNames = ['січня','лютого','березня','квітня','травня','червня',
-      'липня','серпня','вересня','жовтня','листопада','грудня'];
-    return `${parseInt(day)} ${monthNames[parseInt(month) - 1]} ${year}`;
-  };
-
-  const ordersWord = (n) =>
-    (n % 100 >= 11 && n % 100 <= 19) || n % 10 >= 5 || n % 10 === 0
-      ? 'замовлень' : 'замовлення';
+  const formatDayHeader = (dayStr) => dayjs(dayStr).format('D MMMM YYYY');
+  const ordersWord = (n) => t('orders.ordersMeasure');
 
   const buildTableData = (list) => {
     const result = [];
@@ -287,7 +281,7 @@ function OrdersPage() {
 
   const columns = [
     {
-      title: 'Номер',
+      title: t('orders.orderNumber'),
       dataIndex: 'order_number',
       key: 'order_number',
       onCell: (record) => record._isSeparator ? { colSpan: 99, style: { padding: 0 } } : {},
@@ -320,7 +314,7 @@ function OrdersPage() {
                   style={{ width: 110, fontWeight: 600 }}
                 />
               ) : (
-                <Tooltip title="Клікніть двічі для редагування">
+                <Tooltip title={t('orders.editNumberTooltip')}>
                   <Text
                     strong
                     style={{ color: '#1890ff', cursor: 'pointer' }}
@@ -331,7 +325,7 @@ function OrdersPage() {
                 </Tooltip>
               )}
               {record.photos_count > 0 && (
-                <Tooltip title={`${record.photos_count} фото ремонту`}>
+                <Tooltip title={`${record.photos_count} ${t('orders.repairPhotos')}`}>
                   <Space size={2} style={{ color: '#f5c518', fontSize: 12 }}>
                     <CameraOutlined />
                     <span>{record.photos_count}</span>
@@ -340,14 +334,14 @@ function OrdersPage() {
               )}
             </Space>
             {record.marked_for_deletion && (
-              <Tag color="error" style={{ marginTop: 4 }}>На видалення</Tag>
+              <Tag color="error" style={{ marginTop: 4 }}>{t('orders.markedForDeletion')}</Tag>
             )}
           </Space>
         );
       }
     },
     {
-      title: 'Авто',
+      title: t('common.truck'),
       key: 'truck',
       onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (_, record) => (
@@ -365,14 +359,14 @@ function OrdersPage() {
       ),
     },
     {
-      title: 'Клієнт',
+      title: t('common.client'),
       dataIndex: ['client', 'name'],
       key: 'client',
       onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (text) => <Text strong>{text || '-'}</Text>,
     },
     {
-      title: 'Статус',
+      title: t('common.status'),
       dataIndex: 'status',
       key: 'status',
       onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
@@ -382,21 +376,21 @@ function OrdersPage() {
       },
     },
     {
-      title: 'Сума',
+      title: t('common.amount'),
       dataIndex: 'total_cost',
       key: 'total_cost',
       onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
-      render: (val) => val ? `${parseFloat(val).toFixed(2)} грн` : '0.00 грн',
+      render: (val) => val ? `${parseFloat(val).toFixed(2)} ${t('common.uah')}` : `0.00 ${t('common.uah')}`,
     },
     {
-      title: 'Створено',
+      title: t('orders.dateCreated'),
       dataIndex: 'created_at',
       key: 'created_at',
       onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
       render: (date) => formatDate(date),
     },
     {
-      title: 'Закрито',
+      title: t('orders.dateClosed'),
       dataIndex: 'closed_at',
       key: 'closed_at',
       onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
@@ -416,7 +410,7 @@ function OrdersPage() {
               style={{ width: 170 }}
             />
           ) : (
-            <Tooltip title="Двічі клікніть для редагування">
+            <Tooltip title={t('orders.editNumberTooltip')}>
               <span
                 style={{ cursor: 'pointer', color: date ? '#595959' : '#bfbfbf' }}
                 onDoubleClick={() => {
@@ -432,7 +426,7 @@ function OrdersPage() {
       ),
     },
     {
-      title: 'Дії',
+      title: t('common.actions'),
       key: 'actions',
       width: 120,
       onCell: (record) => record._isSeparator ? { colSpan: 0 } : {},
@@ -440,7 +434,7 @@ function OrdersPage() {
         <Space size="small" onClick={(e) => e.stopPropagation()}>
           {!record.marked_for_deletion ? (
             <>
-              <Tooltip title="Редагувати">
+              <Tooltip title={t('common.edit')}>
                 <Button 
                   icon={<EditOutlined />} 
                   onClick={(e) => handleEditClick(e, record)} 
@@ -448,7 +442,7 @@ function OrdersPage() {
                 />
               </Tooltip>
 
-              <Tooltip title="Позначити на видалення">
+              <Tooltip title={t('orders.markForDeletion')}>
                 <Button 
                   danger 
                   icon={<DeleteOutlined />} 
@@ -458,7 +452,7 @@ function OrdersPage() {
               </Tooltip>
             </>
           ) : (
-            <Tooltip title="Скасувати видалення">
+            <Tooltip title={t('orders.cancelDeletion')}>
               <Button 
                 icon={<UndoOutlined />} 
                 onClick={(e) => handleUnmarkForDeletion(e, record)} 
@@ -475,7 +469,7 @@ function OrdersPage() {
   // Додаємо колонку з причиною видалення якщо показуємо видалені
   if (showDeleted) {
     columns.splice(columns.length - 1, 0, {
-      title: 'Причина видалення',
+      title: t('orders.deleteReason'),
       dataIndex: 'deletion_reason',
       key: 'deletion_reason',
       width: 200,
@@ -487,7 +481,7 @@ function OrdersPage() {
           </Text>
           {record.marked_for_deletion_by_name && (
             <div style={{ fontSize: '11px', color: '#999' }}>
-              Позначив: {record.marked_for_deletion_by_name}
+              {t('orders.deletionMarkedBy')} {record.marked_for_deletion_by_name}
             </div>
           )}
         </div>
@@ -498,16 +492,16 @@ function OrdersPage() {
   return (
     <div>
       <PageHeader
-        title="Наряди-замовлення"
+        title={t('orders.title')}
         extra={
           <Space wrap align="center">
             {stats && (
               <>
                 {[
-                  { label: 'Всього за день', value: stats.today },
-                  { label: 'Всього за тиждень', value: stats.week },
-                  { label: 'Всього за місяць', value: stats.month },
-                  { label: 'Всього за рік', value: stats.year },
+                  { label: t('orders.todayCount'), value: stats.today },
+                  { label: t('orders.weekCount'), value: stats.week },
+                  { label: t('orders.monthCount'), value: stats.month },
+                  { label: t('orders.yearCount'), value: stats.year },
                 ].map(({ label, value }) => (
                   <div key={label} style={{
                     border: '1px solid #d9d9d9',
@@ -526,7 +520,7 @@ function OrdersPage() {
               </>
             )}
             <Input
-              placeholder="Пошук (номер, авто, клієнт)"
+              placeholder={t('orders.searchPlaceholder')}
               prefix={<SearchOutlined style={{ color: '#bfbfbf' }} />}
               onChange={e => setSearchText(e.target.value)}
               style={{ width: 220 }}
@@ -534,7 +528,7 @@ function OrdersPage() {
             />
             
             <Select
-              placeholder="Всі статуси"
+              placeholder={t('common.allStatuses')}
               allowClear
               style={{ width: 150 }}
               value={statusFilter}
@@ -551,7 +545,7 @@ function OrdersPage() {
             </Select>
 
             <DatePicker
-              placeholder="Дата створення"
+              placeholder={t('orders.dateCreated')}
               format="DD.MM.YYYY"
               value={dateFilter}
               onChange={(value) => {
@@ -570,7 +564,7 @@ function OrdersPage() {
                 setPagination(prev => ({ ...prev, current: 1 }));
               }}
             >
-              {showDeleted ? 'Приховати видалені' : 'Показати на видалення'}
+              {showDeleted ? t('orders.hideDeleted') : t('orders.showDeleted')}
             </Button>
 
             <Button
@@ -578,7 +572,7 @@ function OrdersPage() {
               icon={<PlusOutlined />}
               onClick={() => navigate('/orders/new')}
             >
-              Нове замовлення
+              {t('orders.newOrder')}
             </Button>
           </Space>
         }
@@ -592,23 +586,23 @@ function OrdersPage() {
             description={
               <div>
                 <Typography.Text style={{ fontSize: 16, display: 'block', marginBottom: 4 }}>
-                  Замовлень ще немає
+                  {t('orders.emptyTitle')}
                 </Typography.Text>
                 <Typography.Text type="secondary">
-                  Створіть перший наряд-замовлення для клієнта
+                  {t('orders.emptyDesc')}
                 </Typography.Text>
               </div>
             }
           >
             <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/orders/new')}>
-              Нове замовлення
+              {t('orders.newOrder')}
             </Button>
           </Empty>
         ) : !loading && pagination.total === 0 ? (
           <Empty
             description={
               <Typography.Text type="secondary">
-                Нічого не знайдено за вашим запитом
+                {t('common.notFound')}
               </Typography.Text>
             }
           />
@@ -638,7 +632,7 @@ function OrdersPage() {
                 total={pagination.total}
                 showSizeChanger
                 pageSizeOptions={['10', '20', '50', '100']}
-                showTotal={(total, range) => `${range[0]}-${range[1]} з ${total}`}
+                showTotal={(total, range) => `${range[0]}-${range[1]} ${t('common.of')} ${total}`}
                 onChange={(page, pageSize) => {
                   setPagination(prev => ({ ...prev, current: page, pageSize }));
                 }}
@@ -653,7 +647,7 @@ function OrdersPage() {
         title={
           <Space>
             <ExclamationCircleOutlined style={{ color: '#faad14' }} />
-            <span>Позначити на видалення</span>
+            <span>{t('orders.markForDeletion')}</span>
           </Space>
         }
         open={isDeleteModalOpen}
@@ -664,27 +658,27 @@ function OrdersPage() {
         }}
         confirmLoading={actionLoading}
         onOk={() => deleteForm.submit()}
-        okText="Підтвердити"
+        okText={t('common.confirm')}
         okButtonProps={{ danger: true }}
-        cancelText="Скасувати"
+        cancelText={t('common.cancel')}
       >
         <p>
-          Ви впевнені, що хочете позначити замовлення{' '}
-          <Text strong>{orderToDelete?.order_number}</Text> на видалення?
+          {t('orders.deleteConfirmDesc')}{' '}
+          <Text strong>{orderToDelete?.order_number}</Text>?
         </p>
         <p style={{ color: '#666' }}>
-          Замовлення не буде видалено одразу. Адміністратор перевірить запит і прийме рішення.
+          {t('orders.deleteConfirmNote')}
         </p>
         
         <Form form={deleteForm} layout="vertical" onFinish={handleMarkForDeletion}>
           <Form.Item 
             name="reason" 
-            label="Причина видалення" 
-            rules={[{ required: true, message: 'Будь ласка, вкажіть причину' }]}
+            label={t('orders.deleteReason')}
+            rules={[{ required: true, message: t('orders.deleteReasonPlaceholder') }]}
           >
             <Input.TextArea 
               rows={3} 
-              placeholder="Наприклад: Дублікат, помилково створено, клієнт відмовився..." 
+              placeholder={t('orders.deleteReasonExample')}
             />
           </Form.Item>
         </Form>

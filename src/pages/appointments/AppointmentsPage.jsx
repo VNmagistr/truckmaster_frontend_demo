@@ -14,7 +14,6 @@ dayjs.extend(isSameOrAfter);
 dayjs.extend(isSameOrBefore);
 dayjs.extend(localeData);
 dayjs.extend(localizedFormat);
-dayjs.locale('uk');
 import {
   Button, Modal, Form, Input, Select, DatePicker, InputNumber,
   message, Tag, Space, Popconfirm, Typography, Flex, AutoComplete, Divider,
@@ -24,6 +23,7 @@ import {
   PlusOutlined, CheckOutlined, CloseOutlined, CheckCircleOutlined,
 } from '@ant-design/icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useTranslation } from 'react-i18next';
 import {
   getAppointments, createAppointment, updateAppointment, deleteAppointment,
   confirmAppointment, cancelAppointment, completeAppointment,
@@ -35,13 +35,6 @@ const localizer = dayjsLocalizer(dayjs);
 
 const Y = '#f5c518';
 const INK = '#1a1a1a';
-
-const SERVICE_TYPE_OPTIONS = [
-  { value: 'diagnosis', label: 'Діагностика' },
-  { value: 'maintenance', label: 'Технічне обслуговування' },
-  { value: 'repair', label: 'Ремонт' },
-  { value: 'other', label: 'Інше' },
-];
 
 const SERVICE_COLORS = {
   diagnosis: '#1677ff',
@@ -65,31 +58,39 @@ const STATUS_COLORS = {
   no_show: 'default',
 };
 
-const STATUS_LABELS = {
-  pending: 'Очікує',
-  confirmed: 'Підтверджено',
-  cancelled: 'Скасовано',
-  completed: 'Завершено',
-  no_show: 'Не з\'явився',
-};
-
-const MESSAGES = {
-  allDay: 'Весь день',
-  previous: '←',
-  next: '→',
-  today: 'Сьогодні',
-  month: 'Місяць',
-  week: 'Тиждень',
-  day: 'День',
-  agenda: 'Список',
-  date: 'Дата',
-  time: 'Час',
-  event: 'Запис',
-  noEventsInRange: 'Немає записів у цьому діапазоні',
-  showMore: (total) => `+${total} ще`,
-};
-
 export default function AppointmentsPage() {
+  const { t, i18n } = useTranslation();
+
+  const SERVICE_TYPE_OPTIONS = [
+    { value: 'diagnosis', label: t('appointments.typeDiagnostics') },
+    { value: 'maintenance', label: t('appointments.typeMaintenance') },
+    { value: 'repair', label: t('appointments.typeRepair') },
+    { value: 'other', label: t('appointments.typeOther') },
+  ];
+
+  const STATUS_LABELS = {
+    pending: t('appointments.statusPending'),
+    confirmed: t('appointments.statusConfirmed'),
+    cancelled: t('appointments.statusCanceled'),
+    completed: t('appointments.statusCompleted'),
+    no_show: t('appointments.statusNoShow'),
+  };
+
+  const MESSAGES = {
+    allDay: t('appointments.allDay'),
+    previous: '←',
+    next: '→',
+    today: t('appointments.today'),
+    month: t('appointments.month'),
+    week: t('appointments.week'),
+    day: t('appointments.day'),
+    agenda: t('appointments.listView'),
+    date: t('common.date'),
+    time: t('common.time'),
+    event: t('appointments.event'),
+    noEventsInRange: t('appointments.noEvents'),
+    showMore: (total) => `+${total}`,
+  };
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form] = Form.useForm();
@@ -114,34 +115,34 @@ export default function AppointmentsPage() {
 
   const createMutation = useMutation({
     mutationFn: createAppointment,
-    onSuccess: () => { messageApi.success('Запис створено'); invalidate(); closeModal(); },
-    onError: () => messageApi.error('Помилка при створенні'),
+    onSuccess: () => { messageApi.success(t('appointments.createdSuccess')); invalidate(); closeModal(); },
+    onError: () => messageApi.error(t('appointments.createdError')),
   });
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }) => updateAppointment(id, data),
-    onSuccess: () => { messageApi.success('Запис оновлено'); invalidate(); closeModal(); },
-    onError: () => messageApi.error('Помилка при оновленні'),
+    onSuccess: () => { messageApi.success(t('appointments.updatedSuccess')); invalidate(); closeModal(); },
+    onError: () => messageApi.error(t('appointments.updatedError')),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteAppointment,
-    onSuccess: () => { messageApi.success('Запис видалено'); invalidate(); closeModal(); },
+    onSuccess: () => { messageApi.success(t('appointments.deletedSuccess')); invalidate(); closeModal(); },
   });
 
   const confirmMutation = useMutation({
     mutationFn: confirmAppointment,
-    onSuccess: () => { messageApi.success('Запис підтверджено'); invalidate(); closeModal(); },
+    onSuccess: () => { messageApi.success(t('appointments.confirmedSuccess')); invalidate(); closeModal(); },
   });
 
   const cancelMutation = useMutation({
     mutationFn: cancelAppointment,
-    onSuccess: () => { messageApi.success('Запис скасовано'); invalidate(); closeModal(); },
+    onSuccess: () => { messageApi.success(t('appointments.canceledSuccess')); invalidate(); closeModal(); },
   });
 
   const completeMutation = useMutation({
     mutationFn: completeAppointment,
-    onSuccess: () => { messageApi.success('Запис завершено'); invalidate(); closeModal(); },
+    onSuccess: () => { messageApi.success(t('appointments.completedSuccess')); invalidate(); closeModal(); },
   });
 
   const openCreate = useCallback(() => {
@@ -282,9 +283,9 @@ export default function AppointmentsPage() {
     <div style={{ padding: '0 0 24px' }}>
       {contextHolder}
       <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>Записи на СТО</Title>
+        <Title level={4} style={{ margin: 0 }}>{t('appointments.title')}</Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-          Новий запис
+          {t('appointments.newAppointment')}
         </Button>
       </Flex>
 
@@ -311,7 +312,7 @@ export default function AppointmentsPage() {
           defaultView="week"
           views={['month', 'week', 'day', 'agenda']}
           messages={MESSAGES}
-          culture="uk"
+          culture={i18n.language}
           style={{ height: 620 }}
           onRangeChange={handleRangeChange}
           onSelectEvent={(event) => openEdit(event.resource)}
@@ -329,7 +330,7 @@ export default function AppointmentsPage() {
       <Modal
         open={modalOpen}
         onCancel={closeModal}
-        title={editingId ? 'Редагувати запис' : 'Новий запис на СТО'}
+        title={editingId ? t('appointments.editAppointment') : t('appointments.newAppointmentFull')}
         width={560}
         footer={
           <Flex justify="space-between" align="center">
@@ -343,7 +344,7 @@ export default function AppointmentsPage() {
                       onClick={() => confirmMutation.mutate(editingId)}
                       loading={confirmMutation.isPending}
                     >
-                      Підтвердити
+                      {t('appointments.confirm')}
                     </Button>
                   )}
                   {!['cancelled', 'completed'].includes(currentAppt.status) && (
@@ -353,7 +354,7 @@ export default function AppointmentsPage() {
                       onClick={() => cancelMutation.mutate(editingId)}
                       loading={cancelMutation.isPending}
                     >
-                      Скасувати
+                      {t('common.cancel')}
                     </Button>
                   )}
                   {currentAppt.status === 'confirmed' && (
@@ -362,7 +363,7 @@ export default function AppointmentsPage() {
                       onClick={() => completeMutation.mutate(editingId)}
                       loading={completeMutation.isPending}
                     >
-                      Завершено
+                      {t('appointments.complete')}
                     </Button>
                   )}
                 </>
@@ -371,19 +372,19 @@ export default function AppointmentsPage() {
             <Space>
               {editingId && (
                 <Popconfirm
-                  title="Видалити запис?"
+                  title={t('appointments.deleteConfirm')}
                   onConfirm={() => deleteMutation.mutate(editingId)}
                 >
-                  <Button danger>Видалити</Button>
+                  <Button danger>{t('common.delete')}</Button>
                 </Popconfirm>
               )}
-              <Button onClick={closeModal}>Відмінити</Button>
+              <Button onClick={closeModal}>{t('common.cancel')}</Button>
               <Button
                 type="primary"
                 onClick={handleSubmit}
                 loading={createMutation.isPending || updateMutation.isPending}
               >
-                Зберегти
+                {t('common.save')}
               </Button>
             </Space>
           </Flex>
@@ -394,22 +395,22 @@ export default function AppointmentsPage() {
             <Tag color={STATUS_COLORS[currentAppt.status]}>
               {STATUS_LABELS[currentAppt.status]}
             </Tag>
-            {currentAppt.confirmation_sent && <Tag color="cyan">Підтвердження надіслано</Tag>}
-            {currentAppt.reminder_sent && <Tag color="purple">Нагадування надіслано</Tag>}
+            {currentAppt.confirmation_sent && <Tag color="cyan">{t('appointments.confirmSent')}</Tag>}
+            {currentAppt.reminder_sent && <Tag color="purple">{t('appointments.reminderSent')}</Tag>}
           </div>
         )}
         <Form form={form} layout="vertical">
           <Form.Item name="client" hidden><Input /></Form.Item>
 
           {/* Client search */}
-          <Form.Item label="Пошук клієнта в базі">
+          <Form.Item label={t('appointments.searchClient')}>
             <AutoComplete
               options={clientOptions}
               onSearch={handleClientSearch}
               onSelect={handleClientSelect}
               onClear={handleClientClear}
               allowClear
-              placeholder="Введіть ім'я або телефон..."
+              placeholder={t('appointments.searchClientPlaceholder')}
               style={{ width: '100%' }}
               filterOption={false}
             />
@@ -417,33 +418,33 @@ export default function AppointmentsPage() {
 
           {selectedClient && (
             <div style={{ marginBottom: 12, padding: '6px 10px', background: '#f6ffed', border: '1px solid #b7eb8f', borderRadius: 4, fontSize: 13 }}>
-              Клієнт знайдений в базі: <strong>{selectedClient.name}</strong>
+              {t('appointments.clientFound', { name: selectedClient.name })}
             </div>
           )}
 
           <Divider style={{ margin: '4px 0 12px', fontSize: 12, color: '#aaa' }}>
-            {selectedClient ? 'Дані заповнено автоматично' : 'або заповніть вручну'}
+            {selectedClient ? t('appointments.autoFilled') : t('appointments.orManual')}
           </Divider>
 
           <Flex gap={12}>
-            <Form.Item name="client_name" label="Ім'я клієнта" style={{ flex: 1 }}
-              rules={[{ required: true, message: 'Вкажіть ім\'я' }]}>
-              <Input placeholder="Іван Петренко" />
+            <Form.Item name="client_name" label={t('appointments.clientName')} style={{ flex: 1 }}
+              rules={[{ required: true, message: t('appointments.clientNamePlaceholder') }]}>
+              <Input placeholder={t('appointments.clientNamePlaceholder')} />
             </Form.Item>
-            <Form.Item name="client_phone" label="Телефон" style={{ flex: 1 }}
-              rules={[{ required: true, message: 'Вкажіть телефон' }]}>
+            <Form.Item name="client_phone" label={t('common.phone')} style={{ flex: 1 }}
+              rules={[{ required: true, message: t('appointments.phonePlaceholder') }]}>
               <Input placeholder="+380 XX XXX XXXX" />
             </Form.Item>
           </Flex>
 
-          <Form.Item name="license_plate" label="Держномер авто"
-            rules={[{ required: true, message: 'Вкажіть держномер' }]}>
+          <Form.Item name="license_plate" label={t('appointments.plateNumber')}
+            rules={[{ required: true, message: t('appointments.platePlaceholder') }]}>
             {clientTrucks.length > 0 ? (
               <Select
-                placeholder="Оберіть авто"
-                options={clientTrucks.map(t => ({
-                  value: t.license_plate,
-                  label: `${t.license_plate} — ${t.specific_model_name}`,
+                placeholder={t('appointments.selectTruck')}
+                options={clientTrucks.map(tr => ({
+                  value: tr.license_plate,
+                  label: `${tr.license_plate} — ${tr.specific_model_name}`,
                 }))}
               />
             ) : (
@@ -452,20 +453,20 @@ export default function AppointmentsPage() {
           </Form.Item>
 
           <Flex gap={12}>
-            <Form.Item name="scheduled_dt" label="Дата та час" style={{ flex: 1 }}
-              rules={[{ required: true, message: 'Вкажіть дату та час' }]}>
+            <Form.Item name="scheduled_dt" label={t('appointments.dateTime')} style={{ flex: 1 }}
+              rules={[{ required: true, message: t('appointments.dateTimePlaceholder') }]}>
               <DatePicker showTime format="DD.MM.YYYY HH:mm" style={{ width: '100%' }} />
             </Form.Item>
-            <Form.Item name="duration_minutes" label="Тривалість (хв)" style={{ flex: 1 }}>
+            <Form.Item name="duration_minutes" label={t('appointments.duration')} style={{ flex: 1 }}>
               <InputNumber min={15} max={480} step={15} style={{ width: '100%' }} />
             </Form.Item>
           </Flex>
 
-          <Form.Item name="service_type" label="Тип послуги">
+          <Form.Item name="service_type" label={t('appointments.serviceType')}>
             <Select options={SERVICE_TYPE_OPTIONS} />
           </Form.Item>
-          <Form.Item name="description" label="Опис / коментар">
-            <Input.TextArea rows={3} placeholder="Що потребує уваги..." />
+          <Form.Item name="description" label={t('appointments.comment')}>
+            <Input.TextArea rows={3} placeholder={t('appointments.commentPlaceholder')} />
           </Form.Item>
         </Form>
       </Modal>

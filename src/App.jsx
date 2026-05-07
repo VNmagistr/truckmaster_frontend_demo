@@ -1,9 +1,12 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useMemo } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ConfigProvider, App as AntApp } from 'antd';
 import ukUA from 'antd/locale/uk_UA';
+import enUS from 'antd/locale/en_US';
 import dayjs from 'dayjs';
 import 'dayjs/locale/uk';
+import 'dayjs/locale/en';
+import { useTranslation } from 'react-i18next';
 
 import { MainLayout, AuthLayout } from './layouts';
 import CabinetLayout from './layouts/CabinetLayout';
@@ -72,7 +75,7 @@ const CabinetOrdersPage = lazy(() => import('./pages/cabinet/CabinetOrdersPage')
 const CabinetOrderDetail = lazy(() => import('./pages/cabinet/CabinetOrderDetail'));
 const CabinetProfilePage = lazy(() => import('./pages/cabinet/CabinetProfilePage'));
 
-dayjs.locale('uk');
+const ANT_LOCALES = { uk: ukUA, en: enUS };
 
 const theme = {
   token: {
@@ -176,8 +179,13 @@ function AppRoutes() {
 }
 
 function App() {
+  const { i18n } = useTranslation();
+  const lang = i18n.language?.startsWith('en') ? 'en' : 'uk';
+
+  useMemo(() => { dayjs.locale(lang); }, [lang]);
+
   return (
-    <ConfigProvider locale={ukUA} theme={theme}>
+    <ConfigProvider locale={ANT_LOCALES[lang] || ukUA} theme={theme}>
       <AntApp>
         <BrowserRouter>
           <AnalyticsTracker />

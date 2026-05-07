@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, Tabs, message, Modal, Row, Col, Typography, Avatar, Divider, Alert } from 'antd';
 import { UserOutlined, SaveOutlined, LockOutlined, DeleteOutlined, ExclamationCircleOutlined, PhoneOutlined, IdcardOutlined } from '@ant-design/icons';
-import { userAPI } from '../../api'; 
+import { useTranslation } from 'react-i18next';
+import { userAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components'; 
 
 const { Title, Text } = Typography;
@@ -11,7 +12,8 @@ function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [saving, setSaving] = useState(false);
-  
+  const { t } = useTranslation();
+
   const [formProfile] = Form.useForm();
   const [formPassword] = Form.useForm();
 
@@ -27,7 +29,7 @@ function ProfilePage() {
       setUser(data);
       formProfile.setFieldsValue(data);
     } catch (error) {
-      message.error('Не вдалося завантажити дані профілю');
+      message.error(t('profile.loadError'));
     } finally {
       setLoading(false);
     }
@@ -39,9 +41,9 @@ function ProfilePage() {
       const response = await userAPI.updateMe(values);
       const data = response.data || response;
       setUser(data);
-      message.success('Профіль оновлено');
+      message.success(t('profile.updateSuccess'));
     } catch (error) {
-      message.error('Помилка оновлення профілю');
+      message.error(t('profile.updateError'));
     } finally {
       setSaving(false);
     }
@@ -51,10 +53,10 @@ function ProfilePage() {
     setSaving(true);
     try {
       await userAPI.changePassword(values);
-      message.success('Пароль успішно змінено');
+      message.success(t('profile.passwordSuccess'));
       formPassword.resetFields();
     } catch (error) {
-      const errorMsg = error.response?.data?.old_password?.[0] || 'Помилка зміни паролю';
+      const errorMsg = error.response?.data?.old_password?.[0] || t('profile.passwordError');
       message.error(errorMsg);
     } finally {
       setSaving(false);
@@ -63,12 +65,12 @@ function ProfilePage() {
 
   const showDeleteConfirm = () => {
     confirm({
-      title: 'Ви впевнені, що хочете видалити акаунт?',
+      title: t('profile.confirmDeleteAccount'),
       icon: <ExclamationCircleOutlined style={{ color: 'red' }} />,
-      content: 'Ваш акаунт буде деактивовано. Ви втратите доступ до системи.',
-      okText: 'Деактивувати',
+      content: t('profile.deleteAccountDesc'),
+      okText: t('profile.deactivate'),
       okType: 'danger',
-      cancelText: 'Скасувати',
+      cancelText: t('common.cancel'),
       onOk: handleDeleteAccount,
     });
   };
@@ -76,11 +78,11 @@ function ProfilePage() {
   const handleDeleteAccount = async () => {
     try {
       await userAPI.deleteMe();
-      message.success('Акаунт деактивовано');
-      localStorage.removeItem('token'); 
+      message.success(t('profile.deleteSuccess'));
+      localStorage.removeItem('token');
       window.location.href = '/login';
     } catch (error) {
-      message.error('Не вдалося видалити акаунт');
+      message.error(t('profile.deleteError'));
     }
   };
 
@@ -89,7 +91,7 @@ function ProfilePage() {
   const items = [
     {
       key: '1',
-      label: 'Особисті дані',
+      label: t('profile.personalData'),
       children: (
         <Form
           form={formProfile}
@@ -98,53 +100,53 @@ function ProfilePage() {
         >
           <Row gutter={16}>
             <Col xs={24} md={12}>
-              <Form.Item label="Логін" name="username">
+              <Form.Item label={t('profile.login')} name="username">
                 <Input disabled prefix={<UserOutlined />} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item label="Email" name="email" rules={[{ type: 'email' }]}>
+              <Form.Item label={t('profile.email')} name="email" rules={[{ type: 'email' }]}>
                 <Input />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item label="Ім'я" name="first_name">
+              <Form.Item label={t('profile.firstName')} name="first_name">
                 <Input />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item label="Прізвище" name="last_name">
+              <Form.Item label={t('profile.lastName')} name="last_name">
                 <Input />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item label="Телефон" name="phone">
-                <Input prefix={<PhoneOutlined />} placeholder="+380..." />
+              <Form.Item label={t('profile.phone')} name="phone">
+                <Input prefix={<PhoneOutlined />} placeholder={t('profile.phonePlaceholder')} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item label="Посада" name="position">
+              <Form.Item label={t('profile.position')} name="position">
                 <Input prefix={<IdcardOutlined />} />
               </Form.Item>
             </Col>
           </Row>
           <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>
-            Зберегти зміни
+            {t('common.saveChanges')}
           </Button>
         </Form>
       ),
     },
     {
       key: '2',
-      label: 'Безпека',
+      label: t('profile.security'),
       children: (
         <Form form={formPassword} layout="vertical" onFinish={handleChangePassword}>
           <Row gutter={16}>
             <Col xs={24} md={12}>
-              <Form.Item 
-                label="Поточний пароль" 
-                name="old_password" 
-                rules={[{ required: true, message: 'Введіть поточний пароль' }]}
+              <Form.Item
+                label={t('profile.currentPassword')}
+                name="old_password"
+                rules={[{ required: true, message: t('profile.currentPasswordPlaceholder') }]}
               >
                 <Input.Password prefix={<LockOutlined />} />
               </Form.Item>
@@ -152,27 +154,27 @@ function ProfilePage() {
           </Row>
           <Row gutter={16}>
             <Col xs={24} md={12}>
-              <Form.Item 
-                label="Новий пароль" 
+              <Form.Item
+                label={t('profile.newPassword')}
                 name="new_password"
-                rules={[{ required: true, message: 'Введіть новий пароль', min: 6 }]}
+                rules={[{ required: true, message: t('profile.newPasswordPlaceholder'), min: 6 }]}
               >
                 <Input.Password prefix={<LockOutlined />} />
               </Form.Item>
             </Col>
             <Col xs={24} md={12}>
-              <Form.Item 
-                label="Підтвердження паролю" 
+              <Form.Item
+                label={t('profile.confirmPassword')}
                 name="confirm_password"
                 dependencies={['new_password']}
                 rules={[
-                  { required: true, message: 'Підтвердіть пароль' },
+                  { required: true, message: t('profile.confirmPasswordPlaceholder') },
                   ({ getFieldValue }) => ({
                     validator(_, value) {
                       if (!value || getFieldValue('new_password') === value) {
                         return Promise.resolve();
                       }
-                      return Promise.reject(new Error('Паролі не співпадають!'));
+                      return Promise.reject(new Error(t('profile.passwordsMismatch')));
                     },
                   }),
                 ]}
@@ -182,25 +184,25 @@ function ProfilePage() {
             </Col>
           </Row>
           <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>
-            Змінити пароль
+            {t('profile.changePassword')}
           </Button>
         </Form>
       ),
     },
     {
       key: '3',
-      label: <span style={{ color: '#ff4d4f' }}>Небезпечна зона</span>,
+      label: <span style={{ color: '#ff4d4f' }}>{t('profile.dangerZone')}</span>,
       children: (
         <div>
           <Alert
-            message="Видалення акаунту"
-            description="Ваш акаунт буде деактивовано. Ви втратите доступ до системи."
+            message={t('profile.deleteAccount')}
+            description={t('profile.deleteAccountDesc')}
             type="error"
             showIcon
             style={{ marginBottom: 16 }}
           />
           <Button type="primary" danger icon={<DeleteOutlined />} onClick={showDeleteConfirm}>
-            Деактивувати мій акаунт
+            {t('profile.deactivateMyAccount')}
           </Button>
         </div>
       ),
@@ -209,7 +211,7 @@ function ProfilePage() {
 
   return (
     <div>
-      <PageHeader title="Мій профіль" showBack />
+      <PageHeader title={t('profile.title')} showBack />
       
       <Row gutter={24}>
         <Col xs={24} lg={8}>
@@ -225,10 +227,10 @@ function ProfilePage() {
             <Text type="secondary">{user?.email}</Text>
             <Divider />
             <div style={{ textAlign: 'left' }}>
-              <p><Text strong>Роль:</Text> {user?.role}</p>
-              <p><Text strong>Телефон:</Text> {user?.phone || '-'}</p>
-              <p><Text strong>Посада:</Text> {user?.position || '-'}</p>
-              <p><Text strong>Дата реєстрації:</Text> {new Date(user?.date_joined).toLocaleDateString()}</p>
+              <p><Text strong>{t('profile.role')}</Text> {user?.role}</p>
+              <p><Text strong>{t('profile.phoneLabel')}</Text> {user?.phone || '-'}</p>
+              <p><Text strong>{t('profile.positionLabel')}</Text> {user?.position || '-'}</p>
+              <p><Text strong>{t('profile.registrationDate')}</Text> {new Date(user?.date_joined).toLocaleDateString()}</p>
             </div>
           </Card>
         </Col>

@@ -7,11 +7,13 @@ import {
   PlusOutlined, SwapOutlined, SearchOutlined, InboxOutlined,
   WarningOutlined, BarcodeOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { inventoryAPI } from '../../api';
 
 const { Text } = Typography;
 
 function WholesaleTab() {
+  const { t } = useTranslation();
   const [warehouses, setWarehouses] = useState([]);
   const [stock, setStock] = useState([]);
   const [stockLoading, setStockLoading] = useState(false);
@@ -61,7 +63,7 @@ function WholesaleTab() {
         setSelectedWarehouse(null);
       }
     } catch {
-      message.error('Не вдалося завантажити склади');
+      message.error(t('wholesale.loadWarehousesError'));
       setSelectedWarehouse(null);
     }
   };

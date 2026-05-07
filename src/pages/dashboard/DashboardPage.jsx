@@ -21,6 +21,8 @@ import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, BarChart, Bar, Legend,
 } from 'recharts';
+import dayjs from 'dayjs';
+import { useTranslation } from 'react-i18next';
 import { ordersAPI, clientsAPI, trucksAPI, botAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatMoney } from '../../utils/formatters';
@@ -36,6 +38,7 @@ const cardStyle = {
 };
 
 function DashboardPage() {
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
     totalClients: 0,
@@ -49,10 +52,13 @@ function DashboardPage() {
     mileageToday: null,
   });
   const [recentOrders, setRecentOrders] = useState([]);
+  const [staleOrders, setStaleOrders] = useState([]);
+  const [staleModalOpen, setStaleModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
+    fetchStaleOrders();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -85,15 +91,31 @@ function DashboardPage() {
 
       setRecentOrders((ordersData.results || []).slice(0, 5));
     } catch {
-      message.error('Не вдалося завантажити статистику');
+      message.error(t('dashboard.statsError'));
     } finally {
       setLoading(false);
     }
   };
 
+  const fetchStaleOrders = async () => {
+    try {
+      const res = await ordersAPI.getStaleInProgress();
+      const data = res.data || res;
+      if (data.length > 0) {
+        setStaleOrders(data);
+        const dismissed = sessionStorage.getItem('stale_orders_dismissed');
+        if (!dismissed) {
+          setStaleModalOpen(true);
+        }
+      }
+    } catch {
+      // silent
+    }
+  };
+
   const recentOrdersColumns = [
     {
-      title: '№',
+      title: t('dashboard.orderNumber'),
       dataIndex: 'order_number',
       key: 'order_number',
       render: (text, record) => (
@@ -103,25 +125,25 @@ function DashboardPage() {
       ),
     },
     {
-      title: 'Клієнт',
+      title: t('common.client'),
       dataIndex: ['client', 'name'],
       key: 'client',
       render: (text) => text || '-',
     },
     {
-      title: 'Авто',
+      title: t('common.truck'),
       dataIndex: ['truck', 'license_plate'],
       key: 'truck',
       render: (text) => text || '-',
     },
     {
-      title: 'Статус',
+      title: t('common.status'),
       dataIndex: 'status',
       key: 'status',
       render: (s) => <StatusTag status={s} type="order" />,
     },
     {
-      title: 'Сума',
+      title: t('common.amount'),
       dataIndex: 'total_cost',
       key: 'total_cost',
       align: 'right',
@@ -153,50 +175,112 @@ function DashboardPage() {
   const SETUP_ITEMS = [
     {
       icon: <CarOutlined style={{ color: '#f5c518', fontSize: 20 }} />,
-      title: 'Базові моделі автомобілів',
-      description: 'Додайте лінійку Iveco, якою ви працюєте: Daily, S-Way, X-Way, Stralis тощо. Це прискорить створення карток авто.',
-      link: { label: 'Відкрити в адмін-панелі', href: `${adminBase}/clients/ivecobasemodel/add/` },
+      title: t('dashboard.setupBaseModels'),
+      description: t('dashboard.setupBaseModelsDesc'),
+      link: { label: t('dashboard.openAdminPanel'), href: `${adminBase}/clients/ivecobasemodel/add/` },
     },
     {
       icon: <AppstoreOutlined style={{ color: '#f5c518', fontSize: 20 }} />,
-      title: 'Групи робіт',
-      description: 'Створіть категорії: Двигун, Трансмісія, Гальма, Підвіска, Електрика, Планове ТО тощо. Від них залежить структура прайсу.',
-      link: { label: 'Відкрити в адмін-панелі', href: `${adminBase}/orders/workgroup/add/` },
+      title: t('dashboard.setupWorkGroups'),
+      description: t('dashboard.setupWorkGroupsDesc'),
+      link: { label: t('dashboard.openAdminPanel'), href: `${adminBase}/orders/workgroup/add/` },
     },
     {
       icon: <DollarOutlined style={{ color: '#f5c518', fontSize: 20 }} />,
-      title: 'Вартості робіт (прайс-лист)',
-      description: 'Для кожної групи додайте позиції: назва роботи, нормо-години, ставка. Ці ціни будуть автоматично підтягуватись у наряди.',
-      link: { label: 'Відкрити в адмін-панелі', href: `${adminBase}/orders/workprice/add/` },
+      title: t('dashboard.setupPriceList'),
+      description: t('dashboard.setupPriceListDesc'),
+      link: { label: t('dashboard.openAdminPanel'), href: `${adminBase}/orders/workprice/add/` },
     },
     {
       icon: <BellOutlined style={{ color: '#f5c518', fontSize: 20 }} />,
-      title: 'Регламенти технічного обслуговування',
-      description: 'Налаштуйте правила автоматичних нагадувань: тип роботи, інтервал у кілометрах або днях. Система сама нагадає про ТО.',
-      link: { label: 'Перейти до Нагадувань ТО', href: '/reminders', internal: true },
+      title: t('dashboard.setupMaintenanceRules'),
+      description: t('dashboard.setupMaintenanceRulesDesc'),
+      link: { label: t('dashboard.goToReminders'), href: '/reminders', internal: true },
     },
     {
       icon: <SettingOutlined style={{ color: '#f5c518', fontSize: 20 }} />,
-      title: 'Інтервали пробігів для вантажівок',
-      description: 'Для кожного авто окремо вкажіть пробіги останньої заміни оливи, ремені, ланцюги. Це дозволить системі відстежувати знос деталей.',
-      note: 'Налаштовується на сторінці кожного автомобіля після його додавання.',
+      title: t('dashboard.setupMileageIntervals'),
+      description: t('dashboard.setupMileageIntervalsDesc'),
+      note: t('dashboard.setupMileageIntervalsNote'),
     },
   ];
 
   if (loading) return <LoadingSpinner />;
+
+  const handleStaleModalClose = () => {
+    sessionStorage.setItem('stale_orders_dismissed', '1');
+    setStaleModalOpen(false);
+  };
+
+  const staleOrdersModal = (
+    <Modal
+      open={staleModalOpen}
+      onCancel={handleStaleModalClose}
+      onOk={handleStaleModalClose}
+      okText={t('common.understood')}
+      cancelButtonProps={{ style: { display: 'none' } }}
+      width={560}
+      title={
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <ExclamationCircleOutlined style={{ color: '#faad14', fontSize: 22 }} />
+          <span>{t('dashboard.staleOrdersTitle')}</span>
+        </div>
+      }
+    >
+      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+        {t('dashboard.staleOrdersDesc')}
+      </Typography.Text>
+      <Table
+        dataSource={staleOrders}
+        rowKey="id"
+        pagination={false}
+        size="small"
+        columns={[
+          {
+            title: t('dashboard.staleOrderNumber'),
+            dataIndex: 'order_number',
+            key: 'order_number',
+            render: (text, record) => (
+              <Link to={`/orders/${record.id}`} style={{ color: INK, fontWeight: 600 }}>
+                {text || `#${record.id}`}
+              </Link>
+            ),
+          },
+          {
+            title: t('common.client'),
+            dataIndex: 'client_name',
+            key: 'client_name',
+            render: (v) => v || '—',
+          },
+          {
+            title: t('common.truck'),
+            dataIndex: 'truck_plate',
+            key: 'truck_plate',
+            render: (v) => v || '—',
+          },
+          {
+            title: t('dashboard.staleInProgressSince'),
+            dataIndex: 'in_progress_since',
+            key: 'in_progress_since',
+            render: (v) => v ? dayjs(v).format('DD.MM.YYYY') : '—',
+          },
+        ]}
+      />
+    </Modal>
+  );
 
   const setupWizardModal = (
     <Modal
       open={setupModalOpen}
       onCancel={handleSetupModalClose}
       onOk={handleSetupModalClose}
-      okText="Зрозуміло, налаштую"
-      cancelText="Пізніше"
+      okText={t('dashboard.setupConfirm')}
+      cancelText={t('common.later')}
       width={620}
       title={
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <ExclamationCircleOutlined style={{ color: '#f5c518', fontSize: 22 }} />
-          <span>Рекомендації перед початком роботи</span>
+          <span>{t('dashboard.setupTitle')}</span>
         </div>
       }
       footer={
@@ -205,21 +289,21 @@ function DashboardPage() {
             checked={dontShowAgain}
             onChange={e => setDontShowAgain(e.target.checked)}
           >
-            Не показувати більше
+            {t('dashboard.dontShowAgain')}
           </Checkbox>
           <div style={{ display: 'flex', gap: 8 }}>
-            <Button onClick={handleSetupModalClose}>Пізніше</Button>
-            <Button type="primary" onClick={handleSetupModalClose}>Зрозуміло, налаштую</Button>
+            <Button onClick={handleSetupModalClose}>{t('common.later')}</Button>
+            <Button type="primary" onClick={handleSetupModalClose}>{t('dashboard.setupConfirm')}</Button>
           </div>
         </div>
       }
     >
       <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-        Система готова до роботи, але рекомендуємо заповнити базові довідники — це займе 10–15 хвилин і значно прискорить щоденну роботу.
+        {t('dashboard.setupSubtitle')}
       </Typography.Text>
       <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 16, fontSize: 13 }}>
-        Будь-які подальші доналаштування — довідники, користувачі, модулі, права доступу — доступні через{' '}
-        <a href={adminBase} target="_blank" rel="noopener noreferrer">адмін-панель Django</a>.
+        {t('dashboard.setupAdminHint')}{' '}
+        <a href={adminBase} target="_blank" rel="noopener noreferrer">{t('dashboard.djangoAdmin')}</a>.
       </Typography.Text>
       <List
         dataSource={SETUP_ITEMS}
@@ -271,8 +355,9 @@ function DashboardPage() {
   if (isFirstRun) {
     return (
       <div>
+        {staleOrdersModal}
         {setupWizardModal}
-        <PageHeader title="Дашборд" />
+        <PageHeader title={t('dashboard.title')} />
         <Card
           style={{
             borderTop: `4px solid ${Y}`,
@@ -285,10 +370,10 @@ function DashboardPage() {
           <div style={{ textAlign: 'center', padding: '16px 0 24px' }}>
             <RocketOutlined style={{ fontSize: 48, color: Y, marginBottom: 12 }} />
             <Typography.Title level={3} style={{ marginBottom: 4 }}>
-              Ласкаво просимо до TruckMaster CRM
+              {t('dashboard.welcome')}
             </Typography.Title>
             <Typography.Text type="secondary" style={{ fontSize: 15 }}>
-              Система порожня. Почніть з трьох простих кроків:
+              {t('dashboard.emptyTitle')}
             </Typography.Text>
           </div>
           <Steps
@@ -297,11 +382,11 @@ function DashboardPage() {
             style={{ maxWidth: 560, margin: '0 auto' }}
             items={[
               {
-                title: <Typography.Text strong>Додайте першого клієнта</Typography.Text>,
+                title: <Typography.Text strong>{t('dashboard.step1Title')}</Typography.Text>,
                 description: (
                   <div style={{ paddingBottom: 8 }}>
                     <Typography.Text type="secondary">
-                      Клієнт — власник вантажівки. Вкажіть ім&apos;я, телефон та місто.
+                      {t('dashboard.step1Desc')}
                     </Typography.Text>
                     <br />
                     <Button
@@ -311,18 +396,18 @@ function DashboardPage() {
                       style={{ marginTop: 8 }}
                       onClick={() => navigate('/clients/new')}
                     >
-                      Додати клієнта
+                      {t('dashboard.addClient')}
                     </Button>
                   </div>
                 ),
                 icon: <UserOutlined />,
               },
               {
-                title: <Typography.Text strong>Додайте вантажівку</Typography.Text>,
+                title: <Typography.Text strong>{t('dashboard.step2Title')}</Typography.Text>,
                 description: (
                   <div style={{ paddingBottom: 8 }}>
                     <Typography.Text type="secondary">
-                      Прив&apos;яжіть авто до клієнта: модель, номерний знак, VIN.
+                      {t('dashboard.step2Desc')}
                     </Typography.Text>
                     <br />
                     <Button
@@ -331,18 +416,18 @@ function DashboardPage() {
                       style={{ marginTop: 8 }}
                       onClick={() => navigate('/trucks/new')}
                     >
-                      Додати авто
+                      {t('dashboard.addTruck')}
                     </Button>
                   </div>
                 ),
                 icon: <CarOutlined />,
               },
               {
-                title: <Typography.Text strong>Створіть перший наряд-замовлення</Typography.Text>,
+                title: <Typography.Text strong>{t('dashboard.step3Title')}</Typography.Text>,
                 description: (
                   <div style={{ paddingBottom: 8 }}>
                     <Typography.Text type="secondary">
-                      Оформіть ремонт або ТО: оберіть авто, опишіть проблему, додайте роботи.
+                      {t('dashboard.step3Desc')}
                     </Typography.Text>
                     <br />
                     <Button
@@ -351,7 +436,7 @@ function DashboardPage() {
                       style={{ marginTop: 8 }}
                       onClick={() => navigate('/orders/new')}
                     >
-                      Нове замовлення
+                      {t('dashboard.newOrder')}
                     </Button>
                   </div>
                 ),
@@ -366,15 +451,16 @@ function DashboardPage() {
 
   return (
     <div>
+      {staleOrdersModal}
       {setupWizardModal}
-      <PageHeader title="Дашборд" />
+      <PageHeader title={t('dashboard.title')} />
 
       {/* Рядок 1: ключові метрики */}
       <Row gutter={[16, 16]}>
         <Col xs={12} sm={8} lg={4}>
           <Card hoverable style={cardStyle} onClick={() => navigate('/clients')}>
             <Statistic
-              title="Клієнтів"
+              title={t('dashboard.clientsCount')}
               value={stats.totalClients}
               prefix={<UserOutlined />}
               valueStyle={{ color: INK }}
@@ -384,7 +470,7 @@ function DashboardPage() {
         <Col xs={12} sm={8} lg={4}>
           <Card hoverable style={cardStyle} onClick={() => navigate('/trucks')}>
             <Statistic
-              title="Вантажівок"
+              title={t('dashboard.trucksCount')}
               value={stats.totalTrucks}
               prefix={<CarOutlined />}
               valueStyle={{ color: INK }}
@@ -394,7 +480,7 @@ function DashboardPage() {
         <Col xs={12} sm={8} lg={4}>
           <Card hoverable style={cardStyle} onClick={() => navigate('/orders')}>
             <Statistic
-              title="Всього замовлень"
+              title={t('dashboard.totalOrders')}
               value={stats.totalOrders}
               prefix={<FileTextOutlined />}
               valueStyle={{ color: INK }}
@@ -404,7 +490,7 @@ function DashboardPage() {
         <Col xs={12} sm={8} lg={4}>
           <Card style={cardStyle}>
             <Statistic
-              title="Відкрито"
+              title={t('dashboard.openOrders')}
               value={stats.openOrders}
               prefix={<ClockCircleOutlined />}
               valueStyle={{ color: '#faad14' }}
@@ -414,7 +500,7 @@ function DashboardPage() {
         <Col xs={12} sm={8} lg={4}>
           <Card style={cardStyle}>
             <Statistic
-              title="В роботі"
+              title={t('dashboard.inProgress')}
               value={stats.inProgressOrders}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#1890ff' }}
@@ -424,7 +510,7 @@ function DashboardPage() {
         <Col xs={12} sm={8} lg={4}>
           <Card style={cardStyle}>
             <Statistic
-              title="Виторг (місяць)"
+              title={t('dashboard.monthRevenue')}
               value={stats.monthlyRevenue}
               prefix={<DollarOutlined />}
               suffix="₴"
@@ -438,10 +524,10 @@ function DashboardPage() {
           <Col xs={12} sm={8} lg={4}>
             <Card style={cardStyle}>
               <Statistic
-                title="Пробіг через бота (сьогодні)"
+                title={t('dashboard.botMileageToday')}
                 value={stats.mileageToday}
                 prefix={<RobotOutlined />}
-                suffix="звітів"
+                suffix={t('dashboard.reports')}
                 valueStyle={{ color: INK }}
               />
             </Card>
@@ -453,11 +539,11 @@ function DashboardPage() {
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={16}>
           <Card
-            title="Виторг за останні 12 місяців"
+            title={t('dashboard.revenue12months')}
             style={cardStyle}
             extra={
               <span style={{ color: '#3f8600', fontWeight: 600 }}>
-                {stats.yearlyRevenue.toLocaleString('uk-UA')} ₴ / рік
+                {stats.yearlyRevenue.toLocaleString('uk-UA')} ₴ / {t('dashboard.year')}
               </span>
             }
           >
@@ -474,7 +560,7 @@ function DashboardPage() {
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                   <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
                   <Tooltip
-                    formatter={(v) => [`${v.toLocaleString('uk-UA')} ₴`, 'Виторг']}
+                    formatter={(v) => [`${v.toLocaleString('uk-UA')} ₴`, t('dashboard.revenue')]}
                   />
                   <Area
                     type="monotone"
@@ -493,9 +579,9 @@ function DashboardPage() {
 
         <Col xs={24} lg={8}>
           <Card
-            title="Останні замовлення"
+            title={t('dashboard.recentOrders')}
             style={{ ...cardStyle, height: '100%' }}
-            extra={<Link to="/orders" style={{ color: Y }}>Всі</Link>}
+            extra={<Link to="/orders" style={{ color: Y }}>{t('dashboard.viewAll')}</Link>}
           >
             <Table
               columns={recentOrdersColumns}
