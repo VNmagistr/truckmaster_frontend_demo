@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components';
 import { clientsAPI, trucksAPI, inventoryAPI } from '../../api';
 import {
@@ -24,11 +25,12 @@ const INK = '#1a1a1a';
 const { Text } = Typography;
 
 const STATUS_COLOR = { draft: 'default', sent: 'blue', paid: 'green', cancelled: 'red' };
-const STATUS_LABEL = { draft: 'Чернетка', sent: 'Виставлено', paid: 'Оплачено', cancelled: 'Скасовано' };
+const STATUS_KEY   = { draft: 'statusDraft', sent: 'statusSent', paid: 'statusPaid', cancelled: 'statusCanceled' };
 
 // ─── Форма шапки рахунку ─────────────────────────────────────────────────────
 
 function InvoiceHeaderForm({ invoice, onSaved }) {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [saving, setSaving] = useState(false);
   const [clientSearch, setClientSearch] = useState('');
@@ -67,7 +69,7 @@ function InvoiceHeaderForm({ invoice, onSaved }) {
     try {
       const res = await trucksAPI.getAll({ client: clientId, page_size: 100 });
       const list = res.data?.results || res.data || [];
-      setTruckOptions(list.map(t => ({ value: t.id, label: `${t.license_plate} — ${t.specific_model_name || ''}` })));
+      setTruckOptions(list.map(tr => ({ value: tr.id, label: `${tr.license_plate} — ${tr.specific_model_name || ''}` })));
     } catch {}
   };
 
@@ -83,7 +85,7 @@ function InvoiceHeaderForm({ invoice, onSaved }) {
       const values = await form.validateFields();
       setSaving(true);
       await updateInvoice(invoice.id, values);
-      message.success('Збережено');
+      message.success(t('invoiceDetail.saved'));
       onSaved();
     } catch (err) {
       if (err?.response?.data) {
@@ -100,11 +102,11 @@ function InvoiceHeaderForm({ invoice, onSaved }) {
     <Form form={form} layout="vertical">
       <Row gutter={16}>
         <Col xs={24} md={12}>
-          <Form.Item name="client" label="Клієнт" rules={[{ required: true, message: 'Оберіть клієнта' }]}>
+          <Form.Item name="client" label={t('invoiceDetail.clientLabel')} rules={[{ required: true, message: t('invoiceDetail.selectClient') }]}>
             <Select
               showSearch
               disabled={readonly}
-              placeholder="Введіть ім'я або телефон"
+              placeholder={t('invoiceDetail.clientSearchPlaceholder')}
               filterOption={false}
               onSearch={searchClients}
               onSelect={handleClientSelect}
@@ -113,17 +115,17 @@ function InvoiceHeaderForm({ invoice, onSaved }) {
           </Form.Item>
         </Col>
         <Col xs={24} md={12}>
-          <Form.Item name="truck" label="Вантажівка">
+          <Form.Item name="truck" label={t('invoiceDetail.selectTruck')}>
             <Select
               disabled={readonly || !selectedClientId}
               allowClear
-              placeholder="Оберіть вантажівку (необов'язково)"
+              placeholder={t('invoiceDetail.selectTruckOptional')}
               options={truckOptions}
             />
           </Form.Item>
         </Col>
         <Col xs={24}>
-          <Form.Item name="notes" label="Примітки">
+          <Form.Item name="notes" label={t('invoiceDetail.notes')}>
             <Input.TextArea rows={2} disabled={readonly} maxLength={500} />
           </Form.Item>
         </Col>
@@ -131,7 +133,7 @@ function InvoiceHeaderForm({ invoice, onSaved }) {
       {!readonly && (
         <Button type="primary" icon={<SaveOutlined />} onClick={handleSave} loading={saving}
           style={{ background: Y, color: INK, borderColor: Y }}>
-          Зберегти
+          {t('common.save')}
         </Button>
       )}
     </Form>
@@ -141,6 +143,7 @@ function InvoiceHeaderForm({ invoice, onSaved }) {
 // ─── Позиції рахунку ─────────────────────────────────────────────────────────
 
 function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
+  const { t } = useTranslation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -160,7 +163,7 @@ function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
       const total = list.reduce((s, i) => s + parseFloat(i.total || 0), 0);
       onTotalChange(total);
     } catch {
-      message.error('Не вдалося завантажити позиції');
+      message.error(t('invoiceDetail.loadError'));
     } finally {
       setLoading(false);
     }
@@ -210,10 +213,10 @@ function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
       const payload = { ...values, invoice: invoiceId };
       if (editingItem) {
         await updateItem(editingItem.id, payload);
-        message.success('Оновлено');
+        message.success(t('invoiceDetail.saved'));
       } else {
         await createItem(payload);
-        message.success('Позицію додано');
+        message.success(t('invoiceDetail.itemAdded'));
       }
       setModalOpen(false);
       load();
@@ -227,28 +230,28 @@ function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
   const handleDelete = async (id) => {
     try {
       await deleteItem(id);
-      message.success('Видалено');
+      message.success(t('invoiceDetail.itemDeleted'));
       load();
-    } catch { message.error('Помилка'); }
+    } catch { message.error(t('common.error')); }
   };
 
   const total = items.reduce((s, i) => s + parseFloat(i.total || 0), 0);
 
   const columns = [
     {
-      title: 'Артикул',
+      title: t('invoiceDetail.skuColumn'),
       dataIndex: 'product_sku',
       key: 'sku',
       width: 110,
       render: v => v ? <Text code style={{ fontSize: 12 }}>{v}</Text> : '—',
     },
     {
-      title: 'Опис / Назва',
+      title: t('invoiceDetail.descColumn'),
       dataIndex: 'description',
       key: 'description',
     },
     {
-      title: 'К-сть',
+      title: t('invoiceDetail.qtyColumn'),
       dataIndex: 'quantity',
       key: 'quantity',
       width: 80,
@@ -256,7 +259,7 @@ function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
       render: v => parseFloat(v),
     },
     {
-      title: 'Ціна',
+      title: t('invoiceDetail.priceColumn'),
       dataIndex: 'unit_price',
       key: 'unit_price',
       width: 110,
@@ -264,7 +267,7 @@ function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
       render: v => `${parseFloat(v).toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴`,
     },
     {
-      title: 'Сума',
+      title: t('invoiceDetail.amountColumn'),
       dataIndex: 'total',
       key: 'total',
       width: 120,
@@ -278,7 +281,7 @@ function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
       render: (_, row) => (
         <Space>
           <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(row)} />
-          <Popconfirm title="Видалити позицію?" onConfirm={() => handleDelete(row.id)} okText="Так" cancelText="Ні">
+          <Popconfirm title={t('confirmDelete.title')} onConfirm={() => handleDelete(row.id)} okText={t('common.yes')} cancelText={t('common.no')}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -292,7 +295,7 @@ function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
         <div style={{ marginBottom: 12 }}>
           <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}
             style={{ background: Y, color: INK, borderColor: Y }}>
-            Додати позицію
+            {t('invoiceDetail.addItem')}
           </Button>
         </div>
       )}
@@ -305,31 +308,31 @@ function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
           pagination={false}
           size="small"
           scroll={{ x: 600 }}
-          locale={{ emptyText: 'Немає позицій' }}
+          locale={{ emptyText: t('invoiceDetail.noItems') }}
           footer={() => (
             <div style={{ textAlign: 'right', fontWeight: 700, fontSize: 16 }}>
-              Разом: {total.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴
+              {t('invoiceDetail.totalLabel')} {total.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴
             </div>
           )}
         />
       </Spin>
 
       <Modal
-        title={editingItem ? 'Редагувати позицію' : 'Додати позицію'}
+        title={editingItem ? t('invoiceDetail.editItem') : t('invoiceDetail.addItem')}
         open={modalOpen}
         onOk={handleSave}
         onCancel={() => setModalOpen(false)}
-        okText="Зберегти"
-        cancelText="Скасувати"
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
         okButtonProps={{ style: { background: Y, color: INK, borderColor: Y } }}
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="product" label="Товар зі складу">
+          <Form.Item name="product" label={t('invoiceDetail.productFromStock')}>
             <Select
               showSearch
               allowClear
-              placeholder="Пошук за назвою або артикулом"
+              placeholder={t('invoiceDetail.productSearchPlaceholder')}
               filterOption={false}
               onSearch={searchProducts}
               onSelect={handleProductSelect}
@@ -339,17 +342,17 @@ function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
               }))}
             />
           </Form.Item>
-          <Form.Item name="description" label="Опис" rules={[{ required: true, message: 'Введіть опис' }]}>
-            <Input placeholder="Назва товару або послуги" maxLength={255} />
+          <Form.Item name="description" label={t('common.description')} rules={[{ required: true, message: t('invoiceDetail.descPlaceholder') }]}>
+            <Input placeholder={t('invoiceDetail.descHelp')} maxLength={255} />
           </Form.Item>
           <Row gutter={12}>
             <Col span={12}>
-              <Form.Item name="quantity" label="Кількість" initialValue={1} rules={[{ required: true }]}>
+              <Form.Item name="quantity" label={t('common.quantity')} initialValue={1} rules={[{ required: true }]}>
                 <InputNumber min={0.01} step={1} style={{ width: '100%' }} />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="unit_price" label="Ціна за одиницю" rules={[{ required: true }]}>
+              <Form.Item name="unit_price" label={t('invoiceDetail.pricePerUnit')} rules={[{ required: true }]}>
                 <InputNumber min={0} step={10} style={{ width: '100%' }} addonAfter="₴" />
               </Form.Item>
             </Col>
@@ -363,6 +366,7 @@ function ItemsTable({ invoiceId, invoiceStatus, onTotalChange }) {
 // ─── Головна сторінка ─────────────────────────────────────────────────────────
 
 export default function InvoiceDetailPage() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const isNew = id === 'new';
@@ -390,7 +394,7 @@ export default function InvoiceDetailPage() {
       setLiveTotal(parseFloat(res.data.total || 0));
       setDeclaration(res.data.nova_poshta_declaration || '');
     } catch {
-      message.error('Рахунок не знайдено');
+      message.error(t('invoiceDetail.loadError'));
       navigate('/invoices');
     } finally {
       setLoading(false);
@@ -422,9 +426,9 @@ export default function InvoiceDetailPage() {
   const loadTrucks = async (clientId) => {
     try {
       const res = await trucksAPI.getAll({ client: clientId, page_size: 100 });
-      setTruckOptions((res.data?.results || res.data || []).map(t => ({
-        value: t.id,
-        label: `${t.license_plate} — ${t.specific_model_name || ''}`,
+      setTruckOptions((res.data?.results || res.data || []).map(tr => ({
+        value: tr.id,
+        label: `${tr.license_plate} — ${tr.specific_model_name || ''}`,
       })));
     } catch {}
   };
@@ -434,7 +438,7 @@ export default function InvoiceDetailPage() {
       const values = await newForm.validateFields();
       setCreating(true);
       const res = await createInvoice(values);
-      message.success(`Рахунок ${res.data.number} створено`);
+      message.success(t('invoiceDetail.invoiceCreated', { number: res.data.number }));
       navigate(`/invoices/${res.data.id}`);
     } catch (err) {
       if (err?.response?.data) {
@@ -447,7 +451,7 @@ export default function InvoiceDetailPage() {
 
   const handleSaveDeclaration = async () => {
     if (declaration && !/^\d{14}$/.test(declaration)) {
-      message.error('Номер декларації має містити рівно 14 цифр');
+      message.error(t('invoiceDetail.npDigitsError'));
       return;
     }
     setSavingDeclaration(true);
@@ -455,9 +459,9 @@ export default function InvoiceDetailPage() {
       const res = await updateInvoice(invoice.id, { nova_poshta_declaration: declaration || null });
       setInvoice(res.data);
       setTrackingResult(null);
-      message.success('Збережено');
+      message.success(t('invoiceDetail.npSaved'));
     } catch {
-      message.error('Не вдалося зберегти');
+      message.error(t('invoiceDetail.npSaveError'));
     } finally {
       setSavingDeclaration(false);
     }
@@ -472,7 +476,7 @@ export default function InvoiceDetailPage() {
       const res = await trackDeclaration(num);
       setTrackingResult({ ok: true, data: res.data });
     } catch (err) {
-      const detail = err?.response?.data?.detail || 'Не вдалося отримати статус';
+      const detail = err?.response?.data?.detail || t('invoiceDetail.npTrackError');
       setTrackingResult({ ok: false, message: detail });
     } finally {
       setTracking(false);
@@ -485,7 +489,7 @@ export default function InvoiceDetailPage() {
       setInvoice(res.data);
       message.success(label);
     } catch (err) {
-      const msg = err?.response?.data?.detail || 'Помилка';
+      const msg = err?.response?.data?.detail || t('common.error');
       message.error(msg);
     }
   };
@@ -494,37 +498,37 @@ export default function InvoiceDetailPage() {
   if (isNew) {
     return (
       <div style={{ paddingBottom: 24 }}>
-        <PageHeader title="Новий рахунок" showBack extra={
-          <Button onClick={() => navigate('/invoices')} icon={<ArrowLeftOutlined />}>Назад</Button>
+        <PageHeader title={t('invoiceDetail.newInvoice')} showBack extra={
+          <Button onClick={() => navigate('/invoices')} icon={<ArrowLeftOutlined />}>{t('invoiceDetail.back')}</Button>
         } />
         <Card style={{ borderTop: `4px solid ${Y}` }}>
           <Form form={newForm} layout="vertical">
             <Row gutter={16}>
               <Col xs={24} md={12}>
-                <Form.Item name="client" label="Клієнт" rules={[{ required: true, message: 'Оберіть клієнта' }]}>
+                <Form.Item name="client" label={t('invoiceDetail.clientLabel')} rules={[{ required: true, message: t('invoiceDetail.selectClient') }]}>
                   <Select
                     showSearch filterOption={false}
-                    placeholder="Введіть ім'я або телефон"
+                    placeholder={t('invoiceDetail.clientSearchPlaceholder')}
                     onSearch={searchClients}
-                    onSelect={(id) => { setSelectedClientId(id); newForm.setFieldValue('truck', undefined); loadTrucks(id); }}
+                    onSelect={(cid) => { setSelectedClientId(cid); newForm.setFieldValue('truck', undefined); loadTrucks(cid); }}
                     options={clientOptions}
                   />
                 </Form.Item>
               </Col>
               <Col xs={24} md={12}>
-                <Form.Item name="truck" label="Вантажівка">
-                  <Select allowClear placeholder="Необов'язково" options={truckOptions} disabled={!selectedClientId} />
+                <Form.Item name="truck" label={t('invoiceDetail.selectTruck')}>
+                  <Select allowClear placeholder={t('invoiceDetail.truckOptional')} options={truckOptions} disabled={!selectedClientId} />
                 </Form.Item>
               </Col>
               <Col xs={24}>
-                <Form.Item name="notes" label="Примітки">
+                <Form.Item name="notes" label={t('invoiceDetail.notes')}>
                   <Input.TextArea rows={2} maxLength={500} />
                 </Form.Item>
               </Col>
             </Row>
             <Button type="primary" icon={<PlusOutlined />} onClick={handleCreate} loading={creating}
               style={{ background: Y, color: INK, borderColor: Y, fontWeight: 600 }}>
-              Створити рахунок
+              {t('invoiceDetail.createInvoice')}
             </Button>
           </Form>
         </Card>
@@ -547,7 +551,7 @@ export default function InvoiceDetailPage() {
         subtitle={
           <Space>
             <Tag color={STATUS_COLOR[invoice.status]} style={{ fontSize: 14 }}>
-              {STATUS_LABEL[invoice.status]}
+              {t(`invoices.${STATUS_KEY[invoice.status]}`)}
             </Tag>
             <span style={{ color: '#888' }}>{dayjs(invoice.date).format('DD.MM.YYYY')}</span>
           </Space>
@@ -556,19 +560,19 @@ export default function InvoiceDetailPage() {
         extra={
           <Space wrap>
             {canSend && (
-              <Button icon={<SendOutlined />} onClick={() => handleAction(markSent, 'Виставлено')}>
-                Виставити
+              <Button icon={<SendOutlined />} onClick={() => handleAction(markSent, t('invoices.statusSent'))}>
+                {t('invoiceDetail.markSent')}
               </Button>
             )}
             {canPay && (
               <Button icon={<CheckCircleOutlined />} style={{ color: 'green', borderColor: 'green' }}
-                onClick={() => handleAction(markPaid, 'Оплачено — запчастини списано зі складу')}>
-                Оплачено
+                onClick={() => handleAction(markPaid, t('invoiceDetail.markPaid'))}>
+                {t('invoices.statusPaid')}
               </Button>
             )}
             {canCancel && (
-              <Popconfirm title="Скасувати рахунок?" onConfirm={() => handleAction(cancelInvoice, 'Скасовано')} okText="Так" cancelText="Ні">
-                <Button danger icon={<StopOutlined />}>Скасувати</Button>
+              <Popconfirm title={t('invoiceDetail.cancelConfirm')} onConfirm={() => handleAction(cancelInvoice, t('invoices.statusCanceled'))} okText={t('common.yes')} cancelText={t('common.no')}>
+                <Button danger icon={<StopOutlined />}>{t('common.cancel')}</Button>
               </Popconfirm>
             )}
           </Space>
@@ -578,23 +582,23 @@ export default function InvoiceDetailPage() {
       {/* Шапка */}
       <Card style={{ marginBottom: 16, borderTop: `4px solid ${Y}` }}>
         <Descriptions column={{ xs: 1, sm: 2, md: 3 }} size="small">
-          <Descriptions.Item label="Клієнт">
+          <Descriptions.Item label={t('invoiceDetail.clientLabel')}>
             <strong>{invoice.client_name}</strong>
           </Descriptions.Item>
-          <Descriptions.Item label="Телефон">{invoice.client_phone || '—'}</Descriptions.Item>
-          <Descriptions.Item label="Вантажівка">{invoice.truck_display || '—'}</Descriptions.Item>
-          <Descriptions.Item label="Тип">
+          <Descriptions.Item label={t('invoiceDetail.phoneLabel')}>{invoice.client_phone || '—'}</Descriptions.Item>
+          <Descriptions.Item label={t('invoiceDetail.truckLabel')}>{invoice.truck_display || '—'}</Descriptions.Item>
+          <Descriptions.Item label={t('invoiceDetail.typeLabel')}>
             <Tag color={invoice.invoice_type === 'driver_tab' ? 'orange' : 'blue'}>
               {invoice.invoice_type_display || '—'}
             </Tag>
           </Descriptions.Item>
-          <Descriptions.Item label="Сума">
+          <Descriptions.Item label={t('invoiceDetail.amountLabel')}>
             <span style={{ fontSize: 20, fontWeight: 700, color: invoice.status === 'paid' ? '#52c41a' : INK }}>
               {liveTotal.toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴
             </span>
           </Descriptions.Item>
           {invoice.nova_poshta_declaration && (
-            <Descriptions.Item label="Декларація НП">
+            <Descriptions.Item label={t('invoiceDetail.npDeclaration')}>
               <Text code>{invoice.nova_poshta_declaration}</Text>
             </Descriptions.Item>
           )}
@@ -605,11 +609,11 @@ export default function InvoiceDetailPage() {
             <Divider />
             <Space align="end" wrap>
               <div>
-                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>Номер декларації НП</div>
+                <div style={{ fontSize: 12, color: '#888', marginBottom: 4 }}>{t('invoiceDetail.npDeclarationPlaceholder')}</div>
                 <Input
                   value={declaration}
                   onChange={e => { setDeclaration(e.target.value.replace(/\D/g, '').slice(0, 14)); setTrackingResult(null); }}
-                  placeholder="14 цифр"
+                  placeholder={t('invoiceDetail.npDigits')}
                   maxLength={14}
                   style={{ width: 180, fontFamily: 'monospace' }}
                   allowClear
@@ -621,14 +625,14 @@ export default function InvoiceDetailPage() {
                 onClick={handleSaveDeclaration}
                 disabled={declaration === (invoice.nova_poshta_declaration || '')}
               >
-                Зберегти
+                {t('common.save')}
               </Button>
             </Space>
 
             {tracking && (
               <div style={{ marginTop: 12, color: '#888', fontSize: 13 }}>
                 <Spin size="small" style={{ marginRight: 8 }} />
-                Отримання статусу Нової Пошти…
+                {t('invoiceDetail.npTrackingStatus')}
               </div>
             )}
 
@@ -642,22 +646,22 @@ export default function InvoiceDetailPage() {
                     description={
                       <Space direction="vertical" size={2} style={{ fontSize: 13 }}>
                         {trackingResult.data.CityRecipient && (
-                          <span>Місто отримувача: <strong>{trackingResult.data.CityRecipient}</strong></span>
+                          <span>{t('invoiceDetail.npReceiverCity')} <strong>{trackingResult.data.CityRecipient}</strong></span>
                         )}
                         {trackingResult.data.WarehouseRecipientAddress && (
-                          <span>Відділення: <strong>{trackingResult.data.WarehouseRecipientAddress}</strong></span>
+                          <span>{t('invoiceDetail.npWarehouse')} <strong>{trackingResult.data.WarehouseRecipientAddress}</strong></span>
                         )}
                         {trackingResult.data.ScheduledDeliveryDate && (
-                          <span>Очікувана доставка: <strong>{trackingResult.data.ScheduledDeliveryDate}</strong></span>
+                          <span>{t('invoiceDetail.npExpectedDelivery')} <strong>{trackingResult.data.ScheduledDeliveryDate}</strong></span>
                         )}
                         {trackingResult.data.ActualDeliveryDate && (
-                          <span>Дата отримання: <strong>{trackingResult.data.ActualDeliveryDate}</strong></span>
+                          <span>{t('invoiceDetail.npReceivedDate')} <strong>{trackingResult.data.ActualDeliveryDate}</strong></span>
                         )}
                         {trackingResult.data.DocumentWeight && (
-                          <span>Вага: <strong>{trackingResult.data.DocumentWeight} кг</strong></span>
+                          <span>{t('invoiceDetail.npWeight')} <strong>{trackingResult.data.DocumentWeight} {t('common.kgShort')}</strong></span>
                         )}
                         {trackingResult.data.DateScan && (
-                          <span>Останнє сканування: <strong>{trackingResult.data.DateScan}</strong></span>
+                          <span>{t('invoiceDetail.npLastScan')} <strong>{trackingResult.data.DateScan}</strong></span>
                         )}
                       </Space>
                     }

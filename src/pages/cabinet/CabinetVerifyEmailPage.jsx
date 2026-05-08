@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import cabinetInstance from '../../api/cabinet';
 import logoImg from '../../assets/logo.jpg';
 
@@ -7,6 +8,7 @@ const Y = '#f5c518';
 const INK = '#1a1a1a';
 
 export default function CabinetVerifyEmailPage() {
+  const { t } = useTranslation();
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState('loading'); // loading | success | error
   const [message, setMessage] = useState('');
@@ -15,7 +17,7 @@ export default function CabinetVerifyEmailPage() {
     const token = searchParams.get('token');
     if (!token) {
       setStatus('error');
-      setMessage('Токен відсутній або недійсний.');
+      setMessage(t('cabinet.verifyEmail.tokenMissing'));
       return;
     }
 
@@ -23,11 +25,11 @@ export default function CabinetVerifyEmailPage() {
       .get(`/verify-email/?token=${token}`)
       .then(res => {
         setStatus('success');
-        setMessage(res.data.detail || 'Email успішно підтверджено.');
+        setMessage(res.data.detail || t('cabinet.verifyEmail.success'));
       })
       .catch(err => {
         setStatus('error');
-        setMessage(err.response?.data?.detail || 'Недійсний або прострочений токен.');
+        setMessage(err.response?.data?.detail || t('cabinet.verifyEmail.error'));
       });
   }, [searchParams]);
 
@@ -42,20 +44,20 @@ export default function CabinetVerifyEmailPage() {
     }}>
       <div style={{ width: '100%', maxWidth: 400 }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img src={logoImg} alt="Італ Трак" style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }} />
-          <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, margin: 0 }}>Особистий кабінет</h1>
+          <img src={logoImg} alt={t('brand.name')} style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }} />
+          <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, margin: 0 }}>{t('cabinet.verifyEmail.title')}</h1>
         </div>
 
         <div style={{ background: '#fff', padding: '40px 28px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', borderTop: `4px solid ${Y}`, textAlign: 'center' }}>
           <div style={{ fontSize: 52, marginBottom: 16 }}>{icon}</div>
 
           {status === 'loading' && (
-            <p style={{ color: '#888', fontSize: 15 }}>Перевірка токена...</p>
+            <p style={{ color: '#888', fontSize: 15 }}>{t('cabinet.verifyEmail.checking')}</p>
           )}
 
           {status === 'success' && (
             <>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: INK, margin: '0 0 12px' }}>Email підтверджено!</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: INK, margin: '0 0 12px' }}>{t('cabinet.verifyEmail.confirmed')}</h2>
               <p style={{ color: '#555', fontSize: 14, marginBottom: 24 }}>{message}</p>
               <Link
                 to="/cabinet"
@@ -65,14 +67,14 @@ export default function CabinetVerifyEmailPage() {
                   borderRadius: 4,
                 }}
               >
-                Перейти до кабінету
+                {t('cabinet.verifyEmail.toCabinet')}
               </Link>
             </>
           )}
 
           {status === 'error' && (
             <>
-              <h2 style={{ fontSize: 18, fontWeight: 800, color: INK, margin: '0 0 12px' }}>Помилка верифікації</h2>
+              <h2 style={{ fontSize: 18, fontWeight: 800, color: INK, margin: '0 0 12px' }}>{t('cabinet.verifyEmail.errorTitle')}</h2>
               <p style={{ color: '#ef4444', fontSize: 14, marginBottom: 24 }}>{message}</p>
               <Link
                 to="/cabinet"
@@ -82,13 +84,13 @@ export default function CabinetVerifyEmailPage() {
                   borderRadius: 4, marginBottom: 12,
                 }}
               >
-                До кабінету
+                {t('cabinet.verifyEmail.toCabinet')}
               </Link>
               <Link
                 to="/cabinet/login"
                 style={{ color: '#888', fontSize: 13, textDecoration: 'none' }}
               >
-                Увійти та надіслати новий лист
+                {t('cabinet.verifyEmail.loginAndResend')}
               </Link>
             </>
           )}

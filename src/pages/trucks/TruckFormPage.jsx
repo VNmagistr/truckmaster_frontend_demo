@@ -156,7 +156,7 @@ function TruckFormPage() {
           message.error(`${key}: ${msg}`);
         });
       } else {
-        message.error('Не вдалося зберегти вантажівку');
+        message.error(t('trucks.saveError'));
       }
     } finally {
       setSaving(false);
@@ -168,7 +168,7 @@ function TruckFormPage() {
   return (
     <div>
       <PageHeader
-        title={isEdit ? 'Редагувати вантажівку' : 'Нова вантажівка'}
+        title={isEdit ? t('trucks.editTruck') : t('trucks.createTruck')}
         showBack
       />
 
@@ -180,36 +180,36 @@ function TruckFormPage() {
         >
           <Form.Item
             name="license_plate"
-            label="Номерний знак"
-            rules={[{ required: true, message: 'Введіть номерний знак' }]}
+            label={t('trucks.licensePlate')}
+            rules={[{ required: true, message: t('trucks.licensePlatePlaceholder') }]}
           >
             <Input placeholder="AA0000BB" style={{ textTransform: 'uppercase' }} />
           </Form.Item>
 
           <Form.Item
             name="full_vin"
-            label="Повний VIN код"
+            label={t('trucks.fullVinCode')}
             rules={[
-              { required: true, message: 'Введіть VIN код' },
-              { len: 17, message: 'VIN код має містити 17 символів' },
+              { required: true, message: t('trucks.vinPlaceholder') },
+              { len: 17, message: t('trucks.vinLengthError') },
             ]}
           >
-            <Input placeholder="17 символів" maxLength={17} style={{ textTransform: 'uppercase' }} />
+            <Input placeholder={t('trucks.vinLength17')} maxLength={17} style={{ textTransform: 'uppercase' }} />
           </Form.Item>
 
           <Form.Item
             name="specific_model_name"
-            label="Модель (уточнення)"
-            rules={[{ required: true, message: 'Введіть модель' }]}
+            label={t('trucks.modelDetail')}
+            rules={[{ required: true, message: t('trucks.modelPlaceholder') }]}
           >
-            <Input placeholder="Наприклад: 35C15, 70C17" />
+            <Input placeholder={t('trucks.modelExample')} />
           </Form.Item>
 
           <Form.Item
             name="base_model"
-            label="Базова модель"
+            label={t('trucks.baseModel')}
           >
-            <Select placeholder="Оберіть базову модель" allowClear>
+            <Select placeholder={t('trucks.selectBaseModel')} allowClear>
               {baseModels.map(model => (
                 <Select.Option key={model.id} value={model.id}>
                   {model.name}
@@ -220,9 +220,9 @@ function TruckFormPage() {
 
           <Form.Item
             name="euro_standard"
-            label="Євростандарт"
+            label={t('trucks.euroStandard')}
           >
-            <Select placeholder="Оберіть євростандарт" allowClear>
+            <Select placeholder={t('trucks.selectEuroStandard')} allowClear>
               {euroStandards.map(euro => (
                 <Select.Option key={euro.value} value={euro.value}>
                   {euro.label}
@@ -233,9 +233,9 @@ function TruckFormPage() {
 
           <Form.Item
             name="transmission_type"
-            label="Тип КПП"
+            label={t('trucks.transmissionType')}
           >
-            <Select placeholder="Оберіть тип КПП" allowClear>
+            <Select placeholder={t('trucks.selectTransmission')} allowClear>
               {transmissionTypes.map(t => (
                 <Select.Option key={t.value} value={t.value}>
                   {t.label}
@@ -246,10 +246,10 @@ function TruckFormPage() {
 
           <Form.Item
             name="client"
-            label="Власник"
+            label={t('trucks.owner')}
           >
             <Select
-              placeholder="Введіть ім'я або телефон для пошуку"
+              placeholder={t('trucks.ownerSearchPlaceholder')}
               allowClear
               showSearch
               filterOption={false}
@@ -270,9 +270,9 @@ function TruckFormPage() {
                 loading={saving}
                 icon={<SaveOutlined />}
               >
-                {isEdit ? 'Зберегти зміни' : 'Створити вантажівку'}
+                {isEdit ? t('common.saveChanges') : t('trucks.createTruck')}
               </Button>
-              <Button onClick={() => navigate('/trucks')}>Скасувати</Button>
+              <Button onClick={() => navigate('/trucks')}>{t('common.cancel')}</Button>
             </Space>
           </Form.Item>
         </Form>

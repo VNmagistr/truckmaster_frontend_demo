@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeftOutlined, RightOutlined } from '@ant-design/icons';
 import { cabinetAPI } from '../../api/cabinet';
 
@@ -16,6 +17,7 @@ const STATUS_COLOR = {
 };
 
 export default function CabinetTruckDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [truck, setTruck] = useState(null);
@@ -28,28 +30,28 @@ export default function CabinetTruckDetail() {
       cabinetAPI.getOrders({ truck: id }),
     ]).then(([trucksRes, ordersRes]) => {
       const allTrucks = Array.isArray(trucksRes.data) ? trucksRes.data : (trucksRes.data.results || []);
-      const t = allTrucks.find(x => String(x.id) === String(id));
-      setTruck(t || null);
+      const found = allTrucks.find(x => String(x.id) === String(id));
+      setTruck(found || null);
       const list = Array.isArray(ordersRes.data) ? ordersRes.data : (ordersRes.data.results || []);
       setOrders(list);
     }).finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>Завантаження...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>{t('common.loading')}</div>;
   if (!truck) return (
     <div style={{ textAlign: 'center', padding: 48 }}>
-      <div style={{ color: '#aaa', marginBottom: 16 }}>Автомобіль не знайдено</div>
+      <div style={{ color: '#aaa', marginBottom: 16 }}>{t('cabinet.truckDetail.notFound')}</div>
       <button onClick={() => navigate('/cabinet/trucks')} style={{ background: Y, border: 'none', padding: '10px 20px', cursor: 'pointer', fontWeight: 700 }}>
-        До списку авто
+        {t('cabinet.truckDetail.backToList')}
       </button>
     </div>
   );
 
   const infoRows = [
-    { label: 'Номерний знак', value: truck.license_plate },
-    { label: 'VIN (останні 7)', value: '...' + truck.last_seven_vin },
-    { label: 'Євростандарт', value: truck.euro_standard_display || '—' },
-    { label: 'Останній пробіг', value: truck.latest_mileage > 0 ? `${truck.latest_mileage.toLocaleString('uk-UA')} км` : '—' },
+    { label: t('cabinet.truckDetail.licensePlate'), value: truck.license_plate },
+    { label: t('cabinet.truckDetail.lastSevenVin'), value: '...' + truck.last_seven_vin },
+    { label: t('cabinet.truckDetail.euroStandard'), value: truck.euro_standard_display || '—' },
+    { label: t('cabinet.truckDetail.lastMileage'), value: truck.latest_mileage > 0 ? `${truck.latest_mileage.toLocaleString('uk-UA')} км` : '—' },
   ];
 
   return (
@@ -58,7 +60,7 @@ export default function CabinetTruckDetail() {
         onClick={() => navigate('/cabinet/trucks')}
         style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: INK2, cursor: 'pointer', fontSize: 14, fontWeight: 600, marginBottom: 20, padding: 0 }}
       >
-        <ArrowLeftOutlined /> Мої авто
+        <ArrowLeftOutlined /> {t('cabinet.truckDetail.breadcrumb')}
       </button>
 
       {/* Truck header */}
@@ -81,12 +83,12 @@ export default function CabinetTruckDetail() {
 
       {/* Orders for this truck */}
       <h2 style={{ fontSize: 17, fontWeight: 800, color: INK, marginBottom: 14 }}>
-        Історія обслуговування ({orders.length})
+        {t('cabinet.truckDetail.serviceHistory', { count: orders.length })}
       </h2>
 
       {orders.length === 0 ? (
         <div style={{ background: '#fff', padding: '28px', textAlign: 'center', color: '#aaa', fontSize: 14 }}>
-          Замовлень для цього автомобіля поки немає.
+          {t('cabinet.truckDetail.noOrders')}
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

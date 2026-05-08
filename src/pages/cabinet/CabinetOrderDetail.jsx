@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ArrowLeftOutlined, CameraOutlined, ToolOutlined } from '@ant-design/icons';
 import { cabinetAPI } from '../../api/cabinet';
 
@@ -29,6 +30,7 @@ function StatusBadge({ status, label }) {
 }
 
 export default function CabinetOrderDetail() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState(null);
@@ -39,12 +41,12 @@ export default function CabinetOrderDetail() {
     cabinetAPI.getOrderById(id).then(r => setOrder(r.data)).finally(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>Завантаження...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>{t('common.loading')}</div>;
   if (!order) return (
     <div style={{ textAlign: 'center', padding: 48 }}>
-      <div style={{ color: '#aaa', marginBottom: 16 }}>Замовлення не знайдено</div>
+      <div style={{ color: '#aaa', marginBottom: 16 }}>{t('cabinet.orderDetail.notFound')}</div>
       <button onClick={() => navigate('/cabinet/orders')} style={{ background: Y, border: 'none', padding: '10px 20px', cursor: 'pointer', fontWeight: 700 }}>
-        До замовлень
+        {t('cabinet.orderDetail.backToOrders')}
       </button>
     </div>
   );
@@ -58,14 +60,14 @@ export default function CabinetOrderDetail() {
         onClick={() => navigate(-1)}
         style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: INK2, cursor: 'pointer', fontSize: 14, fontWeight: 600, marginBottom: 20, padding: 0 }}
       >
-        <ArrowLeftOutlined /> Назад
+        <ArrowLeftOutlined /> {t('cabinet.orderDetail.back')}
       </button>
 
       {/* Order header */}
       <div style={{ background: '#fff', borderTop: `4px solid ${Y}`, padding: '20px 20px', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
           <div>
-            <div style={{ fontSize: 20, fontWeight: 900, color: INK }}>Замовлення №{order.order_number}</div>
+            <div style={{ fontSize: 20, fontWeight: 900, color: INK }}>{t('cabinet.orderDetail.orderNumber')}{order.order_number}</div>
             <div style={{ color: '#888', fontSize: 14, marginTop: 4 }}>
               {order.truck?.specific_model_name} · {order.truck?.license_plate}
             </div>
@@ -75,10 +77,10 @@ export default function CabinetOrderDetail() {
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px 24px', marginTop: 16 }}>
           {[
-            { label: 'Дата', value: new Date(order.created_at).toLocaleDateString('uk-UA') },
-            { label: 'Оновлено', value: new Date(order.updated_at).toLocaleDateString('uk-UA') },
-            ...(order.current_mileage ? [{ label: 'Пробіг', value: `${order.current_mileage.toLocaleString('uk-UA')} км` }] : []),
-            ...(order.total_cost > 0 ? [{ label: 'Вартість', value: `${Number(order.total_cost).toLocaleString('uk-UA')} ₴`, bold: true }] : []),
+            { label: t('cabinet.orderDetail.date'), value: new Date(order.created_at).toLocaleDateString('uk-UA') },
+            { label: t('cabinet.orderDetail.updated'), value: new Date(order.updated_at).toLocaleDateString('uk-UA') },
+            ...(order.current_mileage ? [{ label: t('cabinet.orderDetail.mileage'), value: `${order.current_mileage.toLocaleString('uk-UA')} км` }] : []),
+            ...(order.total_cost > 0 ? [{ label: t('cabinet.orderDetail.cost'), value: `${Number(order.total_cost).toLocaleString('uk-UA')} ₴`, bold: true }] : []),
           ].map(({ label, value, bold }) => (
             <div key={label}>
               <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700, marginBottom: 2 }}>{label}</div>
@@ -89,14 +91,14 @@ export default function CabinetOrderDetail() {
 
         {order.problem_description && (
           <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f0f0f0' }}>
-            <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>Опис проблеми</div>
+            <div style={{ fontSize: 11, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>{t('cabinet.orderDetail.problemDescription')}</div>
             <div style={{ color: INK2, fontSize: 14, lineHeight: 1.65 }}>{order.problem_description}</div>
           </div>
         )}
 
         {order.recommendations && (
           <div style={{ marginTop: 14, padding: '14px 16px', background: '#fffbea', borderLeft: `3px solid ${Y}` }}>
-            <div style={{ fontSize: 11, color: '#999', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>Рекомендації</div>
+            <div style={{ fontSize: 11, color: '#999', textTransform: 'uppercase', letterSpacing: 1.5, fontWeight: 700, marginBottom: 6 }}>{t('cabinet.orderDetail.recommendations')}</div>
             <div style={{ color: INK2, fontSize: 14, lineHeight: 1.65 }}>{order.recommendations}</div>
           </div>
         )}
@@ -107,7 +109,7 @@ export default function CabinetOrderDetail() {
         <div style={{ background: '#fff', padding: '20px 20px', marginBottom: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
             <ToolOutlined style={{ color: Y, fontSize: 16 }} />
-            <h2 style={{ fontSize: 16, fontWeight: 800, color: INK, margin: 0 }}>Виконані роботи</h2>
+            <h2 style={{ fontSize: 16, fontWeight: 800, color: INK, margin: 0 }}>{t('cabinet.orderDetail.completedWorks')}</h2>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
             {order.works.map((work, i) => (
@@ -121,7 +123,7 @@ export default function CabinetOrderDetail() {
                     <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{work.description}</div>
                   )}
                   <div style={{ fontSize: 12, color: '#aaa', marginTop: 4 }}>
-                    {work.hours_spent} год × {Number(work.price_at_moment).toLocaleString('uk-UA')} ₴
+                    {work.hours_spent} {t('cabinet.orderDetail.hoursAndRate')} {Number(work.price_at_moment).toLocaleString('uk-UA')} ₴
                   </div>
                 </div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: INK, flexShrink: 0 }}>
@@ -133,7 +135,7 @@ export default function CabinetOrderDetail() {
           {totalWorks > 0 && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, paddingTop: 12, borderTop: '2px solid #f0f0f0' }}>
               <div style={{ fontSize: 15, fontWeight: 800, color: INK }}>
-                Разом за роботи: {totalWorks.toLocaleString('uk-UA')} ₴
+                {t('cabinet.orderDetail.worksTotal')} {totalWorks.toLocaleString('uk-UA')} ₴
               </div>
             </div>
           )}
@@ -145,12 +147,12 @@ export default function CabinetOrderDetail() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
           <CameraOutlined style={{ color: Y, fontSize: 16 }} />
           <h2 style={{ fontSize: 16, fontWeight: 800, color: INK, margin: 0 }}>
-            Фото ремонту {hasPhotos ? `(${order.photos.length})` : ''}
+            {t('cabinet.orderDetail.repairPhotos')} {hasPhotos ? `(${order.photos.length})` : ''}
           </h2>
         </div>
         {!hasPhotos ? (
           <div style={{ textAlign: 'center', padding: '28px 0', color: '#aaa', fontSize: 14 }}>
-            Фотографій поки немає. Ви отримаєте сповіщення в Telegram, коли їх додадуть.
+            {t('cabinet.orderDetail.noPhotos')}
           </div>
         ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
@@ -164,7 +166,7 @@ export default function CabinetOrderDetail() {
                 >
                   <img
                     src={src}
-                    alt={photo.description || 'Фото ремонту'}
+                    alt={photo.description || t('cabinet.orderDetail.repairPhotos')}
                     style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.3s' }}
                     onMouseEnter={e => e.target.style.transform = 'scale(1.07)'}
                     onMouseLeave={e => e.target.style.transform = 'scale(1)'}
@@ -186,7 +188,7 @@ export default function CabinetOrderDetail() {
             zIndex: 1000, padding: 16, cursor: 'zoom-out',
           }}
         >
-          <img src={lightboxSrc} alt="Фото" style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain' }} />
+          <img src={lightboxSrc} alt={t('cabinet.orderDetail.photo')} style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain' }} />
         </div>
       )}
     </div>

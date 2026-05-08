@@ -10,12 +10,14 @@ import {
   InboxOutlined, RollbackOutlined, SearchOutlined, ImportOutlined,
   LinkOutlined, FileAddOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { inventoryAPI } from '../../api';
 
 const { Text } = Typography;
 const { Panel } = Collapse;
 
 function OrderListTab() {
+  const { t } = useTranslation();
   const [folders, setFolders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
@@ -65,7 +67,7 @@ function OrderListTab() {
       const data = res.data || res;
       setFolders(data.results || data || []);
     } catch {
-      message.error('Не вдалося завантажити список замовлень');
+      message.error(t('inventory.loadError'));
     } finally {
       setLoading(false);
     }
@@ -112,15 +114,15 @@ function OrderListTab() {
     try {
       if (editingFolder) {
         await inventoryAPI.updateOrderFolder(editingFolder.id, values);
-        message.success('Папку оновлено');
+        message.success(t('orderList.folderUpdated'));
       } else {
         await inventoryAPI.createOrderFolder(values);
-        message.success('Папку створено');
+        message.success(t('orderList.folderCreated'));
       }
       setFolderModalOpen(false);
       fetchFolders();
     } catch {
-      message.error('Помилка збереження папки');
+      message.error(t('orderList.folderSaveError'));
     } finally {
       setFolderSaving(false);
     }
@@ -129,10 +131,10 @@ function OrderListTab() {
   const deleteFolder = async (id) => {
     try {
       await inventoryAPI.deleteOrderFolder(id);
-      message.success('Папку видалено');
+      message.success(t('orderList.folderDeleted'));
       fetchFolders();
     } catch {
-      message.error('Не вдалося видалити папку');
+      message.error(t('orderList.folderDeleteError'));
     }
   };
 
@@ -140,10 +142,10 @@ function OrderListTab() {
     e.stopPropagation();
     try {
       await inventoryAPI.archiveOrderFolder(folder.id);
-      message.success('Папку переміщено в архів');
+      message.success(t('orderList.folderArchived'));
       fetchFolders();
     } catch {
-      message.error('Помилка архівування');
+      message.error(t('orderList.folderArchiveError'));
     }
   };
 
@@ -151,10 +153,10 @@ function OrderListTab() {
     e.stopPropagation();
     try {
       await inventoryAPI.unarchiveOrderFolder(folder.id);
-      message.success('Папку відновлено з архіву');
+      message.success(t('orderList.folderRestored'));
       fetchFolders();
     } catch {
-      message.error('Помилка відновлення');
+      message.error(t('orderList.folderRestoreError'));
     }
   };
 
@@ -169,7 +171,7 @@ function OrderListTab() {
       }
       fetchFolders();
     } catch {
-      message.error('Помилка оновлення статусу');
+      message.error(t('orderList.statusUpdateError'));
     }
   };
 
@@ -189,14 +191,14 @@ function OrderListTab() {
         warehouse_id: values.warehouse_id,
       });
       const data = res.data || res;
-      message.success(`Оприбутковано ${data.received} позицій`);
+      message.success(t('orderList.bulkReceived', { count: data.received }));
       if (data.errors && data.errors.length > 0) {
-        message.warning(`Помилки: ${data.errors.map(e => e.item).join(', ')}`);
+        message.warning(t('orderList.bulkErrors', { items: data.errors.map(e => e.item).join(', ') }));
       }
       setBulkReceiveModalOpen(false);
       fetchFolders();
     } catch (err) {
-      const detail = err?.response?.data?.error || 'Помилка масового оприбуткування';
+      const detail = err?.response?.data?.error || t('orderList.bulkReceiveError');
       message.error(detail);
     } finally {
       setBulkReceiveSaving(false);
@@ -233,15 +235,15 @@ function OrderListTab() {
     try {
       if (editingItem) {
         await inventoryAPI.updateOrderItem(editingItem.id, values);
-        message.success('Позицію оновлено');
+        message.success(t('orderList.itemUpdated'));
       } else {
         await inventoryAPI.createOrderItem({ ...values, folder: itemFolderId });
-        message.success('Позицію додано');
+        message.success(t('orderList.itemAdded'));
       }
       setItemModalOpen(false);
       fetchFolders();
     } catch {
-      message.error('Помилка збереження позиції');
+      message.error(t('orderList.itemSaveError'));
     } finally {
       setItemSaving(false);
     }
@@ -251,10 +253,10 @@ function OrderListTab() {
     e.stopPropagation();
     try {
       await inventoryAPI.deleteOrderItem(id);
-      message.success('Позицію видалено');
+      message.success(t('orderList.itemDeleted'));
       fetchFolders();
     } catch {
-      message.error('Не вдалося видалити позицію');
+      message.error(t('orderList.itemDeleteError'));
     }
   };
 
@@ -264,7 +266,7 @@ function OrderListTab() {
       await inventoryAPI.toggleOrderItem(item.id);
       fetchFolders();
     } catch {
-      message.error('Помилка оновлення статусу');
+      message.error(t('orderList.statusUpdateError'));
     }
   };
 
@@ -330,11 +332,11 @@ function OrderListTab() {
         payload.unit = values.unit || receiveItem.unit || 'pcs';
       }
       await inventoryAPI.receiveOrderItem(receiveItem.id, payload);
-      message.success('Товар оприбутковано на склад');
+      message.success(t('wholesale.receiveSuccess'));
       setReceiveModalOpen(false);
       fetchFolders();
     } catch (err) {
-      const detail = err?.response?.data?.error || 'Помилка оприбуткування';
+      const detail = err?.response?.data?.error || t('wholesale.receiveError');
       message.error(detail);
     } finally {
       setReceiveSaving(false);
@@ -370,7 +372,7 @@ function OrderListTab() {
         }}
         actions={[
           canReceive && (
-            <Tooltip title="Приїхало — оприбуткувати на склад" key="receive">
+            <Tooltip title={t('orderList.receiveAll')} key="receive">
               <Button
                 size="small"
                 type="primary"
@@ -381,7 +383,7 @@ function OrderListTab() {
             </Tooltip>
           ),
           !item.is_received && (
-            <Tooltip title={item.is_ordered ? 'Скасувати замовлення' : 'Позначити як замовлено'} key="toggle">
+            <Tooltip title={item.is_ordered ? t('orderList.cancelAll') : t('orderList.ordered')} key="toggle">
               <Button
                 size="small"
                 type={item.is_ordered ? 'default' : 'primary'}
@@ -391,12 +393,12 @@ function OrderListTab() {
               />
             </Tooltip>
           ),
-          <Tooltip title="Редагувати" key="edit">
+          <Tooltip title={t('common.edit')} key="edit">
             <Button size="small" icon={<EditOutlined />} onClick={(e) => openEditItem(item, e)} />
           </Tooltip>,
           <Popconfirm
             key="del"
-            title="Видалити позицію?"
+            title={t('orderList.deleteFolderConfirm')}
             onConfirm={(e) => deleteItem(item.id, e || { stopPropagation: () => {} })}
             onClick={(e) => e.stopPropagation()}
           >
@@ -408,10 +410,10 @@ function OrderListTab() {
           title={
             <Space wrap>
               {item.is_received
-                ? <Tag color="processing" icon={<ImportOutlined />}>Отримано</Tag>
+                ? <Tag color="processing" icon={<ImportOutlined />}>{t('orderList.received')}</Tag>
                 : item.is_ordered
-                  ? <Tag color="success" icon={<CheckCircleOutlined />}>Замовлено</Tag>
-                  : <Tag color="warning" icon={<ClockCircleOutlined />}>Потрібно замовити</Tag>
+                  ? <Tag color="success" icon={<CheckCircleOutlined />}>{t('orderList.ordered')}</Tag>
+                  : <Tag color="warning" icon={<ClockCircleOutlined />}>{t('orderList.needToOrder')}</Tag>
               }
               <Text
                 style={{
@@ -433,7 +435,7 @@ function OrderListTab() {
                 </Text>
               )}
               {item.is_received && item.linked_product_name && (
-                <Tooltip title={`Оприбутковано як: ${item.linked_product_name}`}>
+                <Tooltip title={`${t('orderList.receivedAs')} ${item.linked_product_name}`}>
                   <Tag color="blue" icon={<LinkOutlined />} style={{ fontSize: 11 }}>
                     {item.linked_product_name}
                   </Tag>
@@ -461,34 +463,34 @@ function OrderListTab() {
           <Text strong style={{ fontSize: 15, color: folder.is_archived ? '#8c8c8c' : undefined }}>
             {highlight(folder.name)}
           </Text>
-          {folder.is_archived && <Tag color="default">Архів</Tag>}
+          {folder.is_archived && <Tag color="default">{t('orderList.archive')}</Tag>}
           {total > 0 && (
             <Tag color={allOrdered ? 'success' : 'default'}>
-              {ordered}/{total} замовлено
+              {ordered}/{total} {t('orderList.orderedCount')}
             </Tag>
           )}
           {received > 0 && (
-            <Tag color="processing">{received} отримано</Tag>
+            <Tag color="processing">{received} {t('orderList.receivedCount')}</Tag>
           )}
         </Space>
         <Space onClick={(e) => e.stopPropagation()}>
           {folder.is_archived ? (
-            <Tooltip title="Відновити з архіву">
+            <Tooltip title={t('orderList.restoreFromArchive')}>
               <Button size="small" icon={<RollbackOutlined />} onClick={(e) => unarchiveFolder(folder, e)}>
-                Відновити
+                {t('orderList.restore')}
               </Button>
             </Tooltip>
           ) : (
             <>
               {canBulkReceive && (
-                <Tooltip title="Прийняти все на склад (позиції з прив'язкою до товару)">
+                <Tooltip title={t('orderList.receiveAll')}>
                   <Button
                     size="small"
                     icon={<ThunderboltOutlined />}
                     style={{ color: '#1677ff', borderColor: '#1677ff' }}
                     onClick={(e) => openBulkReceive(folder, e)}
                   >
-                    Прийняти все
+                    {t('orderList.receiveAllBtn')}
                   </Button>
                 </Tooltip>
               )}
@@ -499,10 +501,10 @@ function OrderListTab() {
                 onClick={(e) => markAllOrdered(folder, e)}
                 disabled={total === 0}
               >
-                {allOrdered ? 'Скасувати всі' : 'Замовлено все'}
+                {allOrdered ? t('orderList.cancelAll') : t('orderList.orderAll')}
               </Button>
               <Button size="small" icon={<PlusOutlined />} onClick={(e) => openNewItem(folder.id, e)}>
-                Додати
+                {t('orderList.addItem')}
               </Button>
               <Button size="small" icon={<EditOutlined />} onClick={(e) => openEditFolder(folder, e)} />
               <Tooltip title="Перемістити в архів">

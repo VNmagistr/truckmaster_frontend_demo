@@ -132,10 +132,10 @@ function WholesaleTab() {
         })));
         setProductSelectOpen(true);
       } else {
-        message.warning(`Товар з артикулом "${sku}" не знайдено`);
+        message.warning(t('wholesale.skuNotFound', { sku }));
       }
     } catch {
-      message.error('Помилка пошуку');
+      message.error(t('wholesale.searchError'));
     } finally {
       setSkuSearching(false);
     }
@@ -149,7 +149,7 @@ function WholesaleTab() {
       const data = (res.data || res).results || (res.data || res) || [];
       setStock(data);
     } catch {
-      message.error('Не вдалося завантажити залишки');
+      message.error(t('wholesale.stockLoadError'));
     } finally {
       setStockLoading(false);
     }
@@ -189,11 +189,11 @@ function WholesaleTab() {
     setReceiveSaving(true);
     try {
       await inventoryAPI.receiveStock(values);
-      message.success('Надходження зареєстровано');
+      message.success(t('wholesale.receiveSuccess'));
       setReceiveOpen(false);
       fetchStock(selectedWarehouse);
     } catch (err) {
-      const errMsg = err?.response?.data?.error || 'Помилка реєстрації надходження';
+      const errMsg = err?.response?.data?.error || t('wholesale.receiveError');
       message.error(errMsg);
     } finally {
       setReceiveSaving(false);
@@ -221,11 +221,11 @@ function WholesaleTab() {
     setTransferSaving(true);
     try {
       await inventoryAPI.transferStock(values);
-      message.success('Товар переміщено');
+      message.success(t('wholesale.transferSuccess'));
       setTransferOpen(false);
       fetchStock(selectedWarehouse);
     } catch (err) {
-      const errMsg = err?.response?.data?.error || 'Помилка переміщення';
+      const errMsg = err?.response?.data?.error || t('wholesale.transferError');
       message.error(errMsg);
     } finally {
       setTransferSaving(false);
@@ -234,20 +234,20 @@ function WholesaleTab() {
 
   const columns = [
     {
-      title: 'Артикул',
+      title: t('inventory.sku'),
       dataIndex: 'product_sku',
       key: 'sku',
       width: 120,
       render: (v) => <Text code style={{ fontSize: 12 }}>{v || '—'}</Text>,
     },
     {
-      title: 'Назва',
+      title: t('common.name'),
       dataIndex: 'product_name',
       key: 'name',
       render: (v) => <Text strong>{v}</Text>,
     },
     {
-      title: 'Залишок',
+      title: t('inventory.currentStock'),
       key: 'qty',
       width: 130,
       render: (_, r) => {
@@ -255,51 +255,51 @@ function WholesaleTab() {
         const color = qty <= 0 ? 'red' : qty < 5 ? 'orange' : 'green';
         return (
           <Tag color={color}>
-            {qty > 0 ? `${qty} ${r.product_unit || 'шт'}` : 'Немає'}
+            {qty > 0 ? `${qty} ${r.product_unit || t('common.pcs')}` : t('wholesale.noStock')}
           </Tag>
         );
       },
     },
     {
-      title: 'Зарезервовано',
+      title: t('inventory.reserved'),
       dataIndex: 'reserved',
       key: 'reserved',
       width: 130,
       render: (v, r) => v > 0
-        ? <Tag color="blue">{v} {r.product_unit || 'шт'}</Tag>
+        ? <Tag color="blue">{v} {r.product_unit || t('common.pcs')}</Tag>
         : <Text type="secondary">—</Text>,
     },
     {
-      title: 'Доступно',
+      title: t('inventory.available'),
       key: 'available',
       width: 120,
       render: (_, r) => {
         const avail = Number(r.available) || 0;
         return avail > 0
-          ? <Text strong style={{ color: '#52c41a' }}>{avail} {r.product_unit || 'шт'}</Text>
+          ? <Text strong style={{ color: '#52c41a' }}>{avail} {r.product_unit || t('common.pcs')}</Text>
           : <Text type="secondary">0</Text>;
       },
     },
     {
-      title: 'Місце',
+      title: t('inventory.location'),
       dataIndex: 'location',
       key: 'location',
       width: 100,
       render: (v) => v || <Text type="secondary">—</Text>,
     },
     {
-      title: 'Дії',
+      title: t('common.actions'),
       key: 'actions',
       width: 120,
       render: (_, record) => (
-        <Tooltip title="Перемістити на інший склад">
+        <Tooltip title={t('wholesale.transfer')}>
           <Button
             size="small"
             icon={<SwapOutlined />}
             onClick={() => openTransfer(record)}
             disabled={Number(record.quantity) <= 0}
           >
-            Перемістити
+            {t('wholesale.transfer')}
           </Button>
         </Tooltip>
       ),

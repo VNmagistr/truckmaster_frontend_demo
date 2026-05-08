@@ -601,16 +601,16 @@ function BotPage() {
                     style={{ width: 150 }}
                     allowClear
                     options={[
-                      { value: 'blocked',  label: 'Заблоковані' },
-                      { value: 'inactive', label: 'Неактивні' },
+                      { value: 'blocked',  label: t('bot.filterBlocked') },
+                      { value: 'inactive', label: t('bot.filterInactive') },
                     ]}
                     onChange={(v) => setStatusFilter(v || '')}
                   />
                   <Button icon={<ReloadOutlined />} onClick={() => fetchUsers(1)}>
-                    Оновити
+                    {t('common.refresh')}
                   </Button>
                   <Button type="primary" icon={<PlusOutlined />} onClick={openCreateModal}>
-                    Додати користувача
+                    {t('bot.addUser')}
                   </Button>
                 </Space>
 
@@ -625,7 +625,7 @@ function BotPage() {
                     pageSize: 20,
                     total: usersTotal,
                     onChange: (page) => fetchUsers(page),
-                    showTotal: (total) => `Всього: ${total}`,
+                    showTotal: (total) => `${t('common.total')}: ${total}`,
                     showSizeChanger: false,
                   }}
                 />
@@ -641,7 +641,7 @@ function BotPage() {
               <>
                 <Space wrap style={{ marginBottom: 16 }}>
                   <Input.Search
-                    placeholder="Текст повідомлення..."
+                    placeholder={t('bot.messageSearch')}
                     style={{ width: 280 }}
                     allowClear
                     onSearch={(v) => { setMessageSearch(v); fetchMessages(1, v); }}
@@ -650,17 +650,17 @@ function BotPage() {
                     }}
                   />
                   <Select
-                    placeholder="Напрямок"
+                    placeholder={t('bot.directionFilter')}
                     style={{ width: 170 }}
                     allowClear
                     options={[
-                      { value: 'incoming', label: 'Від користувача' },
-                      { value: 'outgoing', label: 'Від бота' },
+                      { value: 'incoming', label: t('bot.directionFromUser') },
+                      { value: 'outgoing', label: t('bot.directionFromBot') },
                     ]}
                     onChange={(v) => setDirectionFilter(v || '')}
                   />
                   <Button icon={<ReloadOutlined />} onClick={() => fetchMessages(1)}>
-                    Оновити
+                    {t('common.refresh')}
                   </Button>
                 </Space>
 
@@ -675,7 +675,7 @@ function BotPage() {
                     pageSize: 20,
                     total: messagesTotal,
                     onChange: (page) => fetchMessages(page),
-                    showTotal: (total) => `Всього: ${total}`,
+                    showTotal: (total) => `${t('common.total')}: ${total}`,
                     showSizeChanger: false,
                   }}
                 />
@@ -690,11 +690,11 @@ function BotPage() {
             children: (
               <>
                 <div style={{ marginBottom: 12, color: '#888', fontSize: 13 }}>
-                  Сюди потрапляють номери, які адміністратор шукав через бот, але вони не знайдені в базі.
+                  {t('bot.unknownPlatesDesc')}
                 </div>
                 <Space wrap style={{ marginBottom: 16 }}>
                   <Input.Search
-                    placeholder="Номер або нотатка..."
+                    placeholder={t('bot.unknownPlatesSearch')}
                     style={{ width: 280 }}
                     allowClear
                     onSearch={(v) => { setUnknownSearch(v); fetchUnknownPlates(1, v); }}
@@ -703,7 +703,7 @@ function BotPage() {
                     }}
                   />
                   <Button icon={<ReloadOutlined />} onClick={() => fetchUnknownPlates(1)}>
-                    Оновити
+                    {t('common.refresh')}
                   </Button>
                 </Space>
 
@@ -719,7 +719,7 @@ function BotPage() {
                     pageSize: 20,
                     total: unknownTotal,
                     onChange: (page) => fetchUnknownPlates(page),
-                    showTotal: (total) => `Всього: ${total}`,
+                    showTotal: (total) => `${t('common.total')}: ${total}`,
                     showSizeChanger: false,
                   }}
                 />
@@ -731,12 +731,12 @@ function BotPage() {
 
       {/* ── Модалка створення користувача ──────────────────────────────────── */}
       <Modal
-        title="Додати користувача бота"
+        title={t('bot.addUserTitle')}
         open={createModalOpen}
         onOk={handleCreateSave}
         onCancel={() => setCreateModalOpen(false)}
-        okText="Додати"
-        cancelText="Скасувати"
+        okText={t('common.add')}
+        cancelText={t('common.cancel')}
         confirmLoading={creating}
         width={520}
         destroyOnClose
@@ -748,12 +748,12 @@ function BotPage() {
             <Col span={12}>
               <Form.Item
                 name="telegram_id"
-                label="Telegram ID"
+                label={t('bot.telegramIdLabel')}
                 rules={[
-                  { required: true, message: 'Обов\'язкове поле' },
-                  { pattern: /^\d+$/, message: 'Тільки цифри' },
+                  { required: true, message: t('common.required') },
+                  { pattern: /^\d+$/, message: t('bot.onlyDigits') },
                 ]}
-                extra="Числовий ID з Telegram (не username)"
+                extra={t('bot.telegramIdHelp')}
               >
                 <Input placeholder="123456789" />
               </Form.Item>
@@ -767,22 +767,22 @@ function BotPage() {
 
           <Row gutter={16}>
             <Col span={12}>
-              <Form.Item name="first_name" label="Ім'я">
+              <Form.Item name="first_name" label={t('bot.firstName')}>
                 <Input placeholder="Іван" />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="last_name" label="Прізвище">
+              <Form.Item name="last_name" label={t('bot.lastName')}>
                 <Input placeholder="Іваненко" />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="phone_number" label="Номер телефону">
+          <Form.Item name="phone_number" label={t('common.phone')}>
             <Input placeholder="+380501234567" />
           </Form.Item>
 
-          <Form.Item name="role" label="Роль" rules={[{ required: true }]}>
+          <Form.Item name="role" label={t('bot.filterRole')} rules={[{ required: true }]}>
             <Select
               options={ROLE_OPTIONS}
               onChange={(v) => { setCreateRole(v); ensureDataForRole(v); }}
@@ -792,14 +792,14 @@ function BotPage() {
           {createRole === 'owner' && (
             <Form.Item
               name="client"
-              label="Власник (клієнт)"
-              rules={[{ required: true, message: 'Оберіть клієнта для ролі Власник' }]}
+              label={t('bot.ownerClient')}
+              rules={[{ required: true, message: t('bot.selectClientForOwner') }]}
             >
               <Select
                 showSearch
                 allowClear
                 loading={clientsLoading}
-                placeholder="Оберіть клієнта зі списку"
+                placeholder={t('bot.selectClient')}
                 optionFilterProp="label"
                 options={clients.map((c) => ({ value: c.id, label: c.name }))}
               />
@@ -809,19 +809,19 @@ function BotPage() {
           {createRole === 'driver' && (
             <Form.Item
               name="assigned_trucks"
-              label="Автомобілі водія"
-              rules={[{ required: true, message: 'Оберіть хоча б один автомобіль' }]}
+              label={t('bot.driverTrucks')}
+              rules={[{ required: true, message: t('bot.selectAtLeastOneTruck') }]}
             >
               <Select
                 mode="multiple"
                 showSearch
                 allowClear
                 loading={trucksLoading}
-                placeholder="Оберіть автомобіль(і)"
+                placeholder={t('bot.selectTrucks')}
                 optionFilterProp="label"
-                options={trucks.map((t) => ({
-                  value: t.id,
-                  label: `${t.license_plate}${t.specific_model_name ? ` — ${t.specific_model_name}` : ''}${t.client?.name ? ` (${t.client.name})` : ''}`,
+                options={trucks.map((tr) => ({
+                  value: tr.id,
+                  label: `${tr.license_plate}${tr.specific_model_name ? ` — ${tr.specific_model_name}` : ''}${tr.client?.name ? ` (${tr.client.name})` : ''}`,
                 }))}
               />
             </Form.Item>
@@ -829,12 +829,12 @@ function BotPage() {
 
           <Row gutter={24}>
             <Col span={12}>
-              <Form.Item name="is_active" label="Активний" valuePropName="checked">
+              <Form.Item name="is_active" label={t('bot.isActiveCheckbox')} valuePropName="checked">
                 <Switch defaultChecked />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="is_blocked" label="Заблокований" valuePropName="checked">
+              <Form.Item name="is_blocked" label={t('bot.isBlockedCheckbox')} valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Col>
@@ -844,12 +844,12 @@ function BotPage() {
 
       {/* ── Модалка редагування користувача ────────────────────────────────── */}
       <Modal
-        title={`Редагувати — ${editingName}`}
+        title={t('bot.editUser', { name: editingName })}
         open={editModalOpen}
         onOk={handleEditSave}
         onCancel={() => setEditModalOpen(false)}
-        okText="Зберегти"
-        cancelText="Скасувати"
+        okText={t('common.save')}
+        cancelText={t('common.cancel')}
         confirmLoading={saving}
         width={480}
         destroyOnClose
@@ -869,7 +869,7 @@ function BotPage() {
         )}
 
         <Form form={editForm} layout="vertical">
-          <Form.Item name="role" label="Роль" rules={[{ required: true, message: 'Оберіть роль' }]}>
+          <Form.Item name="role" label={t('bot.filterRole')} rules={[{ required: true, message: t('bot.selectRole') }]}>
             <Select
               options={ROLE_OPTIONS}
               onChange={(v) => { setEditRole(v); ensureDataForRole(v); }}
@@ -879,14 +879,14 @@ function BotPage() {
           {editRole === 'owner' && (
             <Form.Item
               name="client"
-              label="Власник (клієнт)"
-              rules={[{ required: true, message: 'Оберіть клієнта для ролі Власник' }]}
+              label={t('bot.ownerClient')}
+              rules={[{ required: true, message: t('bot.selectClientForOwner') }]}
             >
               <Select
                 showSearch
                 allowClear
                 loading={clientsLoading}
-                placeholder="Оберіть клієнта зі списку"
+                placeholder={t('bot.selectClient')}
                 optionFilterProp="label"
                 options={clients.map((c) => ({ value: c.id, label: c.name }))}
               />
@@ -896,19 +896,19 @@ function BotPage() {
           {editRole === 'driver' && (
             <Form.Item
               name="assigned_trucks"
-              label="Автомобілі водія"
-              rules={[{ required: true, message: 'Оберіть хоча б один автомобіль' }]}
+              label={t('bot.driverTrucks')}
+              rules={[{ required: true, message: t('bot.selectAtLeastOneTruck') }]}
             >
               <Select
                 mode="multiple"
                 showSearch
                 allowClear
                 loading={trucksLoading}
-                placeholder="Оберіть автомобіль(і)"
+                placeholder={t('bot.selectTrucks')}
                 optionFilterProp="label"
-                options={trucks.map((t) => ({
-                  value: t.id,
-                  label: `${t.license_plate}${t.specific_model_name ? ` — ${t.specific_model_name}` : ''}${t.client?.name ? ` (${t.client.name})` : ''}`,
+                options={trucks.map((tr) => ({
+                  value: tr.id,
+                  label: `${tr.license_plate}${tr.specific_model_name ? ` — ${tr.specific_model_name}` : ''}${tr.client?.name ? ` (${tr.client.name})` : ''}`,
                 }))}
               />
             </Form.Item>
@@ -916,12 +916,12 @@ function BotPage() {
 
           <Row gutter={24}>
             <Col span={12}>
-              <Form.Item name="is_active" label="Активний" valuePropName="checked">
+              <Form.Item name="is_active" label={t('bot.isActiveCheckbox')} valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Col>
             <Col span={12}>
-              <Form.Item name="is_blocked" label="Заблокований" valuePropName="checked">
+              <Form.Item name="is_blocked" label={t('bot.isBlockedCheckbox')} valuePropName="checked">
                 <Switch />
               </Form.Item>
             </Col>

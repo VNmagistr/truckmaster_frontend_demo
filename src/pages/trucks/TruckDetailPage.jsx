@@ -4,32 +4,32 @@ import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, HistoryOutl
 import { QRCodeCanvas } from 'qrcode.react';
 import dayjs from 'dayjs';
 
-function getIntervalTypes(transmissionType) {
+function getIntervalTypes(transmissionType, t) {
   let gearboxItems;
   if (transmissionType === 'manual') {
-    gearboxItems = [{ key: 'gearbox_oil', label: 'Олива КПП' }];
+    gearboxItems = [{ key: 'gearbox_oil', label: t('truckDetail.gearboxOil') }];
   } else if (transmissionType === 'automatic') {
     gearboxItems = [
-      { key: 'auto_gearbox_oil',    label: 'Олива АКПП' },
-      { key: 'auto_gearbox_filter', label: 'Фільтр АКПП' },
+      { key: 'auto_gearbox_oil',    label: t('truckDetail.autoGearboxOil') },
+      { key: 'auto_gearbox_filter', label: t('truckDetail.autoGearboxFilter') },
     ];
   } else if (transmissionType === 'robotic') {
     gearboxItems = [
-      { key: 'auto_gearbox_oil',    label: 'Олива роботизованої КПП' },
-      { key: 'auto_gearbox_filter', label: 'Фільтр роботизованої КПП' },
+      { key: 'auto_gearbox_oil',    label: t('truckDetail.robotGearboxOil') },
+      { key: 'auto_gearbox_filter', label: t('truckDetail.robotGearboxFilter') },
     ];
   } else {
     gearboxItems = [
-      { key: 'gearbox_oil',      label: 'Олива КПП' },
-      { key: 'auto_gearbox_oil', label: 'Олива АКПП' },
+      { key: 'gearbox_oil',      label: t('truckDetail.gearboxOil') },
+      { key: 'auto_gearbox_oil', label: t('truckDetail.autoGearboxOil') },
     ];
   }
   return [
-    { key: 'engine_oil',    label: 'Олива двигуна' },
+    { key: 'engine_oil',    label: t('truckDetail.engineOil') },
     ...gearboxItems,
-    { key: 'rear_axle_oil', label: 'Олива заднього моста' },
-    { key: 'belts',         label: 'Ремені/ролики' },
-    { key: 'chains',        label: 'Ланцюги' },
+    { key: 'rear_axle_oil', label: t('truckDetail.rearAxleOil') },
+    { key: 'belts',         label: t('truckDetail.belts') },
+    { key: 'chains',        label: t('truckDetail.chains') },
   ];
 }
 import { useParams, useNavigate, Link } from 'react-router-dom';
@@ -37,15 +37,17 @@ import { trucksAPI, ordersAPI, baseModelsAPI, clientsAPI, maintenanceAPI } from 
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
 import { formatDate } from '../../utils/formatters';
 import useEnumsStore from '../../store/enumsStore';
+import { useTranslation } from 'react-i18next';
 
 const { Text } = Typography;
 
 function TruckDetailPage() {
+  const { t } = useTranslation();
   const euroByValue         = useEnumsStore((s) => s.euroByValue);
   const transmissionByValue = useEnumsStore((s) => s.transmissionByValue);
 
   const [truck, setTruck] = useState(null);
-  const intervalTypes = useMemo(() => getIntervalTypes(truck?.transmission_type), [truck?.transmission_type]);
+  const intervalTypes = useMemo(() => getIntervalTypes(truck?.transmission_type, t), [truck?.transmission_type, t]);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -98,7 +100,7 @@ function TruckDetailPage() {
     return /trakker/i.test(base) || /trakker/i.test(specific);
   }, [baseModelName, truck?.specific_model_name]);
 
-  const unitLabel = trackingMode === 'engine_hours' ? 'мг' : 'км';
+  const unitLabel = trackingMode === 'engine_hours' ? t('common.engineHoursShort') : t('common.km');
 
   const { id } = useParams();
   const navigate = useNavigate();
@@ -151,7 +153,7 @@ function TruckDetailPage() {
       }
 
     } catch (error) {
-      message.error('Не вдалося завантажити дані вантажівки');
+      message.error(t('trucks.loadDetailError'));
       navigate('/trucks');
     } finally {
       setLoading(false);
@@ -181,7 +183,7 @@ function TruckDetailPage() {
       setLogs(data.results || data || []);
       setLogsLoaded(true);
     } catch {
-      message.error('Не вдалося завантажити історію ТО');
+      message.error(t('truckDetail.serviceHistoryError'));
     } finally {
       setLogsLoading(false);
     }
@@ -210,7 +212,7 @@ function TruckDetailPage() {
       }
       setIntervalsLoaded(true);
     } catch {
-      message.error('Не вдалося завантажити інтервали');
+      message.error(t('truckDetail.intervalsError'));
     } finally {
       setIntervalsLoading(false);
     }
@@ -222,10 +224,10 @@ function TruckDetailPage() {
       // Для не-Trakker примусово ставимо mileage (поле в формі може бути не показане)
       const payload = { ...values, tracking_mode: isTrakker ? (values.tracking_mode || trackingMode) : 'mileage' };
       await maintenanceAPI.saveIntervals(id, payload);
-      message.success('Інтервали збережено');
+      message.success(t('truckDetail.intervalsSaved'));
       setIntervalsLoaded(false); // скинути кеш щоб наступне відкриття перезавантажило
     } catch {
-      message.error('Помилка збереження інтервалів');
+      message.error(t('truckDetail.intervalsSaveError'));
     } finally {
       setIntervalsSaving(false);
     }
@@ -239,7 +241,7 @@ function TruckDetailPage() {
       setReminders(res.data || []);
       setRemindersLoaded(true);
     } catch {
-      message.error('Не вдалося завантажити нагадування');
+      message.error(t('truckDetail.reminderLoadError'));
     } finally {
       setRemindersLoading(false);
     }
@@ -258,17 +260,17 @@ function TruckDetailPage() {
   const handleReminderComplete = async (rid) => {
     try {
       await maintenanceAPI.completeReminder(rid);
-      message.success('Позначено як виконане');
+      message.success(t('truckDetail.reminderCompleted'));
       reloadReminders();
-    } catch { message.error('Помилка'); }
+    } catch { message.error(t('common.error')); }
   };
 
   const handleReminderDismiss = async (rid) => {
     try {
       await maintenanceAPI.dismissReminder(rid);
-      message.success('Відхилено');
+      message.success(t('truckDetail.reminderDismissed'));
       reloadReminders();
-    } catch { message.error('Помилка'); }
+    } catch { message.error(t('common.error')); }
   };
 
   const openReminderModal = async (record = null) => {
@@ -295,17 +297,17 @@ function TruckDetailPage() {
       values.truck = Number(id);
       if (editingReminder) {
         await maintenanceAPI.updateReminder(editingReminder.id, values);
-        message.success('Оновлено');
+        message.success(t('truckDetail.reminderUpdated'));
       } else {
         await maintenanceAPI.createReminder(values);
-        message.success('Нагадування створено');
+        message.success(t('truckDetail.reminderCreated'));
       }
       setReminderModalOpen(false);
       reloadReminders();
     } catch (err) {
       if (err?.response?.data) {
         const detail = Object.values(err.response.data).flat().join(' ');
-        message.error(detail || 'Помилка збереження');
+        message.error(detail || t('truckDetail.reminderSaveError'));
       }
     }
   };
@@ -325,7 +327,7 @@ function TruckDetailPage() {
       const data = res.data || res;
       setTemplates(data.results || data || []);
     } catch {
-      message.error('Не вдалося завантажити еталони ТО');
+      message.error(t('truckDetail.templateError'));
     } finally {
       setTemplatesLoading(false);
     }
@@ -336,11 +338,11 @@ function TruckDetailPage() {
     setTemplateApplying(true);
     try {
       await maintenanceAPI.applyTemplateToTruck(selectedTemplateId, id);
-      message.success('Еталон застосовано');
+      message.success(t('truckDetail.templateApplied'));
       setSelectedTemplateId(null);
       loadKit();
     } catch (error) {
-      const detail = error.response?.data?.detail || 'Помилка застосування еталону';
+      const detail = error.response?.data?.detail || t('truckDetail.templateError');
       message.error(detail);
     } finally {
       setTemplateApplying(false);
@@ -349,7 +351,7 @@ function TruckDetailPage() {
 
   const ordersColumns = [
     {
-      title: '№ Замовлення',
+      title: t('orders.orderNumber'),
       dataIndex: 'order_number',
       key: 'order_number',
       render: (text, record) => (
@@ -357,20 +359,20 @@ function TruckDetailPage() {
       ),
     },
     {
-      title: 'Опис проблеми',
+      title: t('truckDetail.problemDesc'),
       dataIndex: 'problem_description',
       key: 'problem',
       ellipsis: true,
       render: (text) => text || '-',
     },
     {
-      title: 'Статус',
+      title: t('common.status'),
       dataIndex: 'status',
       key: 'status',
       render: (status) => <StatusTag status={status} type="order" />,
     },
     {
-      title: 'Дата',
+      title: t('common.date'),
       dataIndex: 'created_at',
       key: 'date',
       render: (date) => formatDate(date),
@@ -386,7 +388,7 @@ function TruckDetailPage() {
       label: (
         <span>
           <FileTextOutlined />
-          Історія замовлень ({orders.length})
+          {t('truckDetail.ordersCount', { count: orders.length })}
         </span>
       ),
       children: (
@@ -396,8 +398,8 @@ function TruckDetailPage() {
           rowKey="id"
           pagination={false}
           scroll={{ x: 'max-content' }}
-          locale={{ emptyText: 'Немає замовлень' }}
-          footer={() => orders.length >= 20 ? <div style={{textAlign: 'center', color: '#999'}}>Показано останні 20</div> : null}
+          locale={{ emptyText: t('truckDetail.noOrders') }}
+          footer={() => orders.length >= 20 ? <div style={{textAlign: 'center', color: '#999'}}>{t('truckDetail.last20')}</div> : null}
         />
       ),
     },
@@ -406,7 +408,7 @@ function TruckDetailPage() {
       label: (
         <span>
           <HistoryOutlined />
-          Історія ТО
+          {t('truckDetail.serviceHistory')}
         </span>
       ),
       children: (
@@ -414,30 +416,30 @@ function TruckDetailPage() {
           <Table
             columns={[
               {
-                title: 'Дата',
+                title: t('truckDetail.serviceDate'),
                 dataIndex: 'date_performed',
                 key: 'date',
                 width: 120,
                 render: (d) => formatDate(d),
               },
               {
-                title: 'Вид ТО',
+                title: t('truckDetail.serviceType'),
                 dataIndex: 'rule_name',
                 key: 'rule',
               },
               {
-                title: 'Пробіг',
+                title: t('truckDetail.serviceMileage'),
                 dataIndex: 'mileage',
                 key: 'mileage',
                 width: 120,
-                render: (v) => v ? `${v.toLocaleString()} км` : '—',
+                render: (v) => v ? `${v.toLocaleString()} ${t('common.km')}` : '—',
               },
             ]}
             dataSource={logs}
             rowKey="id"
             pagination={false}
             scroll={{ x: 'max-content' }}
-            locale={{ emptyText: 'Немає записів ТО' }}
+            locale={{ emptyText: t('truckDetail.noServiceHistory') }}
           />
         </Spin>
       ),
@@ -447,29 +449,29 @@ function TruckDetailPage() {
       label: (
         <span>
           <ToolOutlined />
-          Комплект ТО
+          {t('truckDetail.maintenanceKit')}
         </span>
       ),
       children: (
         <Spin spinning={kitLoading}>
-          <Card size="small" title="Застосувати еталон ТО" style={{ marginBottom: 16 }}>
+          <Card size="small" title={t('truckDetail.applyTemplate')} style={{ marginBottom: 16 }}>
             <Space.Compact style={{ width: '100%' }}>
               <Select
                 showSearch
                 allowClear
-                placeholder="Оберіть еталон регламенту ТО"
+                placeholder={t('truckDetail.selectTemplate')}
                 loading={templatesLoading}
                 optionFilterProp="label"
                 value={selectedTemplateId}
                 onChange={setSelectedTemplateId}
                 onFocus={loadTemplates}
                 style={{ flex: 1 }}
-                options={templates.map(t => {
-                  const euro = euroByValue?.[t.euro_standard]?.label || t.euro_standard || 'Будь-який євро';
-                  const trans = transmissionByValue?.[t.transmission_type]?.label || t.transmission_type || 'Будь-яка КПП';
+                options={templates.map(tpl => {
+                  const euro = euroByValue?.[tpl.euro_standard]?.label || tpl.euro_standard || t('truckDetail.anyEuro');
+                  const trans = transmissionByValue?.[tpl.transmission_type]?.label || tpl.transmission_type || t('truckDetail.anyTransmission');
                   return {
-                    value: t.id,
-                    label: `${t.base_model_name} / ${euro} / ${trans}`,
+                    value: tpl.id,
+                    label: `${tpl.base_model_name} / ${euro} / ${trans}`,
                   };
                 })}
               />
@@ -479,45 +481,45 @@ function TruckDetailPage() {
                 disabled={!selectedTemplateId}
                 onClick={handleApplyTemplate}
               >
-                Застосувати
+                {t('truckDetail.apply')}
               </Button>
             </Space.Compact>
           </Card>
 
           {kit ? (
             <div>
-              <Card size="small" title="Мастила" style={{ marginBottom: 16 }}>
+              <Card size="small" title={t('truckDetail.oils')} style={{ marginBottom: 16 }}>
                 <Descriptions size="small" column={1} bordered>
                   {kit.oil_name && (
-                    <Descriptions.Item label="Олива двигуна">
-                      [{kit.oil_sku}] {kit.oil_name} — {kit.oil_quantity} л
+                    <Descriptions.Item label={t('truckDetail.engineOil')}>
+                      [{kit.oil_sku}] {kit.oil_name} — {kit.oil_quantity} {t('common.lShort')}
                     </Descriptions.Item>
                   )}
                   {kit.rear_axle_oil_name && (
-                    <Descriptions.Item label="Олива заднього моста">
-                      [{kit.rear_axle_oil_sku}] {kit.rear_axle_oil_name} — {kit.rear_axle_oil_quantity} л
+                    <Descriptions.Item label={t('truckDetail.rearAxleOil')}>
+                      [{kit.rear_axle_oil_sku}] {kit.rear_axle_oil_name} — {kit.rear_axle_oil_quantity} {t('common.lShort')}
                     </Descriptions.Item>
                   )}
                   {kit.gearbox_oil_name && (
-                    <Descriptions.Item label="Олива КПП">
-                      [{kit.gearbox_oil_sku}] {kit.gearbox_oil_name} — {kit.gearbox_oil_quantity} л
+                    <Descriptions.Item label={t('truckDetail.gearboxOil')}>
+                      [{kit.gearbox_oil_sku}] {kit.gearbox_oil_name} — {kit.gearbox_oil_quantity} {t('common.lShort')}
                     </Descriptions.Item>
                   )}
                   {kit.auto_gearbox_oil_name && (
-                    <Descriptions.Item label="Олива АКПП">
-                      [{kit.auto_gearbox_oil_sku}] {kit.auto_gearbox_oil_name} — {kit.auto_gearbox_oil_quantity} л
+                    <Descriptions.Item label={t('truckDetail.autoGearboxOil')}>
+                      [{kit.auto_gearbox_oil_sku}] {kit.auto_gearbox_oil_name} — {kit.auto_gearbox_oil_quantity} {t('common.lShort')}
                     </Descriptions.Item>
                   )}
                   {kit.auto_gearbox_filter_name && (
-                    <Descriptions.Item label="Фільтр АКПП">
-                      [{kit.auto_gearbox_filter_sku}] {kit.auto_gearbox_filter_name} — {kit.auto_gearbox_filter_quantity} шт
+                    <Descriptions.Item label={t('truckDetail.autoGearboxFilter')}>
+                      [{kit.auto_gearbox_filter_sku}] {kit.auto_gearbox_filter_name} — {kit.auto_gearbox_filter_quantity} {t('common.pcsShort')}
                     </Descriptions.Item>
                   )}
                 </Descriptions>
               </Card>
 
               {kit.filters && kit.filters.length > 0 && (
-                <Card size="small" title="Фільтри">
+                <Card size="small" title={t('truckDetail.filters')}>
                   <Table
                     dataSource={kit.filters}
                     rowKey="id"
@@ -526,22 +528,22 @@ function TruckDetailPage() {
                     scroll={{ x: 'max-content' }}
                     columns={[
                       {
-                        title: 'Запчастина',
+                        title: t('truckDetail.part'),
                         key: 'part',
                         render: (_, record) => record.part_name
                           ? `[${record.part_sku}] ${record.part_name}`
                           : '-',
                       },
                       {
-                        title: 'К-сть',
+                        title: t('truckDetail.filterQty'),
                         dataIndex: 'quantity',
                         width: 80,
                       },
                       {
-                        title: 'Інтервал',
+                        title: t('truckDetail.filterInterval'),
                         dataIndex: 'change_interval_km',
                         width: 120,
-                        render: (val) => val ? `${val.toLocaleString()} км` : '—',
+                        render: (val) => val ? `${val.toLocaleString()} ${t('common.km')}` : '—',
                       },
                     ]}
                   />
@@ -550,7 +552,7 @@ function TruckDetailPage() {
             </div>
           ) : (
             <Empty
-              description="Комплект ТО не налаштовано — оберіть еталон вище"
+              description={t('truckDetail.kitNotConfigured')}
               image={Empty.PRESENTED_IMAGE_SIMPLE}
             />
           )}
@@ -562,7 +564,7 @@ function TruckDetailPage() {
       label: (
         <span>
           <BellOutlined />
-          Нагадування {reminders.filter(r => r.status === 'overdue').length > 0 && (
+          {t('truckDetail.reminders')} {reminders.filter(r => r.status === 'overdue').length > 0 && (
             <Tag color="red" style={{ marginLeft: 4, padding: '0 4px' }}>
               {reminders.filter(r => r.status === 'overdue').length}
             </Tag>
@@ -578,7 +580,7 @@ function TruckDetailPage() {
               onClick={() => openReminderModal()}
               style={{ background: '#f5c518', color: '#1a1a1a', borderColor: '#f5c518' }}
             >
-              Додати нагадування
+              {t('truckDetail.addReminder')}
             </Button>
           </div>
           <Table
@@ -587,11 +589,11 @@ function TruckDetailPage() {
             size="small"
             pagination={false}
             scroll={{ x: 600 }}
-            locale={{ emptyText: 'Немає нагадувань' }}
+            locale={{ emptyText: t('truckDetail.noReminders') }}
             rowClassName={(r) => r.status === 'overdue' ? 'row-overdue' : ''}
             columns={[
               {
-                title: 'Назва',
+                title: t('truckDetail.reminderName'),
                 dataIndex: 'title',
                 key: 'title',
                 render: (v, row) => (
@@ -604,24 +606,23 @@ function TruckDetailPage() {
                 ),
               },
               {
-                title: 'Статус',
+                title: t('truckDetail.reminderStatus'),
                 dataIndex: 'status',
                 key: 'status',
                 width: 120,
                 render: (v) => {
                   const map = { pending: 'blue', notified: 'orange', overdue: 'red', completed: 'green', dismissed: 'default' };
-                  const labels = { pending: 'Очікує', notified: 'Сповіщено', overdue: 'Прострочено', completed: 'Виконано', dismissed: 'Відхилено' };
-                  return <Tag color={map[v]}>{labels[v] || v}</Tag>;
+                  return <Tag color={map[v]}>{t(`reminderStatuses.${v}`) || v}</Tag>;
                 },
               },
               {
-                title: 'Ціль',
+                title: t('truckDetail.reminderTarget'),
                 key: 'target',
                 width: 160,
                 render: (_, row) => (
                   <Space direction="vertical" size={0}>
                     {row.target_date && <span>📅 {dayjs(row.target_date).format('DD.MM.YYYY')}</span>}
-                    {row.target_mileage && <span>🛣 {row.target_mileage.toLocaleString('uk')} км</span>}
+                    {row.target_mileage && <span>🛣 {row.target_mileage.toLocaleString('uk')} {t('common.km')}</span>}
                   </Space>
                 ),
               },
@@ -634,10 +635,10 @@ function TruckDetailPage() {
                     <Button size="small" icon={<EditOutlined />} onClick={() => openReminderModal(row)} />
                     {!['completed', 'dismissed'].includes(row.status) && (
                       <>
-                        <Popconfirm title="Позначити як виконане?" onConfirm={() => handleReminderComplete(row.id)} okText="Так" cancelText="Ні">
+                        <Popconfirm title={t('truckDetail.markCompleted')} onConfirm={() => handleReminderComplete(row.id)} okText={t('common.yes')} cancelText={t('common.no')}>
                           <Button size="small" icon={<CheckOutlined />} style={{ color: 'green', borderColor: 'green' }} />
                         </Popconfirm>
-                        <Popconfirm title="Відхилити?" onConfirm={() => handleReminderDismiss(row.id)} okText="Так" cancelText="Ні">
+                        <Popconfirm title={t('truckDetail.dismiss')} onConfirm={() => handleReminderDismiss(row.id)} okText={t('common.yes')} cancelText={t('common.no')}>
                           <Button size="small" danger icon={<StopOutlined />} />
                         </Popconfirm>
                       </>
@@ -655,7 +656,7 @@ function TruckDetailPage() {
       label: (
         <span>
           <DashboardOutlined />
-          Інтервали регламенту
+          {t('truckDetail.intervals')}
         </span>
       ),
       children: (

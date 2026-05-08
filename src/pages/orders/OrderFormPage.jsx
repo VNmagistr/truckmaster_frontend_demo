@@ -13,6 +13,7 @@ const { Text } = Typography;
 const { TextArea } = Input;
 
 function OrderFormPage() {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -49,11 +50,11 @@ function OrderFormPage() {
 
   // Статуси замовлення
   const statusOptions = [
-    { value: 'OPEN', label: 'Відкрито' },
-    { value: 'IN_PROGRESS', label: 'В роботі' },
-    { value: 'DONE', label: 'Виконано' },
-    { value: 'CLOSED', label: 'Закрито' },
-    { value: 'CANCELED', label: 'Скасовано' },
+    { value: 'OPEN', label: t('statuses.OPEN') },
+    { value: 'IN_PROGRESS', label: t('statuses.IN_PROGRESS') },
+    { value: 'DONE', label: t('statuses.DONE') },
+    { value: 'CLOSED', label: t('statuses.CLOSED') },
+    { value: 'CANCELED', label: t('statuses.CANCELED') },
   ];
 
   useEffect(() => {
@@ -116,7 +117,7 @@ function OrderFormPage() {
           }
         }
       } catch (error) {
-        message.error('Помилка завантаження даних');
+        message.error(t('orders.loadError'));
       } finally {
         setLoading(false);
       }
@@ -138,7 +139,7 @@ function OrderFormPage() {
       const results = data.results || data || [];
       setTruckOptions(results);
     } catch (error) {
-      message.error('Помилка пошуку авто');
+      message.error(t('orders.loadError'));
     } finally {
       setSearchingTrucks(false);
     }
@@ -166,7 +167,7 @@ function OrderFormPage() {
         form.setFieldsValue({ client: undefined });
         setLockedClientName('');
         setClientLocked(false);
-        message.warning('У цього авто немає власника. Оберіть клієнта вручну.');
+        message.warning(t('orders.noOwnerWarning'));
       }
     }
     
@@ -219,7 +220,7 @@ function OrderFormPage() {
       const data = res.data || res;
       setMaintenanceRules(data.results || data || []);
     } catch {
-      message.error('Не вдалося завантажити набори ТО');
+      message.error(t('orderDetail.maintenanceSetsError'));
     } finally {
       setMaintenanceModalLoading(false);
     }
@@ -229,11 +230,11 @@ function OrderFormPage() {
     setMaintenanceModalLoading(true);
     try {
       await ordersAPI.applyMaintenanceSet(id, { rule_id: values.rule_id });
-      message.success('Набір ТО застосовано до наряду');
+      message.success(t('orderDetail.maintenanceSetApplied'));
       setIsMaintenanceModalOpen(false);
       formMaintenance.resetFields();
     } catch (error) {
-      const detail = error.response?.data?.detail || 'Не вдалося застосувати набір ТО';
+      const detail = error.response?.data?.detail || t('orderDetail.maintenanceSetError');
       message.error(detail);
     } finally {
       setMaintenanceModalLoading(false);
@@ -308,7 +309,7 @@ function OrderFormPage() {
 
         if (!data.same_truck) {
           const otherPlate = data.truck?.license_plate || '—';
-          message.error(`Номер вже використовується для авто ${otherPlate}`);
+          message.error(`${t('orders.numberUsed')} ${otherPlate}`);
           return false;
         }
 
@@ -316,38 +317,38 @@ function OrderFormPage() {
         const willChangeStatus = data.status === 'DONE' || data.status === 'CLOSED';
         return new Promise((resolve) => {
           Modal.confirm({
-            title: 'Такий номер наряду вже існує',
+            title: t('orders.numberExists'),
             content: (
               <div>
                 <p style={{ marginBottom: 8 }}>
-                  Наряд №<Text strong>{data.order_number}</Text> від {createdAt}
+                  {t('orders.continueTitle', { number: data.order_number, date: createdAt })}
                   <br />
-                  Авто: <Text strong>{data.truck?.license_plate || '—'}</Text>
+                  {t('orders.continueAuto')} <Text strong>{data.truck?.license_plate || '—'}</Text>
                   {data.truck?.model ? ` — ${data.truck.model}` : ''}
                   <br />
-                  Статус: <Text strong>{data.status_display || data.status}</Text>
+                  {t('orders.continueStatus')} <Text strong>{data.status_display || data.status}</Text>
                 </p>
-                <p>Продовжуємо його?</p>
+                <p>{t('orders.continueQuestion')}</p>
                 {willChangeStatus && (
                   <p style={{ color: '#d48806', marginBottom: 0 }}>
-                    Статус буде змінено на «В роботі».
+                    {t('orders.continueNote')}
                   </p>
                 )}
               </div>
             ),
-            okText: 'Продовжити',
-            cancelText: 'Скасувати',
+            okText: t('orders.continueBtn'),
+            cancelText: t('common.cancel'),
             onOk: async () => {
               try {
                 await ordersAPI.continueOrder(data.order_id);
                 message.success(
                   willChangeStatus
-                    ? 'Наряд переведено в «В роботі»'
-                    : 'Відкриваємо існуючий наряд'
+                    ? t('orders.continueSuccess')
+                    : t('orders.continueOpenExisting')
                 );
                 navigate(`/orders/${data.order_id}`);
               } catch {
-                message.error('Не вдалося продовжити наряд');
+                message.error(t('orders.continueError'));
               }
               resolve(false);
             },
@@ -393,44 +394,44 @@ function OrderFormPage() {
 
       const carFile = carPhotoList.find(f => f.originFileObj);
       if (carFile) {
-        if (carFile.originFileObj.size > MAX_SIZE) { message.error('Фото авто занадто велике (макс. 8MB)'); setSaving(false); return; }
+        if (carFile.originFileObj.size > MAX_SIZE) { message.error(t('orders.photoTooBig')); setSaving(false); return; }
         formData.append('car_photo', carFile.originFileObj);
       }
 
       const odometerFile = odometerPhotoList.find(f => f.originFileObj);
       if (odometerFile) {
-        if (odometerFile.originFileObj.size > MAX_SIZE) { message.error('Фото одометра занадто велике (макс. 8MB)'); setSaving(false); return; }
+        if (odometerFile.originFileObj.size > MAX_SIZE) { message.error(t('orders.photoTooBig')); setSaving(false); return; }
         formData.append('odometer_photo', odometerFile.originFileObj);
       }
 
       const dashboardFile = dashboardPhotoList.find(f => f.originFileObj);
       if (dashboardFile) {
-        if (dashboardFile.originFileObj.size > MAX_SIZE) { message.error('Фото панелі занадто велике (макс. 8MB)'); setSaving(false); return; }
+        if (dashboardFile.originFileObj.size > MAX_SIZE) { message.error(t('orders.photoTooBig')); setSaving(false); return; }
         formData.append('dashboard_photo', dashboardFile.originFileObj);
       }
 
       if (isEdit) {
         await ordersAPI.update(id, formData);
-        message.success('Замовлення оновлено');
+        message.success(t('orders.updateSuccess'));
         navigate('/orders');
       } else {
         const res = await ordersAPI.create(formData);
         const created = res.data || res;
-        message.success('Замовлення створено');
+        message.success(t('orders.createSuccess'));
         navigate(`/orders/${created.id}`);
       }
     } catch (error) {
       const status = error.response?.status;
       const errorDetail = error.response?.data;
       if (status === 413) {
-        message.error('Файл занадто великий. Спробуйте фото меншого розміру.');
+        message.error(t('orders.fileTooBig'));
       } else if (errorDetail && typeof errorDetail === 'object') {
         const messages = Object.entries(errorDetail)
           .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
           .join('; ');
-        message.error(messages || 'Помилка збереження');
+        message.error(messages || t('orders.saveError'));
       } else {
-        message.error('Помилка збереження замовлення');
+        message.error(t('orders.saveError'));
       }
     } finally {
       setSaving(false);
@@ -442,7 +443,7 @@ function OrderFormPage() {
   return (
     <div>
       <PageHeader
-        title={isEdit ? 'Редагувати замовлення' : 'Нове замовлення'}
+        title={isEdit ? t('orders.editOrder') : t('orders.newOrder')}
         showBack
       />
 

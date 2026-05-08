@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { PageHeader } from '../../components';
 import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import {
@@ -28,13 +29,6 @@ const STATUS_COLOR = {
   paid:      'green',
   cancelled: 'red',
 };
-const STATUS_LABEL = {
-  draft:     'Чернетка',
-  sent:      'Виставлено',
-  paid:      'Оплачено',
-  cancelled: 'Скасовано',
-};
-const STATUS_OPTIONS = Object.entries(STATUS_LABEL).map(([v, l]) => ({ value: v, label: l }));
 
 const NP_TAG_COLOR = { '9': 'green', '8': 'blue', '10': 'red', '11': 'orange' };
 const npTagColor = (code) => NP_TAG_COLOR[String(code)] ?? 'default';
@@ -42,6 +36,7 @@ const npTagColor = (code) => NP_TAG_COLOR[String(code)] ?? 'default';
 // ─── Таб 1: НП / Самовивіз ───────────────────────────────────────────────────
 
 function DeliveryInvoicesTab({ onModuleUnavailable }) {
+  const { t } = useTranslation();
   const [data, setData]       = useState([]);
   const [loading, setLoading] = useState(false);
   const [total, setTotal]     = useState(0);
@@ -55,6 +50,14 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
   const [npStatuses, setNpStatuses] = useState({});
 
   const navigate = useNavigate();
+
+  const STATUS_LABEL = {
+    draft:     t('invoices.statusDraft'),
+    sent:      t('invoices.statusSent'),
+    paid:      t('invoices.statusPaid'),
+    cancelled: t('invoices.statusCanceled'),
+  };
+  const STATUS_OPTIONS = Object.entries(STATUS_LABEL).map(([v, l]) => ({ value: v, label: l }));
 
   const fetchNpStatuses = (rows) => {
     const declarations = rows.map(r => r.nova_poshta_declaration).filter(Boolean);
@@ -90,7 +93,7 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
       fetchNpStatuses(rows);
     } catch (err) {
       if (err.isModuleUnavailable) { onModuleUnavailable(); return; }
-      message.error('Не вдалося завантажити рахунки');
+      message.error(t('invoices.loadError'));
     } finally {
       setLoading(false);
     }
@@ -102,10 +105,10 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
   const handleDelete = async (id) => {
     try {
       await deleteInvoice(id);
-      message.success('Видалено');
+      message.success(t('invoices.deleteSuccess'));
       fetch(page);
     } catch {
-      message.error('Не вдалося видалити');
+      message.error(t('invoices.deleteError'));
     }
   };
 
@@ -115,30 +118,30 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
 
   const columns = [
     {
-      title: 'Номер', dataIndex: 'number', key: 'number', width: 140,
+      title: t('invoices.numberColumn'), dataIndex: 'number', key: 'number', width: 140,
       render: (v, row) => (
         <Button type="link" style={{ padding: 0, fontWeight: 600 }} onClick={() => navigate(`/invoices/${row.id}`)}>
           {v}
         </Button>
       ),
     },
-    { title: 'Дата', dataIndex: 'date', key: 'date', width: 110, render: v => dayjs(v).format('DD.MM.YYYY') },
-    { title: 'Клієнт', dataIndex: 'client_name', key: 'client_name' },
+    { title: t('invoices.dateColumn'), dataIndex: 'date', key: 'date', width: 110, render: v => dayjs(v).format('DD.MM.YYYY') },
+    { title: t('invoices.clientColumn'), dataIndex: 'client_name', key: 'client_name' },
     {
-      title: 'Вантажівка', dataIndex: 'truck_display', key: 'truck_display', width: 130,
+      title: t('invoices.truckColumn'), dataIndex: 'truck_display', key: 'truck_display', width: 130,
       render: v => v || '—',
     },
-    { title: 'Позицій', dataIndex: 'items_count', key: 'items_count', width: 80, align: 'center' },
+    { title: t('invoices.itemsColumn'), dataIndex: 'items_count', key: 'items_count', width: 80, align: 'center' },
     {
-      title: 'Сума', dataIndex: 'total', key: 'total', width: 120, align: 'right',
+      title: t('invoices.amountColumn'), dataIndex: 'total', key: 'total', width: 120, align: 'right',
       render: v => <strong>{parseFloat(v).toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>,
     },
     {
-      title: 'Статус', dataIndex: 'status', key: 'status', width: 120,
+      title: t('common.status'), dataIndex: 'status', key: 'status', width: 120,
       render: v => <Tag color={STATUS_COLOR[v]}>{STATUS_LABEL[v] || v}</Tag>,
     },
     {
-      title: 'Доставка НП', key: 'np_status', width: 220,
+      title: t('invoices.npDelivery'), key: 'np_status', width: 220,
       render: (_, row) => {
         const decl = row.nova_poshta_declaration;
         if (!decl) return '—';
@@ -149,11 +152,11 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
           <Tooltip title={
             <div style={{ fontSize: 12, color: '#fff' }}>
               {np.Status && <div style={{ fontWeight: 600, marginBottom: 4 }}>{np.Status}</div>}
-              <div style={{ opacity: 0.75 }}>ТТН: {decl}</div>
-              {np.CityRecipient && <div>Місто: {np.CityRecipient}</div>}
-              {np.WarehouseRecipientAddress && <div>Відд.: {np.WarehouseRecipientAddress}</div>}
-              {np.ActualDeliveryDate && <div>Отримано: {np.ActualDeliveryDate}</div>}
-              {np.ScheduledDeliveryDate && !np.ActualDeliveryDate && <div>Очік.: {np.ScheduledDeliveryDate}</div>}
+              <div style={{ opacity: 0.75 }}>{t('invoices.npTtn')} {decl}</div>
+              {np.CityRecipient && <div>{t('invoices.npCity')} {np.CityRecipient}</div>}
+              {np.WarehouseRecipientAddress && <div>{t('invoices.npWarehouse')} {np.WarehouseRecipientAddress}</div>}
+              {np.ActualDeliveryDate && <div>{t('invoices.npReceived')} {np.ActualDeliveryDate}</div>}
+              {np.ScheduledDeliveryDate && !np.ActualDeliveryDate && <div>{t('invoices.npExpected')} {np.ScheduledDeliveryDate}</div>}
             </div>
           }>
             <Tag color={npTagColor(np.StatusCode)} style={{ cursor: 'default', whiteSpace: 'normal', lineHeight: '18px' }}>
@@ -169,7 +172,7 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
         <Space onClick={e => e.stopPropagation()}>
           <Button size="small" icon={<EyeOutlined />} onClick={() => navigate(`/invoices/${row.id}`)} />
           {row.status === 'draft' && (
-            <Popconfirm title="Видалити рахунок?" onConfirm={() => handleDelete(row.id)} okText="Так" cancelText="Ні">
+            <Popconfirm title={t('invoiceDetail.cancelConfirm')} onConfirm={() => handleDelete(row.id)} okText={t('common.yes')} cancelText={t('common.no')}>
               <Button size="small" danger icon={<DeleteOutlined />} />
             </Popconfirm>
           )}
@@ -183,24 +186,24 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
       <Row gutter={12} style={{ marginBottom: 16 }}>
         <Col xs={8}>
           <Card size="small" style={{ borderTop: `3px solid ${Y}` }}>
-            <Statistic title="Загальна сума" value={totalSum} suffix="₴" precision={0} />
+            <Statistic title={t('invoices.totalSum')} value={totalSum} suffix="₴" precision={0} />
           </Card>
         </Col>
         <Col xs={8}>
           <Card size="small" style={{ borderTop: '3px solid #52c41a' }}>
-            <Statistic title="Оплачено" value={paid} suffix="шт" valueStyle={{ color: '#52c41a' }} />
+            <Statistic title={t('invoices.paidSum')} value={paid} suffix={t('common.pcsShort')} valueStyle={{ color: '#52c41a' }} />
           </Card>
         </Col>
         <Col xs={8}>
           <Card size="small" style={{ borderTop: '3px solid #1677ff' }}>
-            <Statistic title="Виставлено" value={sent} suffix="шт" valueStyle={{ color: '#1677ff' }} />
+            <Statistic title={t('invoices.sentSum')} value={sent} suffix={t('common.pcsShort')} valueStyle={{ color: '#1677ff' }} />
           </Card>
         </Col>
       </Row>
 
       <Flex gap={8} wrap="wrap" style={{ marginBottom: 12 }}>
         <Input
-          placeholder="Пошук за №, клієнтом, номером авто"
+          placeholder={t('invoices.searchPlaceholder')}
           prefix={<SearchOutlined />}
           value={search}
           onChange={e => setSearch(e.target.value)}
@@ -208,16 +211,16 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
           style={{ width: 260 }}
         />
         <Select
-          placeholder="Статус"
+          placeholder={t('common.status')}
           value={statusF || undefined}
           onChange={v => setStatusF(v || '')}
-          options={[{ value: '', label: 'Всі статуси' }, ...STATUS_OPTIONS]}
+          options={[{ value: '', label: t('common.allStatuses') }, ...STATUS_OPTIONS]}
           style={{ width: 150 }}
           allowClear
         />
-        <DatePicker placeholder="Дата від" value={dateFrom} onChange={setDateFrom} format="DD.MM.YYYY" style={{ width: 140 }} allowClear />
-        <DatePicker placeholder="Дата до" value={dateTo}   onChange={setDateTo}   format="DD.MM.YYYY" style={{ width: 140 }} allowClear />
-        <Button icon={<ReloadOutlined />} onClick={() => fetch(page)}>Оновити</Button>
+        <DatePicker placeholder={t('invoices.dateFrom')} value={dateFrom} onChange={setDateFrom} format="DD.MM.YYYY" style={{ width: 140 }} allowClear />
+        <DatePicker placeholder={t('invoices.dateTo')} value={dateTo}   onChange={setDateTo}   format="DD.MM.YYYY" style={{ width: 140 }} allowClear />
+        <Button icon={<ReloadOutlined />} onClick={() => fetch(page)}>{t('common.refresh')}</Button>
       </Flex>
 
       <div style={{ background: '#fff', borderRadius: 8, borderTop: `4px solid ${Y}`, padding: 16 }}>
@@ -232,7 +235,7 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
           pagination={{
             current: page, pageSize, total,
             showSizeChanger: false,
-            showTotal: t => `Всього: ${t}`,
+            showTotal: (cnt) => `${t('common.total')}: ${cnt}`,
             onChange: setPage,
           }}
         />
@@ -244,7 +247,15 @@ function DeliveryInvoicesTab({ onModuleUnavailable }) {
 // ─── Таб 2: Видача водію ─────────────────────────────────────────────────────
 
 function DriverTabSection({ onModuleUnavailable }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
+
+  const STATUS_LABEL = {
+    draft:     t('invoices.statusDraft'),
+    sent:      t('invoices.statusSent'),
+    paid:      t('invoices.statusPaid'),
+    cancelled: t('invoices.statusCanceled'),
+  };
 
   // Журнал видач
   const [pickups, setPickups]   = useState([]);
@@ -284,7 +295,7 @@ function DriverTabSection({ onModuleUnavailable }) {
       setPickups(res.data?.results ?? res.data ?? []);
     } catch (err) {
       if (err.isModuleUnavailable) { onModuleUnavailable(); return; }
-      message.error('Не вдалося завантажити журнал видач');
+      message.error(t('invoiceDriver.loadError'));
     } finally {
       setLoadingP(false);
     }
@@ -386,10 +397,10 @@ function DriverTabSection({ onModuleUnavailable }) {
       setSaving(true);
       if (editingPickup) {
         await updateDriverPickup(editingPickup.id, payload);
-        message.success('Оновлено');
+        message.success(t('invoiceDetail.saved'));
       } else {
         await createDriverPickup(payload);
-        message.success('Запис додано');
+        message.success(t('invoiceDetail.itemAdded'));
       }
       setModalOpen(false);
       fetchPickups();
@@ -405,27 +416,27 @@ function DriverTabSection({ onModuleUnavailable }) {
   const handleDelete = async (id) => {
     try {
       await deleteDriverPickup(id);
-      message.success('Видалено');
+      message.success(t('invoices.deleteSuccess'));
       fetchPickups();
     } catch {
-      message.error('Помилка');
+      message.error(t('common.error'));
     }
   };
 
   const handleGenerate = async () => {
-    if (!clientFilter) { message.warning('Оберіть клієнта для виставлення рахунку'); return; }
+    if (!clientFilter) { message.warning(t('invoices.selectClient')); return; }
     try {
       setGenerating(true);
       const res = await generateDriverTabInvoice({
         client: clientFilter,
         truck: truckFilter || undefined,
       });
-      message.success(`Рахунок ${res.data.number} виставлено`);
+      message.success(t('invoices.invoiceCreated', { number: res.data.number }));
       fetchPickups();
       fetchInvoices();
       navigate(`/invoices/${res.data.id}`);
     } catch (err) {
-      message.error(err?.response?.data?.detail || 'Помилка при виставленні рахунку');
+      message.error(err?.response?.data?.detail || t('invoices.invoiceCreateError'));
     } finally {
       setGenerating(false);
     }
@@ -435,29 +446,29 @@ function DriverTabSection({ onModuleUnavailable }) {
 
   const pickupColumns = [
     {
-      title: 'Дата', dataIndex: 'date', key: 'date', width: 110,
+      title: t('invoices.dateColumn'), dataIndex: 'date', key: 'date', width: 110,
       render: v => dayjs(v).format('DD.MM.YYYY'),
     },
-    { title: 'Клієнт', dataIndex: 'client_name', key: 'client_name', width: 160 },
+    { title: t('invoices.clientColumn'), dataIndex: 'client_name', key: 'client_name', width: 160 },
     {
-      title: 'Вантажівка', dataIndex: 'truck_display', key: 'truck', width: 120,
+      title: t('invoices.truckColumn'), dataIndex: 'truck_display', key: 'truck', width: 120,
       render: v => v || '—',
     },
     {
-      title: 'Артикул', dataIndex: 'product_sku', key: 'sku', width: 100,
+      title: t('invoiceDetail.skuColumn'), dataIndex: 'product_sku', key: 'sku', width: 100,
       render: v => v ? <span style={{ fontFamily: 'monospace', fontSize: 12 }}>{v}</span> : '—',
     },
-    { title: 'Опис', dataIndex: 'description', key: 'description' },
+    { title: t('common.description'), dataIndex: 'description', key: 'description' },
     {
-      title: 'К-сть', dataIndex: 'quantity', key: 'quantity', width: 75, align: 'right',
+      title: t('invoiceDetail.qtyColumn'), dataIndex: 'quantity', key: 'quantity', width: 75, align: 'right',
       render: v => parseFloat(v),
     },
     {
-      title: 'Ціна', dataIndex: 'unit_price', key: 'unit_price', width: 110, align: 'right',
+      title: t('common.price'), dataIndex: 'unit_price', key: 'unit_price', width: 110, align: 'right',
       render: v => `${parseFloat(v).toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴`,
     },
     {
-      title: 'Сума', dataIndex: 'total', key: 'total', width: 120, align: 'right',
+      title: t('invoices.amountColumn'), dataIndex: 'total', key: 'total', width: 120, align: 'right',
       render: v => <strong>{parseFloat(v).toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>,
     },
     {
@@ -465,7 +476,7 @@ function DriverTabSection({ onModuleUnavailable }) {
       render: (_, row) => (
         <Space>
           <Button size="small" icon={<EyeOutlined />} onClick={() => openEdit(row)} />
-          <Popconfirm title="Видалити запис?" onConfirm={() => handleDelete(row.id)} okText="Так" cancelText="Ні">
+          <Popconfirm title={t('confirmDelete.title')} onConfirm={() => handleDelete(row.id)} okText={t('common.yes')} cancelText={t('common.no')}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -475,23 +486,23 @@ function DriverTabSection({ onModuleUnavailable }) {
 
   const invoiceColumns = [
     {
-      title: 'Номер', dataIndex: 'number', key: 'number', width: 140,
+      title: t('invoices.numberColumn'), dataIndex: 'number', key: 'number', width: 140,
       render: (v, row) => (
         <Button type="link" style={{ padding: 0, fontWeight: 600 }} onClick={() => navigate(`/invoices/${row.id}`)}>
           {v}
         </Button>
       ),
     },
-    { title: 'Дата', dataIndex: 'date', key: 'date', width: 110, render: v => dayjs(v).format('DD.MM.YYYY') },
-    { title: 'Клієнт', dataIndex: 'client_name', key: 'client_name' },
-    { title: 'Вантажівка', dataIndex: 'truck_display', key: 'truck', width: 120, render: v => v || '—' },
-    { title: 'Позицій', dataIndex: 'items_count', key: 'items_count', width: 80, align: 'center' },
+    { title: t('invoices.dateColumn'), dataIndex: 'date', key: 'date', width: 110, render: v => dayjs(v).format('DD.MM.YYYY') },
+    { title: t('invoices.clientColumn'), dataIndex: 'client_name', key: 'client_name' },
+    { title: t('invoices.truckColumn'), dataIndex: 'truck_display', key: 'truck', width: 120, render: v => v || '—' },
+    { title: t('invoices.itemsColumn'), dataIndex: 'items_count', key: 'items_count', width: 80, align: 'center' },
     {
-      title: 'Сума', dataIndex: 'total', key: 'total', width: 120, align: 'right',
+      title: t('invoices.amountColumn'), dataIndex: 'total', key: 'total', width: 120, align: 'right',
       render: v => <strong>{parseFloat(v).toLocaleString('uk-UA', { minimumFractionDigits: 2 })} ₴</strong>,
     },
     {
-      title: 'Статус', dataIndex: 'status', key: 'status', width: 120,
+      title: t('common.status'), dataIndex: 'status', key: 'status', width: 120,
       render: v => <Tag color={STATUS_COLOR[v]}>{STATUS_LABEL[v] || v}</Tag>,
     },
     {
@@ -509,7 +520,7 @@ function DriverTabSection({ onModuleUnavailable }) {
         <Select
           showSearch
           allowClear
-          placeholder="Фільтр за клієнтом"
+          placeholder={t('invoiceDriver.filterClient')}
           filterOption={false}
           onSearch={searchClients}
           onSelect={(id, opt) => {
@@ -525,15 +536,15 @@ function DriverTabSection({ onModuleUnavailable }) {
         {clientFilter && (
           <Select
             allowClear
-            placeholder="Вантажівка"
+            placeholder={t('common.truck')}
             value={truckFilter}
             onChange={v => setTruckFilter(v || null)}
             options={truckOptions}
             style={{ width: 200 }}
           />
         )}
-        <DatePicker placeholder="Дата від" value={dateFrom} onChange={setDateFrom} format="DD.MM.YYYY" style={{ width: 130 }} allowClear />
-        <DatePicker placeholder="Дата до" value={dateTo}   onChange={setDateTo}   format="DD.MM.YYYY" style={{ width: 130 }} allowClear />
+        <DatePicker placeholder={t('invoiceDriver.dateFrom')} value={dateFrom} onChange={setDateFrom} format="DD.MM.YYYY" style={{ width: 130 }} allowClear />
+        <DatePicker placeholder={t('invoiceDriver.dateTo')} value={dateTo}   onChange={setDateTo}   format="DD.MM.YYYY" style={{ width: 130 }} allowClear />
         <Button icon={<ReloadOutlined />} onClick={fetchPickups} />
         <Button type="primary" icon={<PlusOutlined />} onClick={openAdd}
           style={{ background: Y, color: INK, borderColor: Y, fontWeight: 600 }}>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { CarOutlined, FileTextOutlined, RightOutlined } from '@ant-design/icons';
 import { cabinetAPI } from '../../api/cabinet';
 import useCabinetAuthStore from '../../store/cabinetAuthStore';
@@ -29,6 +30,7 @@ function StatusBadge({ status, label }) {
 }
 
 export default function CabinetDashboard() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useCabinetAuthStore();
   const [trucks, setTrucks] = useState([]);
@@ -37,8 +39,8 @@ export default function CabinetDashboard() {
 
   useEffect(() => {
     Promise.all([cabinetAPI.getTrucks(), cabinetAPI.getOrders()])
-      .then(([t, o]) => {
-        const truckList = Array.isArray(t.data) ? t.data : (t.data.results || []);
+      .then(([tr, o]) => {
+        const truckList = Array.isArray(tr.data) ? tr.data : (tr.data.results || []);
         const orderList = Array.isArray(o.data) ? o.data : (o.data.results || []);
         setTrucks(truckList);
         setOrders(orderList.slice(0, 5));
@@ -46,25 +48,25 @@ export default function CabinetDashboard() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>Завантаження...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>{t('common.loading')}</div>;
 
   return (
     <div>
       {/* Welcome */}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 'clamp(1.3rem, 4vw, 1.8rem)', fontWeight: 900, color: INK, margin: 0 }}>
-          Вітаємо, {user?.name?.split(' ')[0]}!
+          {t('cabinet.dashboard.welcome')} {user?.name?.split(' ')[0]}!
         </h1>
         <p style={{ color: INK2, marginTop: 6, fontSize: 14 }}>
-          Ваш особистий кабінет сервісного центру Італ Трак
+          {t('cabinet.dashboard.subtitle')}
         </p>
       </div>
 
       {/* Stats row */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 32 }}>
         {[
-          { label: 'Моїх авто', value: trucks.length, icon: <CarOutlined />, color: Y },
-          { label: 'Замовлень', value: orders.length, icon: <FileTextOutlined />, color: '#3b82f6' },
+          { label: t('cabinet.dashboard.myCars'), value: trucks.length, icon: <CarOutlined />, color: Y },
+          { label: t('cabinet.dashboard.myOrders'), value: orders.length, icon: <FileTextOutlined />, color: '#3b82f6' },
         ].map(({ label, value, icon, color }) => (
           <div key={label} style={{ background: '#fff', padding: '20px 18px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', borderLeft: `4px solid ${color}` }}>
             <div style={{ fontSize: 24, color, marginBottom: 6 }}>{icon}</div>
@@ -77,15 +79,15 @@ export default function CabinetDashboard() {
       {/* My trucks */}
       <section style={{ marginBottom: 32 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: INK, margin: 0 }}>Мої автомобілі</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: INK, margin: 0 }}>{t('cabinet.dashboard.myCarsTitle')}</h2>
           <button onClick={() => navigate('/cabinet/trucks')} style={{ background: 'none', border: 'none', color: Y, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
-            Всі <RightOutlined />
+            {t('cabinet.dashboard.viewAll')} <RightOutlined />
           </button>
         </div>
 
         {trucks.length === 0 ? (
           <div style={{ background: '#fff', padding: '28px', textAlign: 'center', color: '#aaa', fontSize: 14 }}>
-            Авто не знайдено. Зверніться до сервісного центру.
+            {t('cabinet.dashboard.noCars')}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -121,15 +123,15 @@ export default function CabinetDashboard() {
       {/* Recent orders */}
       <section>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: INK, margin: 0 }}>Останні замовлення</h2>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: INK, margin: 0 }}>{t('cabinet.dashboard.recentOrders')}</h2>
           <button onClick={() => navigate('/cabinet/orders')} style={{ background: 'none', border: 'none', color: Y, fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>
-            Всі <RightOutlined />
+            {t('cabinet.dashboard.viewAll')} <RightOutlined />
           </button>
         </div>
 
         {orders.length === 0 ? (
           <div style={{ background: '#fff', padding: '28px', textAlign: 'center', color: '#aaa', fontSize: 14 }}>
-            Замовлень поки немає.
+            {t('cabinet.dashboard.noOrders')}
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

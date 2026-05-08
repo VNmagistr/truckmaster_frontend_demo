@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { PhoneOutlined, UserOutlined, MailOutlined, EnvironmentOutlined } from '@ant-design/icons';
 import { QRCodeCanvas } from 'qrcode.react';
 import { cabinetAPI } from '../../api/cabinet';
@@ -10,6 +11,7 @@ const INK2 = '#555';
 const MAPS_URL = 'https://maps.app.goo.gl/mw4fVkobK3tsrpQ88';
 
 export default function CabinetProfilePage() {
+  const { t } = useTranslation();
   const { user } = useCabinetAuthStore();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -18,18 +20,18 @@ export default function CabinetProfilePage() {
     cabinetAPI.getMe().then(r => setProfile(r.data)).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>Завантаження...</div>;
+  if (loading) return <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>{t('common.loading')}</div>;
 
   const rows = [
-    { icon: <UserOutlined />, label: "Ім'я", value: profile?.name },
-    { icon: <PhoneOutlined />, label: 'Телефон', value: profile?.phone },
-    { icon: <MailOutlined />, label: 'Email', value: profile?.email || '—' },
-    { icon: <EnvironmentOutlined />, label: 'Адреса', value: profile?.address || '—' },
+    { icon: <UserOutlined />, label: t('cabinet.profile.nameLabel'), value: profile?.name },
+    { icon: <PhoneOutlined />, label: t('cabinet.profile.phoneLabel'), value: profile?.phone },
+    { icon: <MailOutlined />, label: t('cabinet.profile.emailLabel'), value: profile?.email || '—' },
+    { icon: <EnvironmentOutlined />, label: t('cabinet.profile.addressLabel'), value: profile?.address || '—' },
   ];
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, marginBottom: 24 }}>Мій профіль</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, marginBottom: 24 }}>{t('cabinet.profile.title')}</h1>
 
       <div style={{ background: '#fff', borderTop: `4px solid ${Y}`, padding: '24px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: 16 }}>
         {/* Avatar */}
@@ -43,7 +45,7 @@ export default function CabinetProfilePage() {
           </div>
           <div>
             <div style={{ fontSize: 18, fontWeight: 800, color: INK }}>{profile?.name}</div>
-            <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>Клієнт сервісного центру</div>
+            <div style={{ fontSize: 13, color: '#888', marginTop: 2 }}>{t('cabinet.profile.clientSubtitle')}</div>
           </div>
         </div>
 
@@ -68,7 +70,7 @@ export default function CabinetProfilePage() {
       {/* QR-код сервісного центру */}
       <div style={{ background: '#fff', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: 16 }}>
         <div style={{ fontSize: 13, fontWeight: 700, color: '#aaa', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 14 }}>
-          Ми на карті
+          {t('cabinet.profile.mapTitle')}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
           <a
@@ -88,10 +90,9 @@ export default function CabinetProfilePage() {
             />
           </a>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: INK, marginBottom: 6 }}>Сервісний центр Італ Трак</div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: INK, marginBottom: 6 }}>{t('cabinet.profile.serviceCenter')}</div>
             <div style={{ fontSize: 13, color: INK2, lineHeight: 1.7 }}>
-              Відскануйте QR-код або натисніть на нього,<br />
-              щоб відкрити нашу локацію в Google Maps.
+              {t('cabinet.profile.mapHint')}
             </div>
             <a
               href={MAPS_URL}
@@ -99,7 +100,7 @@ export default function CabinetProfilePage() {
               rel="noopener noreferrer"
               style={{ display: 'inline-block', marginTop: 10, fontSize: 13, fontWeight: 700, color: INK, background: Y, padding: '6px 14px', textDecoration: 'none', borderRadius: 3 }}
             >
-              Відкрити на картах
+              {t('cabinet.profile.openMaps')}
             </a>
           </div>
         </div>
@@ -107,7 +108,7 @@ export default function CabinetProfilePage() {
 
       <div style={{ background: '#fff', padding: '16px 20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <p style={{ color: '#888', fontSize: 13, margin: 0 }}>
-          Щоб змінити дані профілю або отримати Telegram-сповіщення про ремонт, зверніться до менеджера сервісного центру.
+          {t('cabinet.profile.changeDataHint')}
         </p>
       </div>
     </div>

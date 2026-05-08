@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cabinetAuthAPI } from '../../api/cabinet';
 import useCabinetAuthStore from '../../store/cabinetAuthStore';
 import logoImg from '../../assets/logo.jpg';
@@ -9,6 +10,7 @@ const YD = '#d4a800';
 const INK = '#1a1a1a';
 
 export default function CabinetLoginPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { setAuth } = useCabinetAuthStore();
   const [form, setForm] = useState({ username: '', password: '' });
@@ -18,7 +20,7 @@ export default function CabinetLoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.username || !form.password) {
-      setError('Введіть номер телефону та пароль');
+      setError(t('cabinet.login.subtitle'));
       return;
     }
     setLoading(true);
@@ -33,7 +35,7 @@ export default function CabinetLoginPage() {
       navigate('/cabinet');
     } catch (err) {
       const detail = err.response?.data?.detail || err.response?.data?.non_field_errors?.[0];
-      setError(detail || 'Невірний номер телефону або пароль');
+      setError(detail || t('cabinet.login.error'));
     } finally {
       setLoading(false);
     }
@@ -49,19 +51,19 @@ export default function CabinetLoginPage() {
 
         {/* Logo */}
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img src={logoImg} alt="Італ Трак" style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }} />
-          <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, margin: 0 }}>Особистий кабінет</h1>
-          <p style={{ color: '#888', fontSize: 14, marginTop: 6 }}>Сервісний центр Італ Трак</p>
+          <img src={logoImg} alt={t('brand.name')} style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }} />
+          <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, margin: 0 }}>{t('cabinet.login.title')}</h1>
+          <p style={{ color: '#888', fontSize: 14, marginTop: 6 }}>{t('brand.serviceCenter')}</p>
         </div>
 
         {/* Form card */}
         <div style={{ background: '#fff', padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', borderTop: `4px solid ${Y}` }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: INK, marginBottom: 24, marginTop: 0 }}>Увійти</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: INK, marginBottom: 24, marginTop: 0 }}>{t('cabinet.login.loginBtn')}</h2>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             {[
-              { label: 'Номер телефону', key: 'username', placeholder: '+380 ___ ___ __ __', type: 'tel' },
-              { label: 'Пароль', key: 'password', placeholder: '••••••', type: 'password' },
+              { label: t('cabinet.login.phone'), key: 'username', placeholder: '+380 ___ ___ __ __', type: 'tel' },
+              { label: t('cabinet.login.password'), key: 'password', placeholder: '••••••', type: 'password' },
             ].map(({ label, key, placeholder, type }) => (
               <div key={key}>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: 1.5, marginBottom: 6 }}>{label}</label>
@@ -98,21 +100,21 @@ export default function CabinetLoginPage() {
               onMouseEnter={e => { if (!loading) e.target.style.background = YD; }}
               onMouseLeave={e => { if (!loading) e.target.style.background = Y; }}
             >
-              {loading ? 'Вхід...' : 'Увійти'}
+              {loading ? t('cabinet.login.loggingIn') : t('cabinet.login.loginBtn')}
             </button>
           </form>
 
           <div style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#888' }}>
-            Немає акаунту?{' '}
+            {t('cabinet.login.noAccount')}{' '}
             <Link to="/cabinet/register" style={{ color: INK, fontWeight: 700, textDecoration: 'none' }}>
-              Зареєструватися
+              {t('cabinet.login.register')}
             </Link>
           </div>
         </div>
 
 <div style={{ textAlign: 'center', marginTop: 20 }}>
           <Link to="/" style={{ color: '#aaa', fontSize: 13, textDecoration: 'none' }}>
-            ← Повернутись на сайт
+            {t('cabinet.login.backToSite')}
           </Link>
         </div>
       </div>

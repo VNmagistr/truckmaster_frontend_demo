@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { FileTextOutlined, RightOutlined } from '@ant-design/icons';
 import { cabinetAPI } from '../../api/cabinet';
 
@@ -15,19 +16,20 @@ const STATUS_COLOR = {
   CANCELED: '#ef4444',
 };
 
-const ALL_STATUSES = [
-  { value: '', label: 'Всі' },
-  { value: 'OPEN', label: 'Відкрито' },
-  { value: 'IN_PROGRESS', label: 'В роботі' },
-  { value: 'DONE', label: 'Виконано' },
-  { value: 'CLOSED', label: 'Закрито' },
-];
-
 export default function CabinetOrdersPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterStatus, setFilterStatus] = useState('');
+
+  const ALL_STATUSES = [
+    { value: '', label: t('cabinet.orders.filterAll') },
+    { value: 'OPEN', label: t('cabinet.orders.filterOpen') },
+    { value: 'IN_PROGRESS', label: t('cabinet.orders.filterInProgress') },
+    { value: 'DONE', label: t('cabinet.orders.filterDone') },
+    { value: 'CLOSED', label: t('cabinet.orders.filterClosed') },
+  ];
 
   useEffect(() => {
     const params = {};
@@ -43,7 +45,7 @@ export default function CabinetOrdersPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, marginBottom: 16 }}>Мої замовлення</h1>
+      <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, marginBottom: 16 }}>{t('cabinet.orders.title')}</h1>
 
       {/* Status filter */}
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
@@ -64,11 +66,11 @@ export default function CabinetOrdersPage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>Завантаження...</div>
+        <div style={{ textAlign: 'center', padding: 48, color: '#aaa' }}>{t('common.loading')}</div>
       ) : orders.length === 0 ? (
         <div style={{ background: '#fff', padding: '48px 24px', textAlign: 'center', color: '#aaa' }}>
           <FileTextOutlined style={{ fontSize: 48, marginBottom: 12 }} />
-          <div>Замовлень не знайдено.</div>
+          <div>{t('cabinet.orders.noOrders')}</div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

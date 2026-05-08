@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { cabinetAuthAPI } from '../../api/cabinet';
 import logoImg from '../../assets/logo.jpg';
 
@@ -8,6 +9,7 @@ const YD = '#d4a800';
 const INK = '#1a1a1a';
 
 export default function CabinetRegisterPage() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [form, setForm] = useState({ name: '', phone: '', password: '', confirm: '' });
   const [loading, setLoading] = useState(false);
@@ -16,15 +18,15 @@ export default function CabinetRegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name || !form.phone || !form.password) {
-      setError("Заповніть усі обов'язкові поля");
+      setError(t('cabinet.register.fillAllFields'));
       return;
     }
     if (form.password !== form.confirm) {
-      setError('Паролі не збігаються');
+      setError(t('cabinet.register.passwordsMismatch'));
       return;
     }
     if (form.password.length < 6) {
-      setError('Пароль має містити мінімум 6 символів');
+      setError(t('cabinet.register.passwordTooShort'));
       return;
     }
 
@@ -41,17 +43,17 @@ export default function CabinetRegisterPage() {
       const data = err.response?.data;
       if (data?.phone) setError(Array.isArray(data.phone) ? data.phone[0] : data.phone);
       else if (data?.non_field_errors) setError(data.non_field_errors[0]);
-      else setError('Помилка реєстрації. Спробуйте ще раз.');
+      else setError(t('cabinet.register.error'));
     } finally {
       setLoading(false);
     }
   };
 
   const fields = [
-    { label: "Ваше ім'я *", key: 'name', placeholder: 'Іван Петренко', type: 'text' },
-    { label: 'Номер телефону *', key: 'phone', placeholder: '+380 ___ ___ __ __', type: 'tel' },
-    { label: 'Пароль *', key: 'password', placeholder: 'Мінімум 6 символів', type: 'password' },
-    { label: 'Підтвердження пароля *', key: 'confirm', placeholder: '••••••', type: 'password' },
+    { label: t('cabinet.register.name'), key: 'name', placeholder: t('cabinet.register.namePlaceholder'), type: 'text' },
+    { label: t('cabinet.register.phone'), key: 'phone', placeholder: '+380 ___ ___ __ __', type: 'tel' },
+    { label: t('cabinet.register.password'), key: 'password', placeholder: t('cabinet.register.passwordHint'), type: 'password' },
+    { label: t('cabinet.register.confirmPassword'), key: 'confirm', placeholder: '••••••', type: 'password' },
   ];
 
   return (
@@ -63,13 +65,13 @@ export default function CabinetRegisterPage() {
       <div style={{ width: '100%', maxWidth: 400 }}>
 
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
-          <img src={logoImg} alt="Італ Трак" style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }} />
-          <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, margin: 0 }}>Особистий кабінет</h1>
-          <p style={{ color: '#888', fontSize: 14, marginTop: 6 }}>Сервісний центр Італ Трак</p>
+          <img src={logoImg} alt={t('brand.name')} style={{ width: 72, height: 72, objectFit: 'contain', margin: '0 auto 8px', display: 'block' }} />
+          <h1 style={{ fontSize: 22, fontWeight: 900, color: INK, margin: 0 }}>{t('cabinet.login.title')}</h1>
+          <p style={{ color: '#888', fontSize: 14, marginTop: 6 }}>{t('brand.serviceCenter')}</p>
         </div>
 
         <div style={{ background: '#fff', padding: '32px 28px', boxShadow: '0 4px 24px rgba(0,0,0,0.08)', borderTop: `4px solid ${Y}` }}>
-          <h2 style={{ fontSize: 18, fontWeight: 800, color: INK, marginBottom: 24, marginTop: 0 }}>Реєстрація</h2>
+          <h2 style={{ fontSize: 18, fontWeight: 800, color: INK, marginBottom: 24, marginTop: 0 }}>{t('cabinet.register.title')}</h2>
 
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
             {fields.map(({ label, key, placeholder, type }) => (
@@ -108,21 +110,21 @@ export default function CabinetRegisterPage() {
               onMouseEnter={e => { if (!loading) e.target.style.background = YD; }}
               onMouseLeave={e => { if (!loading) e.target.style.background = Y; }}
             >
-              {loading ? 'Реєстрація...' : 'Зареєструватися'}
+              {loading ? t('cabinet.register.registering') : t('cabinet.register.registerBtn')}
             </button>
           </form>
 
           <div style={{ textAlign: 'center', marginTop: 20, fontSize: 14, color: '#888' }}>
-            Вже є акаунт?{' '}
+            {t('cabinet.register.hasAccount')}{' '}
             <Link to="/cabinet/login" style={{ color: INK, fontWeight: 700, textDecoration: 'none' }}>
-              Увійти
+              {t('cabinet.register.loginLink')}
             </Link>
           </div>
         </div>
 
         <div style={{ textAlign: 'center', marginTop: 20 }}>
           <Link to="/" style={{ color: '#aaa', fontSize: 13, textDecoration: 'none' }}>
-            ← Повернутись на сайт
+            {t('cabinet.register.backToSite')}
           </Link>
         </div>
       </div>

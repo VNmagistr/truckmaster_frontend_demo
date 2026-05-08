@@ -7,26 +7,30 @@ import {
   PlusOutlined, EditOutlined, DeleteOutlined, ReloadOutlined,
   AppstoreOutlined,
 } from '@ant-design/icons';
+import { useTranslation } from 'react-i18next';
 import { maintenanceAPI, baseModelsAPI } from '../../api';
 import { PageHeader } from '../../components';
 import ModuleUnavailableBanner from '../../components/ModuleUnavailableBanner';
 import useEnumsStore from '../../store/enumsStore';
 
-const INTERVAL_FIELDS = [
-  { key: 'engine_oil_interval',          label: 'Олива двигуна' },
-  { key: 'gearbox_oil_interval',         label: 'Олива КПП' },
-  { key: 'auto_gearbox_oil_interval',    label: 'Олива АКПП' },
-  { key: 'auto_gearbox_filter_interval', label: 'Фільтр АКПП' },
-  { key: 'rear_axle_oil_interval',       label: 'Олива заднього моста' },
-  { key: 'belts_interval',               label: 'Ремені/ролики' },
-  { key: 'chains_interval',              label: 'Ланцюги' },
+const INTERVAL_KEYS = [
+  { key: 'engine_oil_interval',          tKey: 'templates.engineOil' },
+  { key: 'gearbox_oil_interval',         tKey: 'templates.gearboxOil' },
+  { key: 'auto_gearbox_oil_interval',    tKey: 'templates.autoGearboxOil' },
+  { key: 'auto_gearbox_filter_interval', tKey: 'templates.autoGearboxFilter' },
+  { key: 'rear_axle_oil_interval',       tKey: 'templates.rearAxleOil' },
+  { key: 'belts_interval',               tKey: 'templates.belts' },
+  { key: 'chains_interval',              tKey: 'templates.chains' },
 ];
 
 function TemplatesPage() {
+  const { t } = useTranslation();
   const euroStandards       = useEnumsStore((s) => s.euroStandards);
   const euroByValue         = useEnumsStore((s) => s.euroByValue);
   const transmissionTypes   = useEnumsStore((s) => s.transmissionTypes);
   const transmissionByValue = useEnumsStore((s) => s.transmissionByValue);
+
+  const INTERVAL_FIELDS = INTERVAL_KEYS.map(({ key, tKey }) => ({ key, label: t(tKey) }));
 
   const [loading, setLoading]     = useState(false);
   const [templates, setTemplates] = useState([]);
@@ -47,7 +51,7 @@ function TemplatesPage() {
       setTemplates(data.results || data || []);
     } catch (err) {
       if (err.isModuleUnavailable) { setModuleUnavailable(true); return; }
-      message.error('Не вдалося завантажити еталони');
+      message.error(t('templates.loadError'));
     } finally {
       setLoading(false);
     }
@@ -98,10 +102,10 @@ function TemplatesPage() {
       });
       if (editing) {
         await maintenanceAPI.updateTemplate(editing.id, values);
-        message.success('Збережено');
+        message.success(t('templates.saveSuccess'));
       } else {
         await maintenanceAPI.createTemplate(values);
-        message.success('Еталон створено');
+        message.success(t('templates.createSuccess'));
       }
       setModalOpen(false);
       fetchTemplates();
@@ -109,9 +113,9 @@ function TemplatesPage() {
       const detail = err?.response?.data;
       if (detail && typeof detail === 'object') {
         const msg = Object.entries(detail).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join('; ');
-        message.error(msg || 'Помилка збереження');
+        message.error(msg || t('templates.saveError'));
       } else if (!err?.errorFields) {
-        message.error('Помилка збереження');
+        message.error(t('templates.saveError'));
       }
     } finally {
       setSaving(false);
@@ -121,44 +125,44 @@ function TemplatesPage() {
   const handleDelete = async (id) => {
     try {
       await maintenanceAPI.deleteTemplate(id);
-      message.success('Видалено');
+      message.success(t('common.delete'));
       fetchTemplates();
     } catch {
-      message.error('Не вдалося видалити');
+      message.error(t('templates.deleteError'));
     }
   };
 
-  const unitFor = (mode) => mode === 'engine_hours' ? 'мг' : 'км';
+  const unitFor = (mode) => mode === 'engine_hours' ? t('common.engineHoursShort') : t('common.km');
 
   const columns = [
     {
-      title: 'Базова модель',
+      title: t('trucks.baseModel'),
       dataIndex: 'base_model_name',
       key: 'base_model_name',
       render: (v) => <strong>{v || '—'}</strong>,
     },
     {
-      title: 'Євро',
+      title: t('templates.euroColumn'),
       dataIndex: 'euro_standard',
       key: 'euro_standard',
       width: 90,
-      render: (v) => v ? <Tag color="blue">{euroByValue[v]?.label || v}</Tag> : <span style={{ color: '#ccc' }}>будь-який</span>,
+      render: (v) => v ? <Tag color="blue">{euroByValue[v]?.label || v}</Tag> : <span style={{ color: '#ccc' }}>{t('templates.anyEuro')}</span>,
     },
     {
-      title: 'КПП',
+      title: t('templates.transmissionColumn'),
       dataIndex: 'transmission_type',
       key: 'transmission_type',
       width: 130,
-      render: (v) => v ? <Tag color="purple">{transmissionByValue[v]?.label || v}</Tag> : <span style={{ color: '#ccc' }}>будь-яка</span>,
+      render: (v) => v ? <Tag color="purple">{transmissionByValue[v]?.label || v}</Tag> : <span style={{ color: '#ccc' }}>{t('templates.anyTransmission')}</span>,
     },
     {
-      title: 'Режим',
+      title: t('templates.modeColumn'),
       dataIndex: 'tracking_mode',
       key: 'tracking_mode',
       width: 130,
       render: (v) => v === 'engine_hours'
-        ? <Tag color="orange">Мотогодини</Tag>
-        : <Tag>Кілометраж</Tag>,
+        ? <Tag color="orange">{t('templates.modeEngineHours')}</Tag>
+        : <Tag>{t('templates.modeMileage')}</Tag>,
     },
     ...INTERVAL_FIELDS.map(({ key, label }) => ({
       title: label,
@@ -176,10 +180,10 @@ function TemplatesPage() {
       width: 110,
       render: (_, r) => (
         <Space size={4}>
-          <Tooltip title="Редагувати">
+          <Tooltip title={t('common.edit')}>
             <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(r)} />
           </Tooltip>
-          <Popconfirm title="Видалити еталон?" okText="Так" cancelText="Ні" onConfirm={() => handleDelete(r.id)}>
+          <Popconfirm title={t('templates.deleteConfirm')} okText={t('common.yes')} cancelText={t('common.no')} onConfirm={() => handleDelete(r.id)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -187,24 +191,23 @@ function TemplatesPage() {
     },
   ];
 
-  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName="Нагадування ТО" />;
+  if (moduleUnavailable) return <ModuleUnavailableBanner moduleName={t('menu.templates')} />;
 
-  const unitLabel = trackingMode === 'engine_hours' ? 'мг' : 'км';
+  const unitLabel = trackingMode === 'engine_hours' ? t('common.engineHoursShort') : t('common.km');
 
   return (
     <div>
-      <PageHeader title="Еталони регламенту ТО" />
+      <PageHeader title={t('templates.title')} />
 
       <Card style={{ marginBottom: 16 }}>
         <Space wrap>
           <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>
-            Новий еталон
+            {t('templates.newTemplate')}
           </Button>
-          <Button icon={<ReloadOutlined />} onClick={fetchTemplates}>Оновити</Button>
+          <Button icon={<ReloadOutlined />} onClick={fetchTemplates}>{t('common.refresh')}</Button>
           <span style={{ color: '#888', fontSize: 13 }}>
             <AppstoreOutlined style={{ marginRight: 6 }} />
-            Після збереження вантажівки система підтягує сюди вписані інтервали в її TruckMaintenanceIntervals
-            (заповнюючи лише порожні поля).
+            {t('templates.templateNote')}
           </span>
         </Space>
       </Card>
@@ -220,12 +223,12 @@ function TemplatesPage() {
       />
 
       <Modal
-        title={editing ? 'Редагувати еталон' : 'Новий еталон'}
+        title={editing ? t('templates.editTemplate') : t('templates.newTemplate')}
         open={modalOpen}
         onOk={handleSave}
         onCancel={() => setModalOpen(false)}
-        okText={editing ? 'Зберегти' : 'Створити'}
-        cancelText="Скасувати"
+        okText={editing ? t('common.save') : t('templates.createTemplate')}
+        cancelText={t('common.cancel')}
         confirmLoading={saving}
         width={640}
         destroyOnClose
@@ -233,11 +236,11 @@ function TemplatesPage() {
         <Form form={form} layout="vertical" style={{ marginTop: 8 }}>
           <Row gutter={16}>
             <Col span={24}>
-              <Form.Item name="base_model" label="Базова модель"
-                rules={[{ required: true, message: 'Оберіть базову модель' }]}>
+              <Form.Item name="base_model" label={t('trucks.baseModel')}
+                rules={[{ required: true, message: t('templates.selectBaseModel') }]}>
                 <Select
                   showSearch optionFilterProp="label"
-                  placeholder="Оберіть базову модель"
+                  placeholder={t('templates.selectBaseModel')}
                   options={baseModels.map(m => ({ value: m.id, label: m.name }))}
                 />
               </Form.Item>
@@ -245,26 +248,26 @@ function TemplatesPage() {
           </Row>
           <Row gutter={16}>
             <Col span={8}>
-              <Form.Item name="euro_standard" label="Євростандарт">
-                <Select allowClear placeholder="будь-який"
-                  options={[{ value: '', label: 'будь-який' }, ...euroStandards]}
+              <Form.Item name="euro_standard" label={t('templates.euroColumn')}>
+                <Select allowClear placeholder={t('templates.anyEuro')}
+                  options={[{ value: '', label: t('templates.anyEuro') }, ...euroStandards]}
                 />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="transmission_type" label="Тип КПП">
-                <Select allowClear placeholder="будь-яка"
-                  options={[{ value: '', label: 'будь-яка' }, ...transmissionTypes]}
+              <Form.Item name="transmission_type" label={t('templates.transmissionColumn')}>
+                <Select allowClear placeholder={t('templates.anyTransmission')}
+                  options={[{ value: '', label: t('templates.anyTransmission') }, ...transmissionTypes]}
                 />
               </Form.Item>
             </Col>
             <Col span={8}>
-              <Form.Item name="tracking_mode" label="Режим обліку"
+              <Form.Item name="tracking_mode" label={t('templates.trackingMode')}
                 rules={[{ required: true }]}>
                 <Select onChange={setTrackingMode}
                   options={[
-                    { value: 'mileage',      label: 'По кілометражу (км)' },
-                    { value: 'engine_hours', label: 'По мотогодинах (мг)' },
+                    { value: 'mileage',      label: t('templates.byKm') },
+                    { value: 'engine_hours', label: t('templates.byEngineHours') },
                   ]}
                 />
               </Form.Item>
@@ -272,7 +275,7 @@ function TemplatesPage() {
           </Row>
 
           <div style={{ fontWeight: 600, margin: '8px 0 12px' }}>
-            Інтервали ({unitLabel})
+            {t('templates.intervalsLabel', { unit: unitLabel })}
           </div>
           <Row gutter={[16, 8]}>
             {INTERVAL_FIELDS.map(({ key, label }) => (
@@ -283,14 +286,14 @@ function TemplatesPage() {
                     step={trackingMode === 'engine_hours' ? 100 : 1000}
                     style={{ width: '100%' }}
                     addonAfter={unitLabel}
-                    placeholder={trackingMode === 'engine_hours' ? 'напр. 500' : 'напр. 15000'}
+                    placeholder={trackingMode === 'engine_hours' ? t('templates.notePlaceholder') : t('templates.notePlaceholderKm')}
                   />
                 </Form.Item>
               </Col>
             ))}
           </Row>
 
-          <Form.Item name="notes" label="Нотатка">
+          <Form.Item name="notes" label={t('templates.noteLabel')}>
             <Input maxLength={255} />
           </Form.Item>
         </Form>
