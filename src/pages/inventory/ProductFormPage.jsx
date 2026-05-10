@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Form, Input, Button, Card, message, Space, Select, InputNumber, Switch, Row, Col, Modal } from 'antd';
 import { SaveOutlined, DeleteOutlined, ExclamationCircleOutlined, ScanOutlined } from '@ant-design/icons';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { inventoryAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
 import BarcodeScanner from '../../components/BarcodeScanner';
 import { UNITS } from '../../utils/constants';
 
 function ProductFormPage() {
+  const { t } = useTranslation();
   const [form] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -26,7 +28,7 @@ function ProductFormPage() {
   const handleBarcodeDetected = (code) => {
     form.setFieldsValue({ barcode: code });
     setIsScannerOpen(false);
-    message.success(`Штрих-код розпізнано: ${code}`);
+    message.success(`${t('inventory.barcodeRecognized')} ${code}`);
   };
 
   useEffect(() => {
@@ -81,7 +83,7 @@ function ProductFormPage() {
       }
 
     } catch {
-      message.error('Не вдалося завантажити дані товару');
+      message.error(t('inventory.loadDetailError'));
       navigate('/inventory');
     } finally {
       setLoading(false);
@@ -106,10 +108,10 @@ function ProductFormPage() {
 
       if (isEdit) {
         await inventoryAPI.updateProduct(id, cleanValues);
-        message.success('Товар успішно оновлено');
+        message.success(t('inventory.updateSuccess'));
       } else {
         await inventoryAPI.createProduct(cleanValues);
-        message.success('Товар успішно створено');
+        message.success(t('inventory.createSuccess'));
       }
       navigate('/inventory');
     } catch (error) {
@@ -125,9 +127,9 @@ function ProductFormPage() {
             message.error(`Помилка: ${JSON.stringify(errors)}`);
         }
       } else if (error.response?.status === 405) {
-         message.error('Помилка 405: Створення заборонено сервером. Оновіть inventory/views.py');
+         message.error(t('inventory.saveError'));
       } else {
-        message.error('Не вдалося зберегти товар');
+        message.error(t('inventory.saveError'));
       }
     } finally {
       setSaving(false);
@@ -136,20 +138,20 @@ function ProductFormPage() {
 
   const handleDelete = () => {
     Modal.confirm({
-      title: 'Видалити товар?',
+      title: t('inventory.deleteConfirm'),
       icon: <ExclamationCircleOutlined />,
-      content: 'Товар буде видалено без можливості відновлення.',
-      okText: 'Видалити',
+      content: t('inventory.deleteConfirmDesc'),
+      okText: t('common.delete'),
       okType: 'danger',
-      cancelText: 'Скасувати',
+      cancelText: t('common.cancel'),
       onOk: async () => {
         setDeleting(true);
         try {
           await inventoryAPI.markForDeletion(id);
-          message.success('Товар видалено');
+          message.success(t('inventory.deleteSuccess'));
           navigate('/inventory');
         } catch (error) {
-          message.error('Не вдалося видалити товар');
+          message.error(t('inventory.deleteError'));
         } finally {
           setDeleting(false);
         }
@@ -162,7 +164,7 @@ function ProductFormPage() {
   return (
     <div>
       <PageHeader
-        title={isEdit ? 'Редагувати товар' : 'Новий товар'}
+        title={isEdit ? t('inventory.editProduct') : t('inventory.newProduct')}
         showBack
         extra={isEdit && (
           <Button
@@ -171,7 +173,7 @@ function ProductFormPage() {
             loading={deleting}
             onClick={handleDelete}
           >
-            Видалити
+            {t('common.delete')}
           </Button>
         )}
       />
@@ -194,24 +196,24 @@ function ProductFormPage() {
             <Col xs={24} md={8}>
               <Form.Item
                 name="sku_code"
-                label="Артикул"
-                rules={[{ required: true, message: 'Введіть артикул' }]}
+                label={t('inventory.sku')}
+                rules={[{ required: true, message: t('inventory.skuPlaceholder') }]}
               >
-                <Input placeholder="Унікальний код товару" />
+                <Input placeholder={t('inventory.skuHelp')} />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
               <Form.Item
                 name="barcode"
-                label="Штрих-код"
+                label={t('inventory.barcode')}
               >
                 <Input
-                  placeholder="Штрих-код (EAN/UPC)"
+                  placeholder={t('inventory.barcodePlaceholder')}
                   addonAfter={
                     <ScanOutlined
                       onClick={() => setIsScannerOpen(true)}
                       style={{ cursor: 'pointer', color: '#1a1a1a' }}
-                      title="Сканувати камерою"
+                      title={t('inventory.scanCamera')}
                     />
                   }
                 />
@@ -220,33 +222,33 @@ function ProductFormPage() {
             <Col xs={24} md={8}>
               <Form.Item
                 name="brand"
-                label="Бренд"
+                label={t('common.brand')}
               >
-                <Input placeholder="Виробник" />
+                <Input placeholder={t('inventory.brandPlaceholder')} />
               </Form.Item>
             </Col>
           </Row>
 
           <Form.Item
             name="name"
-            label="Назва"
-            rules={[{ required: true, message: 'Введіть назву товару' }]}
+            label={t('common.name')}
+            rules={[{ required: true, message: t('inventory.namePlaceholder') }]}
           >
-            <Input placeholder="Повна назва товару" />
+            <Input placeholder={t('inventory.nameHelp')} />
           </Form.Item>
 
-          <Form.Item name="description" label="Опис">
-            <Input.TextArea rows={3} placeholder="Опис товару" />
+          <Form.Item name="description" label={t('common.description')}>
+            <Input.TextArea rows={3} placeholder={t('inventory.descriptionPlaceholder')} />
           </Form.Item>
 
           <Row gutter={24}>
             <Col xs={24} md={8}>
               <Form.Item
                 name="category_filter"
-                label="Категорія"
+                label={t('common.category')}
               >
                 <Select
-                  placeholder="Оберіть категорію"
+                  placeholder={t('inventory.selectCategory')}
                   allowClear
                   onChange={handleCategoryChange}
                 >
@@ -261,9 +263,9 @@ function ProductFormPage() {
             <Col xs={24} md={8}>
               <Form.Item
                 name="subcategory"
-                label="Підкатегорія"
+                label={t('inventory.subcategory')}
               >
-                <Select placeholder="Оберіть підкатегорію" allowClear loading={subcategoriesLoading}>
+                <Select placeholder={t('inventory.selectSubcategory')} allowClear loading={subcategoriesLoading}>
                   {filteredSubcategories.map(sub => (
                     <Select.Option key={sub.id} value={sub.id}>
                       {sub.name}
@@ -273,15 +275,15 @@ function ProductFormPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="viscosity" label="В'язкість (для олив)">
-                <Input placeholder="5W-30, 10W-40, тощо" />
+              <Form.Item name="viscosity" label={t('inventory.viscosity')}>
+                <Input placeholder={t('inventory.viscosityPlaceholder')} />
               </Form.Item>
             </Col>
           </Row>
 
           <Row gutter={24}>
             <Col xs={24} md={6}>
-              <Form.Item name="unit" label="Одиниця виміру">
+              <Form.Item name="unit" label={t('inventory.unit')}>
                 <Select>
                   {Object.values(UNITS).map(unit => (
                     <Select.Option key={unit.value} value={unit.value}>
@@ -292,17 +294,17 @@ function ProductFormPage() {
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item name="cost_price" label="Собівартість">
-                <InputNumber style={{ width: '100%' }} min={0} precision={2} addonAfter="грн" />
+              <Form.Item name="cost_price" label={t('inventory.costPrice')}>
+                <InputNumber style={{ width: '100%' }} min={0} precision={2} addonAfter={t('common.uah')} />
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item name="selling_price" label="Ціна продажу" rules={[{ required: true, message: 'Введіть ціну' }]}>
-                <InputNumber style={{ width: '100%' }} min={0} precision={2} addonAfter="грн" />
+              <Form.Item name="selling_price" label={t('inventory.salePrice')} rules={[{ required: true, message: t('inventory.pricePlaceholder') }]}>
+                <InputNumber style={{ width: '100%' }} min={0} precision={2} addonAfter={t('common.uah')} />
               </Form.Item>
             </Col>
             <Col xs={24} md={6}>
-              <Form.Item name="volume_per_unit" label="Об'єм в упаковці (л)">
+              <Form.Item name="volume_per_unit" label={t('inventory.volumePerPack')}>
                 <InputNumber style={{ width: '100%' }} min={0} precision={2} />
               </Form.Item>
             </Col>
@@ -310,40 +312,40 @@ function ProductFormPage() {
 
           <Row gutter={24}>
             <Col xs={24} md={8}>
-              <Form.Item name="current_stock" label="Поточний залишок">
+              <Form.Item name="current_stock" label={t('inventory.currentStock')}>
                 <InputNumber style={{ width: '100%' }} min={0} />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="min_stock_level" label="Мінімальний залишок">
+              <Form.Item name="min_stock_level" label={t('inventory.minStock')}>
                 <InputNumber style={{ width: '100%' }} min={0} />
               </Form.Item>
             </Col>
             <Col xs={24} md={8}>
-              <Form.Item name="address_in_stock" label="Місце на складі">
-                <Input placeholder="Полиця, секція" />
+              <Form.Item name="address_in_stock" label={t('inventory.location')}>
+                <Input placeholder={t('inventory.locationPlaceholder')} />
               </Form.Item>
             </Col>
           </Row>
 
-          <Form.Item name="specifications" label="Специфікації">
-            <Input.TextArea rows={2} placeholder="Технічні характеристики" />
+          <Form.Item name="specifications" label={t('inventory.specs')}>
+            <Input.TextArea rows={2} placeholder={t('inventory.specsPlaceholder')} />
           </Form.Item>
 
-          <Form.Item name="notes" label="Примітки">
-            <Input.TextArea rows={2} placeholder="Додаткові примітки" />
+          <Form.Item name="notes" label={t('common.notes')}>
+            <Input.TextArea rows={2} placeholder={t('inventory.notesPlaceholder')} />
           </Form.Item>
 
-          <Form.Item name="is_active" label="Активний" valuePropName="checked">
+          <Form.Item name="is_active" label={t('inventory.isActive')} valuePropName="checked">
             <Switch />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
             <Space>
               <Button type="primary" htmlType="submit" loading={saving} icon={<SaveOutlined />}>
-                {isEdit ? 'Зберегти зміни' : 'Створити товар'}
+                {isEdit ? t('common.saveChanges') : t('inventory.createProduct')}
               </Button>
-              <Button onClick={() => navigate('/inventory')}>Скасувати</Button>
+              <Button onClick={() => navigate('/inventory')}>{t('common.cancel')}</Button>
             </Space>
           </Form.Item>
         </Form>

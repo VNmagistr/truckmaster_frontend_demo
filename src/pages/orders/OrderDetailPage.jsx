@@ -10,6 +10,7 @@ import BarcodeScanner from '../../components/BarcodeScanner';
 import { formatMoney, formatDateTime } from '../../utils/formatters';
 
 function OrderDetailPage() {
+  const { t } = useTranslation();
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   
@@ -76,8 +77,8 @@ function OrderDetailPage() {
   }, [id]);
 
   const pdfMenuItems = [
-    { key: 'client', label: 'PDF для клієнта' },
-    { key: 'mechanic', label: 'PDF для механіка' },
+    { key: 'client', label: t('orderDetail.pdfClient') },
+    { key: 'mechanic', label: t('orderDetail.pdfMechanic') },
   ];
 
   const downloadPdf = async (type) => {
@@ -97,7 +98,7 @@ function OrderDetailPage() {
       link.click();
       window.URL.revokeObjectURL(url);
     } catch {
-      message.error('Не вдалося завантажити PDF');
+      message.error(t('orderDetail.pdfError'));
     } finally {
       setPdfLoading(false);
     }
@@ -109,14 +110,14 @@ function OrderDetailPage() {
       const response = await ordersAPI.getById(id);
       const data = response.data || response;
       
-      if (!data) throw new Error("Дані замовлення відсутні");
+      if (!data) throw new Error(t('orders.dataAbsent'));
       setOrder(data);
 
       loadDirectories();
       loadCountdown();
       loadStatusHistory();
     } catch (error) {
-      message.error('Не вдалося завантажити замовлення (можливо, воно видалене)');
+      message.error(t('orders.loadDetailError'));
     } finally {
       setLoading(false);
     }
@@ -197,7 +198,7 @@ function OrderDetailPage() {
       files.forEach(f => formData.append('images', f.originFileObj));
       if (photoDescription) formData.append('description', photoDescription);
       await repairPhotosAPI.bulkUpload(formData);
-      message.success(files.length === 1 ? 'Фото додано' : `Додано фото: ${files.length}`);
+      message.success(files.length === 1 ? t('orderDetail.photoAdded') : t('orderDetail.photoAddedCount', { count: files.length }));
       setIsPhotoModalOpen(false);
       setPhotoFileList([]);
       setPhotoDescription('');
@@ -207,7 +208,7 @@ function OrderDetailPage() {
         setOrder(response.data || response);
       } catch { /* ignore refresh error */ }
     } catch {
-      message.error('Не вдалося завантажити фото');
+      message.error(t('orderDetail.photoUploadError'));
     } finally {
       setPhotoModalLoading(false);
     }
@@ -215,21 +216,21 @@ function OrderDetailPage() {
 
   const handleDeleteRepairPhoto = (photoId) => {
     Modal.confirm({
-      title: 'Видалити фото?',
+      title: t('orderDetail.deletePhotoConfirm'),
       icon: <ExclamationCircleOutlined />,
-      okText: 'Видалити',
+      okText: t('common.delete'),
       okType: 'danger',
-      cancelText: 'Скасувати',
+      cancelText: t('common.cancel'),
       onOk: async () => {
         try {
           await repairPhotosAPI.delete(photoId);
-          message.success('Фото видалено');
+          message.success(t('orderDetail.photoDeleted'));
           try {
             const response = await ordersAPI.getById(id);
             setOrder(response.data || response);
           } catch { /* ignore */ }
         } catch {
-          message.error('Не вдалося видалити фото');
+          message.error(t('orderDetail.photoDeleteError'));
         }
       },
     });
@@ -251,7 +252,7 @@ function OrderDetailPage() {
       const list = Array.isArray(data) ? data : (data.results || []);
       setKitData(list.length > 0 ? list[0] : null);
     } catch {
-      message.error('Не вдалося завантажити набір ТО');
+      message.error(t('orderDetail.kitApplyError'));
       setIsKitModalOpen(false);
     } finally {
       setKitLoading(false);
@@ -286,18 +287,18 @@ function OrderDetailPage() {
   };
 
   const handleAddKit = async () => {
-    if (!kitWorkId) return message.warning('Оберіть роботу');
+    if (!kitWorkId) return message.warning(t('orderDetail.selectWork'));
     setModalLoading(true);
     try {
       const res = await ordersAPI.applyKit(kitWorkId);
       const data = res.data || res;
-      message.success(`Набір ТО додано: ${data.count} позиції`);
+      message.success(t('orderDetail.kitApplied', { count: data.count }));
       setIsKitModalOpen(false);
       setKitWorkId(null);
       setKitData(null);
       initPage();
     } catch (error) {
-      const msg = error.response?.data?.error || error.response?.data?.detail || 'Помилка при додаванні набору';
+      const msg = error.response?.data?.error || error.response?.data?.detail || t('orderDetail.kitApplyError');
       message.error(msg);
     } finally {
       setModalLoading(false);
@@ -311,9 +312,9 @@ function OrderDetailPage() {
       await ordersAPI.update(id, { order_number: orderNumberValue });
       setOrder(prev => ({ ...prev, order_number: orderNumberValue }));
       setEditingOrderNumber(false);
-      message.success('Номер наряду збережено');
+      message.success(t('orders.orderNumberSaved'));
     } catch (error) {
-      message.error('Помилка збереження номера наряду');
+      message.error(t('orders.orderNumberError'));
     } finally {
       setSavingOrderNumber(false);
     }
@@ -326,9 +327,9 @@ function OrderDetailPage() {
       await ordersAPI.update(id, { problem_description: problemValue });
       setOrder(prev => ({ ...prev, problem_description: problemValue }));
       setEditingProblem(false);
-      message.success('Опис проблеми збережено');
+      message.success(t('orders.descSaved'));
     } catch (error) {
-      message.error('Помилка збереження опису проблеми');
+      message.error(t('orders.descError'));
     } finally {
       setSavingProblem(false);
     }
@@ -341,9 +342,9 @@ function OrderDetailPage() {
       await ordersAPI.update(id, { recommendations: recommendationsValue });
       setOrder(prev => ({ ...prev, recommendations: recommendationsValue }));
       setEditingRecommendations(false);
-      message.success('Рекомендації збережено');
+      message.success(t('orders.recSaved'));
     } catch (error) {
-      message.error('Помилка збереження рекомендацій');
+      message.error(t('orders.recError'));
     } finally {
       setSavingRecommendations(false);
     }
@@ -353,10 +354,10 @@ function OrderDetailPage() {
   const handleStatusChange = async (newStatus) => {
     try {
       await ordersAPI.update(id, { status: newStatus });
-      message.success('Статус змінено');
+      message.success(t('orders.statusChanged'));
       initPage();
     } catch (error) {
-      message.error('Помилка зміни статусу');
+      message.error(t('orders.statusError'));
     }
   };
 
@@ -373,14 +374,14 @@ function OrderDetailPage() {
         mechanic: values.employee || null,
         hours_spent: values.hours,
       });
-      message.success('Роботу додано');
+      message.success(t('orderDetail.workAdded'));
       setIsWorkModalOpen(false);
       formWork.resetFields();
       initPage();
     } catch (error) {
        console.error('addWork error response:', error.response?.data);
        const data = error.response?.data;
-       const errorMsg = data?.error || data?.detail || (typeof data === 'object' ? JSON.stringify(data) : null) || 'Помилка при додаванні роботи';
+       const errorMsg = data?.error || data?.detail || (typeof data === 'object' ? JSON.stringify(data) : null) || t('orderDetail.workAddError');
        message.error(errorMsg);
     } finally {
       setModalLoading(false);
@@ -398,12 +399,12 @@ function OrderDetailPage() {
         unit_price: values.unit_price
       });
       
-      message.success('Запчастину списано');
+      message.success(t('orderDetail.partWrittenOff'));
       setIsPartModalOpen(false);
       formPart.resetFields();
       initPage();
     } catch (error) {
-       const errorMsg = error.response?.data?.error || error.response?.data?.detail || 'Помилка при списанні запчастини';
+       const errorMsg = error.response?.data?.error || error.response?.data?.detail || t('orderDetail.partWriteOffError');
        message.error(errorMsg);
     } finally {
       setModalLoading(false);
@@ -430,12 +431,12 @@ function OrderDetailPage() {
           part: part.id,
           unit_price: part.selling_price || 0,
         });
-        message.success(`Знайдено: ${part.name}`);
+        message.success(t('orderDetail.barcodeFound') + ` ${part.name}`);
       } else {
-        message.warning(`Товар зі штрих-кодом "${code}" не знайдено. Спробуйте пошук вручну.`);
+        message.warning(t('orderDetail.barcodeNotFound', { code }));
       }
     } catch {
-      message.error('Помилка пошуку за штрих-кодом');
+      message.error(t('orderDetail.barcodeError'));
     }
   };
 
@@ -475,13 +476,13 @@ function OrderDetailPage() {
         hours_spent: values.hours_spent,
         description: values.description || ''
       });
-      message.success('Роботу оновлено');
+      message.success(t('orderDetail.workUpdated'));
       setIsEditWorkModalOpen(false);
       setEditingWork(null);
       formEditWork.resetFields();
       initPage();
     } catch (error) {
-      message.error('Помилка оновлення роботи');
+      message.error(t('orderDetail.workUpdateError'));
     } finally {
       setModalLoading(false);
     }
@@ -489,19 +490,19 @@ function OrderDetailPage() {
 
   const handleDeleteWork = (workId) => {
     Modal.confirm({
-      title: 'Видалити роботу?',
+      title: t('orderDetail.deleteWork'),
       icon: <ExclamationCircleOutlined />,
-      content: 'Ви впевнені, що хочете видалити цю роботу?',
-      okText: 'Видалити',
+      content: t('orderDetail.deleteWorkConfirm'),
+      okText: t('common.delete'),
       okType: 'danger',
-      cancelText: 'Скасувати',
+      cancelText: t('common.cancel'),
       onOk: async () => {
         try {
           await ordersAPI.removeWork(workId);
-          message.success('Роботу видалено');
+          message.success(t('orderDetail.workDeleted'));
           initPage();
         } catch (error) {
-          message.error('Помилка видалення роботи');
+          message.error(t('orderDetail.workDeleteError'));
         }
       }
     });
@@ -515,7 +516,7 @@ function OrderDetailPage() {
       const data = res.data || res;
       setMaintenanceRules(data.results || data || []);
     } catch {
-      message.error('Не вдалося завантажити набори ТО');
+      message.error(t('orderDetail.maintenanceSetsError'));
     } finally {
       setMaintenanceModalLoading(false);
     }
@@ -525,12 +526,12 @@ function OrderDetailPage() {
     setMaintenanceModalLoading(true);
     try {
       await ordersAPI.applyMaintenanceSet(id, { rule_id: values.rule_id });
-      message.success('Набір ТО застосовано');
+      message.success(t('orderDetail.maintenanceSetApplied'));
       setIsMaintenanceModalOpen(false);
       formMaintenance.resetFields();
       initPage();
     } catch (error) {
-      const detail = error.response?.data?.detail || 'Не вдалося застосувати набір ТО';
+      const detail = error.response?.data?.detail || t('orderDetail.maintenanceSetError');
       message.error(detail);
     } finally {
       setMaintenanceModalLoading(false);
@@ -539,19 +540,19 @@ function OrderDetailPage() {
 
   const handleDeletePart = (workId, partId) => {
     Modal.confirm({
-      title: 'Видалити запчастину?',
+      title: t('orderDetail.deletePart'),
       icon: <ExclamationCircleOutlined />,
-      content: 'Ви впевнені, що хочете видалити цю запчастину?',
-      okText: 'Видалити',
+      content: t('orderDetail.deletePartConfirm'),
+      okText: t('common.delete'),
       okType: 'danger',
-      cancelText: 'Скасувати',
+      cancelText: t('common.cancel'),
       onOk: async () => {
         try {
           await ordersAPI.removePartFromWork(workId, partId);
-          message.success('Запчастину видалено');
+          message.success(t('orderDetail.partDeleted'));
           initPage();
         } catch (error) {
-          message.error('Помилка видалення запчастини');
+          message.error(t('orderDetail.partDeleteError'));
         }
       }
     });
@@ -572,13 +573,13 @@ function OrderDetailPage() {
       (work.used_parts || []).map(part => ({
         ...part,
         work_id: work.id,
-        work_name: work.display_name || work.custom_name || work.work?.name || work.description || 'Невідома робота',
+        work_name: work.display_name || work.custom_name || work.work?.name || work.description || '-',
       }))
     ),
     ...(order.direct_parts || []).map(part => ({
       ...part,
       work_id: null,
-      work_name: 'ТО (набір)',
+      work_name: t('orderDetail.maintenanceTOSet'),
     })),
   ];
   
@@ -591,15 +592,15 @@ function OrderDetailPage() {
 
   // Статуси для dropdown
   const statusItems = [
-    { key: 'OPEN', label: 'Відкрито', icon: <ClockCircleOutlined /> },
-    { key: 'IN_PROGRESS', label: 'В роботі', icon: <ToolOutlined /> },
-    { key: 'DONE', label: 'Виконано', icon: <CheckCircleOutlined /> },
-    { key: 'CLOSED', label: 'Закрито', icon: <CheckCircleOutlined /> },
+    { key: 'OPEN', label: t('statuses.OPEN'), icon: <ClockCircleOutlined /> },
+    { key: 'IN_PROGRESS', label: t('statuses.IN_PROGRESS'), icon: <ToolOutlined /> },
+    { key: 'DONE', label: t('statuses.DONE'), icon: <CheckCircleOutlined /> },
+    { key: 'CLOSED', label: t('statuses.CLOSED'), icon: <CheckCircleOutlined /> },
   ];
 
   const worksColumns = [
     {
-      title: 'Робота',
+      title: t('orderDetail.workName'),
       dataIndex: 'work',
       key: 'work',
       render: (val, record) => {
@@ -612,7 +613,7 @@ function OrderDetailPage() {
       },
     },
     {
-      title: 'Виконавець',
+      title: t('orderDetail.executor'),
       dataIndex: 'mechanic',
       key: 'mechanic',
       render: (val) => {
@@ -623,18 +624,18 @@ function OrderDetailPage() {
       },
     },
     {
-      title: 'Годин',
+      title: t('orderDetail.hours'),
       dataIndex: 'hours_spent',
       key: 'hours_spent',
       render: (val) => (val != null && val !== '') ? val : '-'
     },
     {
-      title: 'Вартість',
+      title: t('orderDetail.cost'),
       key: 'amount',
       render: (_, record) => formatMoney(record.amount ?? record.price_at_moment),
     },
     {
-      title: 'Дії',
+      title: t('common.actions'),
       key: 'actions',
       width: 100,
       render: (_, record) => (
@@ -661,47 +662,47 @@ function OrderDetailPage() {
 
   const partsColumns = [
     {
-      title: 'Артикул',
+      title: t('orderDetail.sku'),
       key: 'part_sku',
       width: 110,
       render: (_, record) => record.part_sku || '-',
     },
     {
-      title: 'Назва',
+      title: t('orderDetail.partName'),
       key: 'part_name',
       render: (_, record) => record.part_name || '-',
     },
     {
-      title: 'Бренд',
+      title: t('orderDetail.partBrand'),
       key: 'part_brand',
       width: 120,
       render: (_, record) => record.part_brand || '-',
     },
     { 
-      title: 'Кількість', 
-      dataIndex: 'quantity', 
+      title: t('orderDetail.partQty'),
+      dataIndex: 'quantity',
       key: 'quantity',
       render: (val) => val || '-'
     },
     { 
-      title: 'Ціна', 
-      dataIndex: 'unit_price', 
-      key: 'unit_price', 
+      title: t('orderDetail.partPrice'),
+      dataIndex: 'unit_price',
+      key: 'unit_price',
       render: (val) => formatMoney(val) 
     },
     { 
-      title: 'Сума', 
-      key: 'total', 
+      title: t('orderDetail.partAmount'),
+      key: 'total',
       render: (_, record) => formatMoney((parseFloat(record.unit_price) || 0) * (parseFloat(record.quantity) || 1)) 
     },
     {
-      title: 'Робота',
+      title: t('orderDetail.partWork'),
       dataIndex: 'work_name',
       key: 'work_name',
       render: (val) => <span style={{ fontSize: '12px', color: '#666' }}>{val}</span>
     },
     {
-      title: 'Дії',
+      title: t('common.actions'),
       key: 'actions',
       width: 80,
       render: (_, record) => record.work_id ? (
@@ -723,7 +724,7 @@ function OrderDetailPage() {
   const tabItems = [
     {
       key: 'works',
-      label: `Роботи (${orderWorks.length})`,
+      label: t('orderDetail.works', { count: orderWorks.length }),
       children: (
         <div>
             <Button
@@ -733,7 +734,7 @@ function OrderDetailPage() {
                 disabled={isDeleted}
                 style={{ marginBottom: 8, width: '100%' }}
             >
-                Додати набір для ТО
+                {t('orderDetail.addMaintenanceSet')}
             </Button>
             <Button
                 type="dashed"
@@ -742,7 +743,7 @@ function OrderDetailPage() {
                 disabled={isDeleted}
                 style={{ marginBottom: 16, width: '100%' }}
             >
-                Додати роботу
+                {t('orderDetail.addWork')}
             </Button>
             <Table
                 columns={worksColumns}
@@ -752,14 +753,14 @@ function OrderDetailPage() {
                 size="small"
                 bordered
                 scroll={{ x: 'max-content' }}
-                locale={{ emptyText: 'Роботи не додано' }}
+                locale={{ emptyText: t('orderDetail.noWorks') }}
             />
         </div>
       ),
     },
     {
       key: 'parts',
-      label: `Запчастини (${allUsedParts.length})`,
+      label: t('orderDetail.parts', { count: allUsedParts.length }),
       children: (
         <div>
              <Button
@@ -769,7 +770,7 @@ function OrderDetailPage() {
                 disabled={isDeleted || orderWorks.length === 0}
                 style={{ marginBottom: 8, width: '100%' }}
             >
-                Списати запчастину
+                {t('orderDetail.writeOffPart')}
             </Button>
             <Button
                 type="dashed"
@@ -778,14 +779,14 @@ function OrderDetailPage() {
                 disabled={isDeleted || orderWorks.length === 0}
                 style={{ marginBottom: 16, width: '100%' }}
             >
-                Додати набір ТО
+                {t('orderDetail.addMaintenanceKit')}
             </Button>
             {orderWorks.length === 0 && (
-              <Alert 
-                message="Спочатку додайте роботу" 
-                description="Щоб списати запчастину, потрібно спочатку додати хоча б одну роботу до замовлення."
-                type="info" 
-                showIcon 
+              <Alert
+                message={t('orderDetail.addPartFirst')}
+                description={t('orderDetail.addPartFirstDesc')}
+                type="info"
+                showIcon
                 style={{ marginBottom: 16 }}
               />
             )}
@@ -797,40 +798,40 @@ function OrderDetailPage() {
                 size="small"
                 bordered
                 scroll={{ x: 'max-content' }}
-                locale={{ emptyText: 'Запчастини не використано' }}
+                locale={{ emptyText: t('orderDetail.noParts') }}
             />
         </div>
       ),
     },
     {
       key: 'car-photos',
-      label: `Фото авто (${[carPhoto, odometerPhoto, dashboardPhoto].filter(Boolean).length})`,
+      label: t('orderDetail.carPhotos', { count: [carPhoto, odometerPhoto, dashboardPhoto].filter(Boolean).length }),
       children: (
         <Row gutter={[16, 16]}>
           <Col xs={24} sm={8}>
-            <Card size="small" title="Фото авто" style={{ textAlign: 'center' }}>
+            <Card size="small" title={t('orderDetail.carPhotoLabel')} style={{ textAlign: 'center' }}>
               {carPhoto ? (
-                <Image src={carPhoto} alt="Фото авто" style={{ maxHeight: 200, objectFit: 'contain' }} />
+                <Image src={carPhoto} alt={t('orderDetail.carPhotoLabel')} style={{ maxHeight: 200, objectFit: 'contain' }} />
               ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('orderDetail.noPhoto')} />
               )}
             </Card>
           </Col>
           <Col xs={24} sm={8}>
-            <Card size="small" title="Фото одометра" style={{ textAlign: 'center' }}>
+            <Card size="small" title={t('orderDetail.odometerPhotoLabel')} style={{ textAlign: 'center' }}>
               {odometerPhoto ? (
-                <Image src={odometerPhoto} alt="Фото одометра" style={{ maxHeight: 200, objectFit: 'contain' }} />
+                <Image src={odometerPhoto} alt={t('orderDetail.odometerPhotoLabel')} style={{ maxHeight: 200, objectFit: 'contain' }} />
               ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('orderDetail.noPhoto')} />
               )}
             </Card>
           </Col>
           <Col xs={24} sm={8}>
-            <Card size="small" title="Фото панелі приладів" style={{ textAlign: 'center' }}>
+            <Card size="small" title={t('orderDetail.dashboardPhotoLabel')} style={{ textAlign: 'center' }}>
               {dashboardPhoto ? (
-                <Image src={dashboardPhoto} alt="Фото панелі приладів" style={{ maxHeight: 200, objectFit: 'contain' }} />
+                <Image src={dashboardPhoto} alt={t('orderDetail.dashboardPhotoLabel')} style={{ maxHeight: 200, objectFit: 'contain' }} />
               ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото" />
+                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('orderDetail.noPhoto')} />
               )}
             </Card>
           </Col>
@@ -839,7 +840,7 @@ function OrderDetailPage() {
     },
     {
       key: 'status-history',
-      label: `Історія статусів (${statusHistory.length})`,
+      label: t('orderDetail.statusHistory', { count: statusHistory.length }),
       children: (
         <Table
           dataSource={statusHistory}
@@ -847,31 +848,31 @@ function OrderDetailPage() {
           pagination={false}
           size="small"
           loading={statusHistoryLoading}
-          locale={{ emptyText: 'Немає змін статусу' }}
+          locale={{ emptyText: t('orderDetail.noStatusChanges') }}
           columns={[
             {
-              title: 'Дата і час',
+              title: t('orderDetail.dateTime'),
               dataIndex: 'changed_at',
               key: 'changed_at',
               width: 160,
               render: (val) => val ? formatDateTime(val) : '-',
             },
             {
-              title: 'Зі статусу',
+              title: t('orderDetail.fromStatus'),
               dataIndex: 'from_status',
               key: 'from_status',
               width: 140,
               render: (val) => val ? <StatusTag status={val} /> : <span style={{ color: '#999' }}>—</span>,
             },
             {
-              title: 'На статус',
+              title: t('orderDetail.toStatus'),
               dataIndex: 'to_status',
               key: 'to_status',
               width: 140,
               render: (val) => <StatusTag status={val} />,
             },
             {
-              title: 'Хто змінив',
+              title: t('orderDetail.changedBy'),
               dataIndex: 'changed_by_name',
               key: 'changed_by_name',
               render: (val) => val || '-',
@@ -882,13 +883,13 @@ function OrderDetailPage() {
     },
     {
       key: 'repair-photos',
-      label: `Фото ремонту (${repairPhotos.length})`,
+      label: t('orderDetail.repairPhotos', { count: repairPhotos.length }),
       children: (
         <div>
           {!isDeleted && (
             <div style={{ marginBottom: 16 }}>
               <Button icon={<PlusOutlined />} onClick={() => setIsPhotoModalOpen(true)}>
-                Додати фото
+                {t('orderDetail.addPhoto')}
               </Button>
             </div>
           )}
@@ -925,7 +926,7 @@ function OrderDetailPage() {
               </Row>
             </Image.PreviewGroup>
           ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Немає фото з ремонту" />
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('orderDetail.noRepairPhotos')} />
           )}
         </div>
       ),
@@ -935,7 +936,7 @@ function OrderDetailPage() {
   return (
     <div>
       <PageHeader
-        title={`Замовлення ${order.order_number || `#${order.id}`}`}
+        title={`${t('orderDetail.orderLabel')} ${order.order_number || `#${order.id}`}`}
         showBack
         extra={
           <Space wrap>
@@ -955,7 +956,7 @@ function OrderDetailPage() {
               disabled={isDeleted}
             >
               <Button>
-                Змінити статус <DownOutlined />
+                {t('orders.changeStatus')} <DownOutlined />
               </Button>
             </Dropdown>
             <Button
@@ -964,7 +965,7 @@ function OrderDetailPage() {
                 onClick={() => navigate(`/orders/${id}/edit`)}
                 disabled={isDeleted}
             >
-                Редагувати
+                {t('common.edit')}
             </Button>
           </Space>
         }
@@ -972,7 +973,7 @@ function OrderDetailPage() {
 
       {isDeleted && (
         <Alert 
-          message="Це замовлення позначено на видалення" 
+          message={t('orders.markedForDeletionBanner')} 
           description={`Причина: ${order.deletion_reason || 'Не вказано'}. Позначив: ${order.marked_for_deletion_by_name || 'Невідомо'}`}
           type="error" 
           showIcon 
@@ -985,7 +986,7 @@ function OrderDetailPage() {
           {/* Ліва колонка: реквізити наряду та авто */}
           <Col xs={24} md={12} style={{ borderRight: '1px solid #f0f0f0', paddingRight: 0 }}>
             <Descriptions bordered column={1} size="small">
-              <Descriptions.Item label="Номер">
+              <Descriptions.Item label={t('orders.orderNumber')}>
                 {editingOrderNumber ? (
                   <Space.Compact>
                     <Input
@@ -997,8 +998,8 @@ function OrderDetailPage() {
                       onKeyDown={e => e.key === 'Escape' && setEditingOrderNumber(false)}
                       style={{ width: 160 }}
                     />
-                    <Button type="primary" size="small" loading={savingOrderNumber} onClick={handleSaveOrderNumber}>Зберегти</Button>
-                    <Button size="small" onClick={() => setEditingOrderNumber(false)}>Скасувати</Button>
+                    <Button type="primary" size="small" loading={savingOrderNumber} onClick={handleSaveOrderNumber}>{t('common.save')}</Button>
+                    <Button size="small" onClick={() => setEditingOrderNumber(false)}>{t('common.cancel')}</Button>
                   </Space.Compact>
                 ) : (
                   <Space size={4}>
@@ -1018,23 +1019,23 @@ function OrderDetailPage() {
                   </Space>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="Клієнт">
+              <Descriptions.Item label={t('common.client')}>
                 {clientId ? (
                   <Link to={`/clients/${clientId}`}>{getSafeName(order.client)}</Link>
                 ) : getSafeName(order.client)}
               </Descriptions.Item>
-              <Descriptions.Item label="Модель">
+              <Descriptions.Item label={t('trucks.model')}>
                 {order.truck?.specific_model_name || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="Держномер">
+              <Descriptions.Item label={t('trucks.licensePlate')}>
                 {truckId ? (
                   <Link to={`/trucks/${truckId}`}>{order.truck?.license_plate || '-'}</Link>
                 ) : (order.truck?.license_plate || '-')}
               </Descriptions.Item>
-              <Descriptions.Item label="VIN (останні 7)">
+              <Descriptions.Item label={t('trucks.vin')}>
                 {order.truck?.last_seven_vin || '-'}
               </Descriptions.Item>
-              <Descriptions.Item label="Пробіг">
+              <Descriptions.Item label={t('orders.currentMileage')}>
                 <span style={{ color: '#1890ff' }}>{formatMileage(order.current_mileage)}</span>
               </Descriptions.Item>
               {(order.engine_hours != null || /trakker/i.test(order.truck?.base_model_name || '')) && (
@@ -1055,7 +1056,7 @@ function OrderDetailPage() {
           {/* Права колонка: статус, проблема, рекомендації, сума */}
           <Col xs={24} md={12} className="order-detail-right-col">
             <Descriptions bordered column={1} size="small" className="order-detail-right-descriptions">
-              <Descriptions.Item label="Статус">
+              <Descriptions.Item label={t('common.status')}>
                 <Dropdown
                   menu={{
                     items: statusItems.map(item => ({
@@ -1073,7 +1074,7 @@ function OrderDetailPage() {
                   </span>
                 </Dropdown>
               </Descriptions.Item>
-              <Descriptions.Item label="Опис проблеми">
+              <Descriptions.Item label={t('orders.problemDescription')}>
                 {editingProblem ? (
                   <div>
                     <Input.TextArea
@@ -1104,8 +1105,8 @@ function OrderDetailPage() {
                       }}
                     />
                     <Space>
-                      <Button type="primary" size="small" loading={savingProblem} onClick={handleSaveProblem}>Зберегти</Button>
-                      <Button size="small" onClick={() => setEditingProblem(false)}>Скасувати</Button>
+                      <Button type="primary" size="small" loading={savingProblem} onClick={handleSaveProblem}>{t('common.save')}</Button>
+                      <Button size="small" onClick={() => setEditingProblem(false)}>{t('common.cancel')}</Button>
                     </Space>
                   </div>
                 ) : (
@@ -1126,7 +1127,7 @@ function OrderDetailPage() {
                   </div>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="Рекомендації">
+              <Descriptions.Item label={t('orders.recommendations')}>
                 {editingRecommendations ? (
                   <div>
                     <Input.TextArea
@@ -1157,8 +1158,8 @@ function OrderDetailPage() {
                       }}
                     />
                     <Space>
-                      <Button type="primary" size="small" loading={savingRecommendations} onClick={handleSaveRecommendations}>Зберегти</Button>
-                      <Button size="small" onClick={() => setEditingRecommendations(false)}>Скасувати</Button>
+                      <Button type="primary" size="small" loading={savingRecommendations} onClick={handleSaveRecommendations}>{t('common.save')}</Button>
+                      <Button size="small" onClick={() => setEditingRecommendations(false)}>{t('common.cancel')}</Button>
                     </Space>
                   </div>
                 ) : (
@@ -1187,7 +1188,7 @@ function OrderDetailPage() {
                   </div>
                 )}
               </Descriptions.Item>
-              <Descriptions.Item label="Сума">
+              <Descriptions.Item label={t('orderDetail.cost')}>
                 <span style={{ color: '#52c41a', fontWeight: 'bold' }}>
                   {formatMoney(order.total_cost)}
                 </span>
@@ -1199,7 +1200,7 @@ function OrderDetailPage() {
 
       {/* Відлік регламентних робіт */}
       <Card
-        title="Регламентні роботи"
+        title={t('orderDetail.maintenanceRegular')}
         size="small"
         loading={countdownLoading}
         style={{ marginBottom: 16 }}
@@ -1213,26 +1214,26 @@ function OrderDetailPage() {
           style={{ maxWidth: 800 }}
           columns={[
             {
-              title: 'Вид роботи',
+              title: t('orderDetail.maintenanceWorkType'),
               dataIndex: 'label',
               key: 'label',
             },
             {
-              title: 'Інтервал',
+              title: t('orderDetail.maintenanceInterval'),
               dataIndex: 'interval',
               key: 'interval',
               width: 120,
               render: (val) => val ? `${val.toLocaleString('uk-UA')} км` : '—',
             },
             {
-              title: 'Остання заміна',
+              title: t('orderDetail.maintenanceLastChange'),
               dataIndex: 'last_km',
               key: 'last_km',
               width: 140,
               render: (val) => val ? `${val.toLocaleString('uk-UA')} км` : '—',
             },
             {
-              title: 'Залишилось',
+              title: t('orderDetail.maintenanceRemaining'),
               dataIndex: 'remaining',
               key: 'remaining',
               width: 130,
@@ -1252,17 +1253,17 @@ function OrderDetailPage() {
 
       {/* Модалка додавання роботи */}
       <Modal
-        title="Додати роботу"
+        title={t('orderDetail.addWorkModal')}
         open={isWorkModalOpen}
         onCancel={() => { setIsWorkModalOpen(false); setLiveWorkPrice(null); }}
         footer={null}
         destroyOnClose
       >
         <Form form={formWork} layout="vertical" onFinish={handleAddWork}>
-            <Form.Item name="work" label="Послуга з довідника" rules={[{ required: true, message: 'Оберіть послугу' }]}>
+            <Form.Item name="work" label={t('orderDetail.serviceFromCatalog')} rules={[{ required: true, message: t('orderDetail.selectService') }]}>
                  <Select
                     showSearch
-                    placeholder="Оберіть послугу"
+                    placeholder={t('orderDetail.selectService')}
                     optionFilterProp="label"
                     options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
                     onSelect={(workId) => {
@@ -1277,21 +1278,21 @@ function OrderDetailPage() {
             </Form.Item>
             <Form.Item
               name="custom_name"
-              label="Назва роботи в наряді"
-              tooltip="Можна відредагувати під конкретний наряд — довідник не зміниться"
+              label={t('orderDetail.workNameInOrder')}
+              tooltip={t('orderDetail.workNameHint')}
             >
                 <Input placeholder="Назва з довідника або власна" />
             </Form.Item>
-            <Form.Item name="employee" label="Механік">
+            <Form.Item name="employee" label={t('orderDetail.mechanic')}>
                  <Select
                     showSearch
                     allowClear
-                    placeholder="Оберіть механіка"
+                    placeholder={t('orderDetail.selectMechanic')}
                     optionFilterProp="label"
                     options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))}
                  />
             </Form.Item>
-            <Form.Item name="hours" label="Кількість годин" rules={[{ required: true }]}>
+            <Form.Item name="hours" label={t('orderDetail.hoursCount')} rules={[{ required: true }]}>
                 <InputNumber
                   min={0.1}
                   step={0.5}
@@ -1312,21 +1313,21 @@ function OrderDetailPage() {
                 <Text strong style={{ fontSize: 15 }}>{formatMoney(liveWorkPrice.total)}</Text>
               </div>
             )}
-            <Button type="primary" htmlType="submit" loading={modalLoading} block>Зберегти</Button>
+            <Button type="primary" htmlType="submit" loading={modalLoading} block>{t('common.save')}</Button>
         </Form>
       </Modal>
 
       {/* Модалка списання запчастин */}
-      <Modal title="Списати запчастину" open={isPartModalOpen} onCancel={() => setIsPartModalOpen(false)} footer={null} destroyOnClose width={500}>
+      <Modal title={t('orderDetail.writeOffPart')} open={isPartModalOpen} onCancel={() => setIsPartModalOpen(false)} footer={null} destroyOnClose width={500}>
         <Form form={formPart} layout="vertical" onFinish={handleAddPart}>
             {orderWorks.length > 0 ? (
-              <Form.Item 
-                name="service_work" 
-                label="До якої роботи списати?" 
-                rules={[{ required: true, message: 'Оберіть роботу' }]}
+              <Form.Item
+                name="service_work"
+                label={t('orderDetail.whichWorkToWriteOff')}
+                rules={[{ required: true, message: t('orderDetail.selectWork') }]}
               >
-                <Select 
-                  placeholder="Оберіть роботу"
+                <Select
+                  placeholder={t('orderDetail.selectWork')}
                   options={orderWorks.map(w => ({
                     value: w.id,
                     label: w.display_name || w.custom_name || w.work?.name || w.description || `Робота #${w.id}`
@@ -1334,31 +1335,31 @@ function OrderDetailPage() {
                 />
               </Form.Item>
             ) : (
-              <Alert 
-                message="Спочатку додайте роботу" 
-                description="Щоб списати запчастину, потрібно спочатку додати хоча б одну роботу до замовлення."
-                type="warning" 
-                showIcon 
+              <Alert
+                message={t('orderDetail.addPartFirst')}
+                description={t('orderDetail.addPartFirstDesc')}
+                type="warning"
+                showIcon
                 style={{ marginBottom: 16 }}
               />
             )}
             
             <Form.Item name="part" label={
               <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                Запчастина
+                {t('orderDetail.part')}
                 <Button
                   size="small"
                   icon={<ScanOutlined />}
                   onClick={() => setIsScannerOpen(true)}
-                  title="Сканувати штрих-код"
+                  title={t('orderDetail.scanBarcode')}
                 >
-                  Сканувати
+                  {t('orderDetail.scanBarcode')}
                 </Button>
               </span>
-            } rules={[{ required: true, message: 'Оберіть запчастину' }]}>
+            } rules={[{ required: true, message: t('orderDetail.selectPart') }]}>
                 <Select
                     showSearch
-                    placeholder="Назва або 4 останні цифри артикулу"
+                    placeholder={t('orderDetail.partSearchPlaceholder')}
                     filterOption={false}
                     onSearch={handlePartsSearch}
                     loading={partsSearchLoading}
@@ -1371,31 +1372,31 @@ function OrderDetailPage() {
             </Form.Item>
             <Row gutter={16}>
                 <Col span={12}>
-                  <Form.Item name="quantity" label="Кількість" initialValue={1} rules={[{ required: true }]}>
+                  <Form.Item name="quantity" label={t('orderDetail.partQty')} initialValue={1} rules={[{ required: true }]}>
                       <InputNumber min={1} style={{ width: '100%' }} />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="unit_price" label="Ціна за од." rules={[{ required: true }]}>
+                  <Form.Item name="unit_price" label={t('orderDetail.pricePerUnit')} rules={[{ required: true }]}>
                       <InputNumber min={0} style={{ width: '100%' }} addonAfter="грн" />
                   </Form.Item>
                 </Col>
             </Row>
-            <Button 
-              type="primary" 
-              htmlType="submit" 
-              loading={modalLoading} 
+            <Button
+              type="primary"
+              htmlType="submit"
+              loading={modalLoading}
               block
               disabled={orderWorks.length === 0}
             >
-              Списати
+              {t('orderDetail.writeOff')}
             </Button>
         </Form>
       </Modal>
 
       {/* Модалка набору ТО */}
       <Modal
-        title="Набір ТО для авто"
+        title={t('orderDetail.maintenanceKit')}
         open={isKitModalOpen}
         onCancel={() => { setIsKitModalOpen(false); setKitWorkId(null); setKitData(null); }}
         footer={null}
@@ -1403,9 +1404,9 @@ function OrderDetailPage() {
         width={520}
       >
         <Form layout="vertical">
-          <Form.Item label="До якої роботи списати?" required>
+          <Form.Item label={t('orderDetail.whichWorkToWriteOff')} required>
             <Select
-              placeholder="Оберіть роботу"
+              placeholder={t('orderDetail.selectWork')}
               value={kitWorkId}
               onChange={setKitWorkId}
               options={orderWorks.map(w => ({ value: w.id, label: w.work?.name || w.description || `Робота #${w.id}` }))}
@@ -1417,8 +1418,8 @@ function OrderDetailPage() {
           <LoadingSpinner />
         ) : kitData === null ? (
           <Alert
-            message="Набір ТО не знайдено"
-            description="Для цього авто ще не збережено набір ТО. Додайте оливу та фільтри вручну — вони збережуться автоматично."
+            message={t('orderDetail.kitNotFound')}
+            description={t('orderDetail.kitNotFoundDesc')}
             type="warning"
             showIcon
             style={{ marginBottom: 16 }}
@@ -1431,24 +1432,24 @@ function OrderDetailPage() {
                 name: kitData.oil_name,
                 sku: kitData.oil_sku,
                 quantity: kitData.oil_quantity,
-                type: 'Олива',
+                type: t('orderDetail.kitOil'),
               }] : []),
               ...(kitData.filters || []).map(f => ({
                 key: `filter-${f.id}`,
                 name: f.part_name,
                 sku: f.part_sku,
                 quantity: f.quantity,
-                type: f.filter_type?.name || 'Фільтр',
+                type: f.filter_type?.name || t('orderDetail.kitFilter'),
               })),
             ]}
             pagination={false}
             size="small"
-            locale={{ emptyText: 'Набір порожній' }}
+            locale={{ emptyText: t('orderDetail.kitEmpty') }}
             columns={[
-              { title: 'Назва', dataIndex: 'name', key: 'name' },
-              { title: 'Артикул', dataIndex: 'sku', key: 'sku', width: 100 },
-              { title: 'Тип', dataIndex: 'type', key: 'type', width: 100 },
-              { title: 'К-сть', dataIndex: 'quantity', key: 'quantity', width: 70 },
+              { title: t('orderDetail.partName'), dataIndex: 'name', key: 'name' },
+              { title: t('orderDetail.kitSku'), dataIndex: 'sku', key: 'sku', width: 100 },
+              { title: t('orderDetail.kitType'), dataIndex: 'type', key: 'type', width: 100 },
+              { title: t('orderDetail.kitQty'), dataIndex: 'quantity', key: 'quantity', width: 70 },
             ]}
           />
         )}
@@ -1461,13 +1462,13 @@ function OrderDetailPage() {
           disabled={!kitWorkId || kitData === null}
           onClick={handleAddKit}
         >
-          Списати весь набір
+          {t('orderDetail.writeOffFullKit')}
         </Button>
       </Modal>
 
       {/* Модалка редагування роботи */}
       <Modal
-        title="Редагувати роботу"
+        title={t('orderDetail.editWork')}
         open={isEditWorkModalOpen}
         onCancel={() => {
           setIsEditWorkModalOpen(false);
@@ -1479,10 +1480,10 @@ function OrderDetailPage() {
         destroyOnClose
       >
         <Form form={formEditWork} layout="vertical" onFinish={handleSaveEditWork}>
-            <Form.Item name="work" label="Послуга з довідника" rules={[{ required: true, message: 'Оберіть послугу' }]}>
+            <Form.Item name="work" label={t('orderDetail.serviceFromCatalog')} rules={[{ required: true, message: t('orderDetail.selectService') }]}>
                  <Select
                     showSearch
-                    placeholder="Оберіть послугу"
+                    placeholder={t('orderDetail.selectService')}
                     optionFilterProp="label"
                     options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
                     onSelect={(workId) => {
@@ -1497,21 +1498,21 @@ function OrderDetailPage() {
             </Form.Item>
             <Form.Item
               name="custom_name"
-              label="Назва роботи в наряді"
-              tooltip="Можна відредагувати під конкретний наряд — довідник не зміниться"
+              label={t('orderDetail.workNameInOrder')}
+              tooltip={t('orderDetail.workNameHint')}
             >
                 <Input placeholder="Назва з довідника або власна" />
             </Form.Item>
-            <Form.Item name="mechanic" label="Механік">
+            <Form.Item name="mechanic" label={t('orderDetail.mechanic')}>
                  <Select
                     showSearch
                     allowClear
-                    placeholder="Оберіть механіка"
+                    placeholder={t('orderDetail.selectMechanic')}
                     optionFilterProp="label"
                     options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))}
                  />
             </Form.Item>
-            <Form.Item name="hours_spent" label="Кількість годин" rules={[{ required: true }]}>
+            <Form.Item name="hours_spent" label={t('orderDetail.hoursCount')} rules={[{ required: true }]}>
                 <InputNumber
                   min={0.1}
                   step={0.5}
@@ -1532,16 +1533,16 @@ function OrderDetailPage() {
                 <Text strong style={{ fontSize: 15 }}>{formatMoney(liveEditWorkPrice.total)}</Text>
               </div>
             )}
-            <Form.Item name="description" label="Опис">
-                <Input.TextArea rows={2} placeholder="Додатковий опис (необов'язково)" />
+            <Form.Item name="description" label={t('orderDetail.workDescription')}>
+                <Input.TextArea rows={2} placeholder={t('orderDetail.workDescriptionHint')} />
             </Form.Item>
-            <Button type="primary" htmlType="submit" loading={modalLoading} block>Зберегти зміни</Button>
+            <Button type="primary" htmlType="submit" loading={modalLoading} block>{t('common.save')}</Button>
         </Form>
       </Modal>
 
       {/* Модалка набору ТО */}
       <Modal
-        title="Додати набір для ТО"
+        title={t('orderDetail.maintenanceSetModal')}
         open={isMaintenanceModalOpen}
         onCancel={() => { setIsMaintenanceModalOpen(false); formMaintenance.resetFields(); }}
         footer={null}
@@ -1549,14 +1550,14 @@ function OrderDetailPage() {
       >
         <Form form={formMaintenance} layout="vertical" onFinish={handleApplyMaintenanceSet}>
           <Form.Item
-            label="Набір ТО"
+            label={t('orderDetail.maintenanceSet')}
             name="rule_id"
-            rules={[{ required: true, message: 'Оберіть набір' }]}
+            rules={[{ required: true, message: t('orderDetail.selectMaintenanceSet') }]}
           >
             <Select
-              placeholder="Оберіть регламент ТО"
+              placeholder={t('orderDetail.selectMaintenanceRule')}
               loading={maintenanceModalLoading}
-              notFoundContent="Немає доступних наборів"
+              notFoundContent={t('orderDetail.noSetsAvailable')}
             >
               {maintenanceRules.map(r => (
                 <Select.Option key={r.id} value={r.id}>
@@ -1572,7 +1573,7 @@ function OrderDetailPage() {
               loading={maintenanceModalLoading}
               block
             >
-              Застосувати
+              {t('orderDetail.maintenanceSetApplyBtn')}
             </Button>
           </Form.Item>
         </Form>
@@ -1580,7 +1581,7 @@ function OrderDetailPage() {
 
       {/* Модалка завантаження фото з ремонту */}
       <Modal
-        title="Додати фото з ремонту"
+        title={t('orderDetail.addRepairPhoto')}
         open={isPhotoModalOpen}
         onCancel={() => { setIsPhotoModalOpen(false); setPhotoFileList([]); setPhotoDescription(''); }}
         footer={null}
@@ -1597,12 +1598,12 @@ function OrderDetailPage() {
           >
             <div>
               <PlusOutlined />
-              <div style={{ marginTop: 8 }}>Вибрати фото</div>
+              <div style={{ marginTop: 8 }}>{t('orderDetail.selectPhoto')}</div>
             </div>
           </Upload>
         </div>
         <Input
-          placeholder="Опис фото (необов'язково)"
+          placeholder={t('orderDetail.photoDesc')}
           value={photoDescription}
           onChange={(e) => setPhotoDescription(e.target.value)}
           style={{ marginBottom: 16 }}
@@ -1614,7 +1615,7 @@ function OrderDetailPage() {
           onClick={handleUploadRepairPhoto}
           block
         >
-          {photoFileList.length > 1 ? `Завантажити ${photoFileList.length} фото` : 'Завантажити'}
+          {photoFileList.length > 1 ? t('orderDetail.uploadCount', { count: photoFileList.length }) : t('orderDetail.upload')}
         </Button>
       </Modal>
 

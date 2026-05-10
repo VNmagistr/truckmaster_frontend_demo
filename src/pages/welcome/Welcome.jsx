@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Row, Col, Collapse } from 'antd';
+import { useTranslation } from 'react-i18next';
 import SeoHead from '../../components/SeoHead';
 import logoImg from '../../assets/logo.jpg';
 import imgSway from '../../assets/trucks/sway.jpg';
@@ -33,38 +34,7 @@ const PHONES = [
   { number: '+380973950777', operator: 'Kyivstar' },
 ];
 
-const SERVICES = [
-  {
-    icon: <ToolOutlined />,
-    title: 'Технічне обслуговування',
-    items: ['Планове ТО за регламентом виробника', 'Заміна моторного масла та фільтрів', 'Перевірка та регулювання гальм', 'Обслуговування трансмісії'],
-  },
-  {
-    icon: <ThunderboltOutlined />,
-    title: "Комп'ютерна діагностика",
-    items: ['Повна діагностика автомобіля', 'Читання та скидання помилок', 'Перевірка всіх вузлів та агрегатів', 'Діагностика гідравліки та пневматики'],
-  },
-  {
-    icon: <SettingOutlined />,
-    title: 'Ремонт двигуна',
-    items: ['Капітальний та поточний ремонт', 'Заміна ГРМ та прокладок', 'Заміна турбокомпресора'],
-  },
-];
-
-const WHY_US = [
-  { icon: <StarOutlined />, title: '10+ років досвіду', desc: 'Спеціалізуємося виключно на вантажній техніці Iveco — знаємо кожну деталь' },
-  { icon: <SafetyCertificateOutlined />, title: 'Оригінальні запчастини', desc: 'Використовуємо тільки оригінальні та сертифіковані аналоги від перевірених постачальників' },
-  { icon: <ThunderboltOutlined />, title: 'Швидка діагностика', desc: 'Сучасне діагностичне обладнання дозволяє точно та швидко виявити несправність' },
-  { icon: <DollarOutlined />, title: 'Прозоре ціноутворення', desc: 'Без прихованих витрат. Погоджуємо вартість до початку робіт' },
-  { icon: <CarOutlined />, title: 'Зручне розташування', desc: "смт. Запитів, Львівська обл. — зручний під'їзд для великовагової техніки" },
-];
-
-const FAQ_ITEMS = [
-  { key: '1', label: 'Як часто потрібно робити ТО для Iveco?', children: 'Виробник рекомендує ТО кожні 20 000/45000/75000 км відповідно до типу двигуна або 1 раз на рік — залежно від умов експлуатації. Для важких умов (пил, короткі поїздки, гори) інтервал може бути скорочений. Наші майстри нададуть індивідуальну рекомендацію після діагностики.' },
-  { key: '2', label: 'Які моделі Iveco ви обслуговуєте?', children: 'Ми обслуговуємо весь модельний ряд: Iveco Daily, Eurocargo, Stralis, Trakker та інші. Маємо досвід роботи з усіма поколіннями та двигунами від Euro 3 до Euro 6.' },
-  { key: '3', label: 'Як дізнатися вартість ремонту?', children: 'Зателефонуйте або залиште заявку на сайті — ми безкоштовно проконсультуємо та надамо орієнтовну вартість. Точна вартість визначається після діагностики.' },
-  { key: '4', label: 'Чи можна записатися заздалегідь?', children: 'Так, і ми це рекомендуємо. Запишіться по телефону або через форму на сайті — це дозволить нам підготуватися та заощадить ваш час.' },
-];
+// FAQ_ITEMS moved inside Welcome component to use t()
 
 function formatPhone(phone) {
   const d = phone.replace('+', '');
@@ -123,6 +93,7 @@ function StarRating({ rating }) {
 }
 
 function ReviewCard({ review }) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const text = review.text || '';
   const long = text.length > 200;
@@ -156,7 +127,7 @@ function ReviewCard({ review }) {
       <p style={{ fontSize: 14, color: INK2, lineHeight: 1.65, margin: 0 }}>{shown}</p>
       {long && (
         <button onClick={() => setExpanded(e => !e)} style={{ background: 'none', border: 'none', color: Y, fontWeight: 700, fontSize: 13, cursor: 'pointer', padding: 0, textAlign: 'left' }}>
-          {expanded ? 'Згорнути' : 'Читати далі'}
+          {expanded ? t('welcome.collapse') : t('welcome.readMore')}
         </button>
       )}
     </div>
@@ -164,6 +135,7 @@ function ReviewCard({ review }) {
 }
 
 function ReviewsSection({ apiUrl }) {
+  const { t } = useTranslation();
   const [data, setData] = useState(null);
 
   useEffect(() => {
@@ -181,9 +153,9 @@ function ReviewsSection({ apiUrl }) {
         {/* Header */}
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 48, gap: 24 }}>
           <div>
-            <Tag>Відгуки клієнтів</Tag>
+            <Tag>{t('welcome.reviewsTitle')}</Tag>
             <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)', fontWeight: 900, color: INK, margin: 0, letterSpacing: '-0.5px' }}>
-              Що кажуть наші клієнти
+              {t('welcome.reviewsSubtitle')}
             </h2>
           </div>
           {/* Rating summary */}
@@ -191,7 +163,7 @@ function ReviewsSection({ apiUrl }) {
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 52, fontWeight: 900, color: INK, lineHeight: 1 }}>{data.rating}</div>
               <StarRating rating={data.rating} />
-              <div style={{ fontSize: 12, color: INK3, marginTop: 4 }}>{data.user_ratings_total} відгуків</div>
+              <div style={{ fontSize: 12, color: INK3, marginTop: 4 }}>{data.user_ratings_total} {t('welcome.reviewsCount')}</div>
             </div>
             <a
               href={data.maps_url}
@@ -213,7 +185,7 @@ function ReviewsSection({ apiUrl }) {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
               </svg>
-              Google відгуки
+              {t('welcome.googleReviews')}
             </a>
           </div>
         </div>
@@ -236,6 +208,7 @@ function ReviewsSection({ apiUrl }) {
 
 /* ══════════════════════════════════════════════ */
 const Welcome = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -243,6 +216,39 @@ const Welcome = () => {
   const [form, setForm] = useState({ name: '', phone: '', message: '' });
   const [formState, setFormState] = useState('idle');
   const [formError, setFormError] = useState('');
+
+  const SERVICES = [
+    {
+      icon: <ToolOutlined />,
+      title: t('welcome.service1Title'),
+      items: t('welcome.service1Items', { returnObjects: true }),
+    },
+    {
+      icon: <ThunderboltOutlined />,
+      title: t('welcome.service2Title'),
+      items: t('welcome.service2Items', { returnObjects: true }),
+    },
+    {
+      icon: <SettingOutlined />,
+      title: t('welcome.service3Title'),
+      items: t('welcome.service3Items', { returnObjects: true }),
+    },
+  ];
+
+  const WHY_US = [
+    { icon: <StarOutlined />, title: t('welcome.advantage1'), desc: t('welcome.advantage1Desc') },
+    { icon: <SafetyCertificateOutlined />, title: t('welcome.advantage2'), desc: t('welcome.advantage2Desc') },
+    { icon: <ThunderboltOutlined />, title: t('welcome.advantage3'), desc: t('welcome.advantage3Desc') },
+    { icon: <DollarOutlined />, title: t('welcome.advantage4'), desc: t('welcome.advantage4Desc') },
+    { icon: <CarOutlined />, title: t('welcome.advantage5'), desc: t('welcome.advantage5Desc') },
+  ];
+
+  const FAQ_ITEMS = [
+    { key: '1', label: t('welcome.faq1Label'), children: t('welcome.faq1Content') },
+    { key: '2', label: t('welcome.faq2Label'), children: t('welcome.faq2Content') },
+    { key: '3', label: t('welcome.faq3Label'), children: t('welcome.faq3Content') },
+    { key: '4', label: t('welcome.faq4Label'), children: t('welcome.faq4Content') },
+  ];
 
   useEffect(() => {
     const onScroll = () => {
@@ -261,7 +267,7 @@ const Welcome = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.phone.trim()) { setFormError("Заповніть ім'я та телефон"); return; }
+    if (!form.name.trim() || !form.phone.trim()) { setFormError(t('common.required')); return; }
     setFormError('');
     setFormState('loading');
     try {
@@ -275,7 +281,7 @@ const Welcome = () => {
     } catch { setFormState('error'); setFormError("Помилка з'єднання. Спробуйте зателефонувати."); }
   };
 
-  const NAV = [['why', 'Про нас'], ['services', 'Послуги'], ['gallery', 'Галерея'], ['faq', 'FAQ'], ['contacts', 'Контакти']];
+  const NAV = [['why', t('welcome.navAbout')], ['services', t('welcome.navServices')], ['gallery', t('welcome.navGallery')], ['faq', t('welcome.navFaq')], ['contacts', t('welcome.navContacts')]];
 
   return (
     <div className="welcome-page" style={{ fontFamily: "'Segoe UI', system-ui, -apple-system, sans-serif", color: INK, background: BG, overflowX: 'hidden' }}>
@@ -297,8 +303,8 @@ const Welcome = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={scrollToTop}>
             <LogoMark size={76} />
             <div>
-              <div style={{ color: scrolled ? INK : '#fff', fontWeight: 900, fontSize: 28, letterSpacing: 1, lineHeight: 1.1 }}>Італ Трак</div>
-              <div style={{ color: scrolled ? INK3 : '#fff', fontWeight: 800, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' }}>Сервісний центр Iveco</div>
+              <div style={{ color: scrolled ? INK : '#fff', fontWeight: 900, fontSize: 28, letterSpacing: 1, lineHeight: 1.1 }}>{t('welcome.brandName')}</div>
+              <div style={{ color: scrolled ? INK3 : '#fff', fontWeight: 800, fontSize: 13, letterSpacing: 1.5, textTransform: 'uppercase' }}>{t('welcome.serviceCenter')}</div>
             </div>
           </div>
 
@@ -322,7 +328,7 @@ const Welcome = () => {
             onMouseEnter={e => { e.currentTarget.style.borderColor = Y; e.currentTarget.style.color = Y; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.3)'; e.currentTarget.style.color = scrolled ? INK2 : BG; }}
           >
-            Кабінет
+            {t('welcome.cabinetLink')}
           </button>
 
           {/* Phone CTA */}
@@ -373,21 +379,21 @@ const Welcome = () => {
 
         <div style={{ position: 'relative', zIndex: 2, maxWidth: 1200, margin: '0 auto', width: '100%' }}>
           <div style={{ maxWidth: 620 }}>
-            <Tag>Сервіс ремонту автомобілів Iveco</Tag>
+            <Tag>{t('welcome.heroTitle1')}</Tag>
 
             <h1 style={{ fontSize: 'clamp(2.4rem, 5.5vw, 4.2rem)', fontWeight: 900, color: BG, lineHeight: 1.08, marginBottom: 24, letterSpacing: '-1px' }}>
-              Сервісний центр<br />
-              <span style={{ color: Y }}>вантажних авто</span>
+              {t('welcome.heroTitle2')}<br />
+              <span style={{ color: Y }}>{t('welcome.heroTitle3')}</span>
             </h1>
 
             <p style={{ color: '#aaa', fontSize: 18, lineHeight: 1.7, marginBottom: 44, maxWidth: 500 }}>
-              Спеціалізуємося на обслуговуванні та ремонті вантажівок Iveco. Досвідчені майстри, оригінальні запчастини, гарантія якості.
+              {t('welcome.heroDesc')}
             </p>
 
             {/* CTA buttons */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 56 }}>
               <PrimaryBtn onClick={() => scrollTo('callback')}>
-                <SendOutlined /> Залишити заявку
+                <SendOutlined /> {t('welcome.cta')}
               </PrimaryBtn>
               <a href={`tel:${PHONES[0].number}`} style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -404,7 +410,7 @@ const Welcome = () => {
 
             {/* Stats */}
             <div style={{ display: 'flex', gap: 40, flexWrap: 'wrap' }}>
-              {[['10+', 'Років досвіду'], ['2000+', 'Авто щороку'], ['100%', 'Гарантія якості']].map(([num, label]) => (
+              {[['10+', t('welcome.yearsExperience')], ['2000+', t('welcome.carsPerYear')], ['100%', t('welcome.qualityGuarantee')]].map(([num, label]) => (
                 <div key={label}>
                   <div style={{ fontSize: 32, fontWeight: 900, color: Y, lineHeight: 1 }}>{num}</div>
                   <div style={{ color: '#888', fontSize: 13, marginTop: 4 }}>{label}</div>
@@ -416,7 +422,7 @@ const Welcome = () => {
 
         {/* Scroll indicator */}
         <div style={{ position: 'absolute', bottom: 32, left: '50%', transform: 'translateX(-50%)', textAlign: 'center' }}>
-          <div style={{ color: '#555', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>Гортай</div>
+          <div style={{ color: '#555', fontSize: 11, letterSpacing: 2, textTransform: 'uppercase', marginBottom: 8 }}>{t('welcome.scrollDown')}</div>
           <div style={{ width: 1, height: 40, background: 'linear-gradient(to bottom, #555, transparent)', margin: '0 auto' }} />
         </div>
       </section>
@@ -449,13 +455,13 @@ const Welcome = () => {
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 56, flexWrap: 'wrap', gap: 24 }}>
             <div>
-              <Tag>Наші переваги</Tag>
+              <Tag>{t('welcome.advantagesTitle')}</Tag>
               <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)', fontWeight: 900, color: INK, margin: 0, letterSpacing: '-0.5px' }}>
-                Чому обирають нас
+                {t('welcome.advantagesSubtitle')}
               </h2>
             </div>
             <p style={{ color: INK2, fontSize: 16, maxWidth: 380, lineHeight: 1.7, margin: 0 }}>
-              Ми розуміємо, що вантажівка — це ваш бізнес. Тому робимо все, щоб вона працювала надійно.
+              {t('welcome.advantagesDesc')}
             </p>
           </div>
 
@@ -484,9 +490,9 @@ const Welcome = () => {
       <section id="services" style={{ padding: '96px 32px', background: BG2 }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <Tag>Що ми робимо</Tag>
-            <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)', fontWeight: 900, color: INK, letterSpacing: '-0.5px' }}>Наші послуги</h2>
-            <p style={{ color: INK2, fontSize: 16, maxWidth: 480, margin: '16px auto 0', lineHeight: 1.7 }}>Повний спектр технічного обслуговування та ремонту вантажної техніки Iveco</p>
+            <Tag>{t('welcome.servicesTitle')}</Tag>
+            <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)', fontWeight: 900, color: INK, letterSpacing: '-0.5px' }}>{t('welcome.servicesSubtitle')}</h2>
+            <p style={{ color: INK2, fontSize: 16, maxWidth: 480, margin: '16px auto 0', lineHeight: 1.7 }}>{t('welcome.servicesDesc')}</p>
           </div>
 
           <Row gutter={[24, 24]}>
@@ -525,9 +531,9 @@ const Welcome = () => {
       <section id="gallery" style={{ padding: '96px 32px', background: BG }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <Tag>Наша робота</Tag>
-            <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)', fontWeight: 900, color: INK, letterSpacing: '-0.5px' }}>Галерея</h2>
-            <p style={{ color: INK2, fontSize: 16, maxWidth: 480, margin: '16px auto 0', lineHeight: 1.7 }}>Фотографії нашого сервісу, команди та виконаних робіт</p>
+            <Tag>{t('welcome.galleryTitle')}</Tag>
+            <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)', fontWeight: 900, color: INK, letterSpacing: '-0.5px' }}>{t('welcome.gallerySubtitle')}</h2>
+            <p style={{ color: INK2, fontSize: 16, maxWidth: 480, margin: '16px auto 0', lineHeight: 1.7 }}>{t('welcome.galleryDesc')}</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
             {[
@@ -558,9 +564,9 @@ const Welcome = () => {
       <section id="faq" style={{ padding: '96px 32px', background: BG2 }}>
         <div style={{ maxWidth: 840, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <Tag>Відповіді</Tag>
-            <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)', fontWeight: 900, color: INK, letterSpacing: '-0.5px' }}>Часті запитання</h2>
-            <p style={{ color: INK2, fontSize: 16, marginTop: 16, lineHeight: 1.7 }}>Не знайшли відповіді? Зателефонуйте — з радістю проконсультуємо.</p>
+            <Tag>{t('welcome.faqTitle')}</Tag>
+            <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)', fontWeight: 900, color: INK, letterSpacing: '-0.5px' }}>{t('welcome.faqSubtitle')}</h2>
+            <p style={{ color: INK2, fontSize: 16, marginTop: 16, lineHeight: 1.7 }}>{t('welcome.faqDesc')}</p>
           </div>
           <Collapse
             items={FAQ_ITEMS}
@@ -576,10 +582,10 @@ const Welcome = () => {
         {/* Top CTA banner */}
         <div style={{ background: Y, padding: '52px 32px', textAlign: 'center' }}>
           <h2 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 900, color: INK, marginBottom: 8, letterSpacing: '-0.5px' }}>
-            Готові допомогти вашій вантажівці?
+            {t('welcome.ctaTitle')}
           </h2>
           <p style={{ color: 'rgba(0,0,0,0.55)', fontSize: 16, marginBottom: 28 }}>
-            Зателефонуйте або залиште заявку — відповімо найближчим часом
+            {t('welcome.ctaDesc')}
           </p>
           <div style={{ display: 'flex', justifyContent: 'center', gap: 16, flexWrap: 'wrap' }}>
             {PHONES.map(({ number, operator }) => (
@@ -596,24 +602,24 @@ const Welcome = () => {
         {/* Form */}
         <div style={{ padding: '80px 32px', background: INK }}>
           <div style={{ maxWidth: 560, margin: '0 auto' }}>
-            <Tag>Зворотний зв'язок</Tag>
-            <h2 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 900, color: BG, marginBottom: 12, letterSpacing: '-0.5px' }}>Залишити заявку</h2>
-            <p style={{ color: '#888', fontSize: 15, marginBottom: 40, lineHeight: 1.7 }}>Заповніть форму — ми передзвонимо або напишемо на Viber/Telegram найближчим часом.</p>
+            <Tag>{t('welcome.contactFormTitle')}</Tag>
+            <h2 style={{ fontSize: 'clamp(1.6rem, 3vw, 2.2rem)', fontWeight: 900, color: BG, marginBottom: 12, letterSpacing: '-0.5px' }}>{t('welcome.contactFormSubtitle')}</h2>
+            <p style={{ color: '#888', fontSize: 15, marginBottom: 40, lineHeight: 1.7 }}>{t('welcome.contactFormDesc')}</p>
 
             {formState === 'success' ? (
               <div style={{ textAlign: 'center', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.3)', padding: '48px 32px' }}>
                 <div style={{ fontSize: 44, marginBottom: 16 }}>✅</div>
-                <div style={{ color: '#4ade80', fontSize: 20, fontWeight: 800, marginBottom: 8 }}>Заявку отримано!</div>
-                <div style={{ color: '#666', fontSize: 15 }}>Ми зв'яжемося з Вами найближчим часом.</div>
+                <div style={{ color: '#4ade80', fontSize: 20, fontWeight: 800, marginBottom: 8 }}>{t('welcome.formSuccess')}</div>
+                <div style={{ color: '#666', fontSize: 15 }}>{t('welcome.formSuccessDesc')}</div>
                 <button onClick={() => setFormState('idle')} style={{ marginTop: 24, background: 'none', border: `1px solid ${Y}`, color: Y, padding: '10px 24px', cursor: 'pointer', fontSize: 13 }}>
-                  Надіслати ще одну
+                  {t('welcome.formSendAnother')}
                 </button>
               </div>
             ) : (
               <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                 {[
-                  { label: "Ваше ім'я *", key: 'name', placeholder: 'Іван Петренко', type: 'text' },
-                  { label: 'Телефон *', key: 'phone', placeholder: '+380 __ ___ __ __', type: 'tel' },
+                  { label: t('welcome.formName'), key: 'name', placeholder: t('welcome.formNamePlaceholder'), type: 'text' },
+                  { label: t('welcome.formPhone'), key: 'phone', placeholder: '+380 __ ___ __ __', type: 'tel' },
                 ].map(({ label, key, placeholder, type }) => (
                   <div key={key}>
                     <label style={{ color: '#888', fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1.5 }}>{label}</label>
@@ -622,8 +628,8 @@ const Welcome = () => {
                   </div>
                 ))}
                 <div>
-                  <label style={{ color: '#888', fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1.5 }}>Повідомлення</label>
-                  <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder="Опишіть проблему або запитання..." rows={4}
+                  <label style={{ color: '#888', fontSize: 11, fontWeight: 700, display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 1.5 }}>{t('welcome.formMessage')}</label>
+                  <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} placeholder={t('welcome.formMessagePlaceholder')} rows={4}
                     style={{ width: '100%', padding: '13px 16px', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)', color: BG, fontSize: 15, outline: 'none', resize: 'vertical', boxSizing: 'border-box', fontFamily: 'inherit', borderRadius: 0 }} />
                 </div>
 
@@ -634,7 +640,7 @@ const Welcome = () => {
                 )}
 
                 <PrimaryBtn type="submit" disabled={formState === 'loading'}>
-                  {formState === 'loading' ? <><LoadingOutlined /> Надсилаємо...</> : <><SendOutlined /> Надіслати заявку</>}
+                  {formState === 'loading' ? <><LoadingOutlined /> {t('welcome.formSubmitting')}</> : <><SendOutlined /> {t('welcome.formSubmit')}</>}
                 </PrimaryBtn>
               </form>
             )}
@@ -646,19 +652,19 @@ const Welcome = () => {
       <section id="contacts" style={{ padding: '96px 32px', background: BG }}>
         <div style={{ maxWidth: 1200, margin: '0 auto' }}>
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <Tag>Як нас знайти</Tag>
-            <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)', fontWeight: 900, color: INK, letterSpacing: '-0.5px' }}>Контакти</h2>
+            <Tag>{t('welcome.contactsTitle')}</Tag>
+            <h2 style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.6rem)', fontWeight: 900, color: INK, letterSpacing: '-0.5px' }}>{t('welcome.contactsSubtitle')}</h2>
           </div>
           <Row gutter={[48, 48]} align="middle">
             <Col xs={24} lg={10}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 36 }}>
                 {[
                   {
-                    icon: <EnvironmentOutlined />, title: 'Адреса',
-                    content: <span style={{ color: INK, fontSize: 16, lineHeight: 1.7 }}>Львівська обл., смт. Запитів,<br />вул. Київська, 185</span>,
+                    icon: <EnvironmentOutlined />, title: t('welcome.addressLabel'),
+                    content: <span style={{ color: INK, fontSize: 16, lineHeight: 1.7 }}>{t('welcome.address')}</span>,
                   },
                   {
-                    icon: <PhoneOutlined />, title: 'Телефони',
+                    icon: <PhoneOutlined />, title: t('welcome.phonesLabel'),
                     content: (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                         {PHONES.map(({ number, operator }) => (
@@ -671,10 +677,10 @@ const Welcome = () => {
                     ),
                   },
                   {
-                    icon: <ClockCircleOutlined />, title: 'Години роботи',
+                    icon: <ClockCircleOutlined />, title: t('welcome.hoursLabel'),
                     content: (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        {[['Пн – Пт', '09:30 – 18:00', false], ['Субота – Неділя', 'Вихідний', true]].map(([day, hours, isOff]) => (
+                        {[[t('welcome.weekdays'), t('welcome.weekdaysHours'), false], [t('welcome.weekends'), t('welcome.weekendsHours'), true]].map(([day, hours, isOff]) => (
                           <div key={day} style={{ display: 'flex', justifyContent: 'space-between', gap: 40, paddingBottom: 8, borderBottom: '1px solid #f0f0f0' }}>
                             <span style={{ color: INK2, fontSize: 15 }}>{day}</span>
                             <span style={{ color: isOff ? '#ef4444' : INK, fontSize: 15, fontWeight: 600 }}>{hours}</span>
@@ -699,7 +705,7 @@ const Welcome = () => {
             <Col xs={24} lg={14}>
               <div style={{ overflow: 'hidden', boxShadow: '0 4px 32px rgba(0,0,0,0.1)', border: `3px solid ${Y}` }}>
                 <iframe
-                  title="Карта"
+                  title={t('welcome.map')}
                   src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d381.8849867079073!2d24.22635464372931!3d49.91746731963937!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x473ac54acf95915b%3A0xdc293f6a56dd6cd5!2z0IbRgtCw0Lst0KLRgNCw0Lo!5e0!3m2!1suk!2sua!4v1772792246178!5m2!1suk!2sua"
                   width="100%"
                   height="400"
@@ -720,8 +726,8 @@ const Welcome = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer' }} onClick={scrollToTop}>
               <LogoMark size={44} />
               <div>
-                <div style={{ color: BG, fontWeight: 900, fontSize: 17, letterSpacing: 1 }}>Італ Трак</div>
-                <div style={{ color: '#555', fontSize: 9, letterSpacing: 2.5, textTransform: 'uppercase' }}>Сервісний центр Iveco</div>
+                <div style={{ color: BG, fontWeight: 900, fontSize: 17, letterSpacing: 1 }}>{t('welcome.brandName')}</div>
+                <div style={{ color: '#555', fontSize: 9, letterSpacing: 2.5, textTransform: 'uppercase' }}>{t('welcome.serviceCenter')}</div>
               </div>
             </div>
             <nav style={{ display: 'flex', flexWrap: 'wrap', gap: 24 }}>
@@ -737,7 +743,7 @@ const Welcome = () => {
             </a>
           </div>
           <div style={{ borderTop: '1px solid #222', paddingTop: 24, textAlign: 'center' }}>
-            <span style={{ color: '#444', fontSize: 13 }}>© {new Date().getFullYear()} Італ Трак — Сервісний центр вантажних авто Iveco. Всі права захищено.</span>
+            <span style={{ color: '#444', fontSize: 13 }}>© {new Date().getFullYear()} {t('welcome.footer')}</span>
           </div>
         </div>
       </footer>
@@ -745,7 +751,7 @@ const Welcome = () => {
       {/* ══ SCROLL TO TOP ══ */}
       <button
         onClick={scrollToTop}
-        aria-label="Повернутись наверх"
+        aria-label={t('welcome.scrollToTop')}
         style={{
           position: 'fixed', bottom: 32, right: 32, width: 48, height: 48,
           background: Y, border: 'none', color: INK, fontSize: 18, cursor: 'pointer',

@@ -1452,7 +1452,18 @@
     "advantage4": "Transparent pricing",
     "advantage4Desc": "No hidden costs. We agree on the price before work begins",
     "advantage5": "Convenient location",
-    "advantage5Desc": "Zapytiv, Lviv region — convenient access for heavy vehicles"
+    "advantage5Desc": "Zapytiv, Lviv region — convenient access for heavy vehicles",
+    "service1Items": ["Scheduled maintenance per manufacturer regulations", "Engine oil and filter replacement", "Brake inspection and adjustment", "Transmission service"],
+    "service2Items": ["Full vehicle diagnostics", "Error code reading and reset", "Inspection of all assemblies and units", "Hydraulic and pneumatic diagnostics"],
+    "service3Items": ["Major and routine repairs", "Timing belt and gasket replacement", "Turbocharger replacement"],
+    "faq1Label": "How often should I service my Iveco?",
+    "faq1Content": "The manufacturer recommends maintenance every 20,000/45,000/75,000 km depending on engine type, or once a year — depending on operating conditions. For harsh conditions (dust, short trips, mountains) the interval may be shortened. Our technicians will provide an individual recommendation after diagnostics.",
+    "faq2Label": "Which Iveco models do you service?",
+    "faq2Content": "We service the entire model range: Iveco Daily, Eurocargo, Stralis, Trakker and others. We have experience with all generations and engines from Euro 3 to Euro 6.",
+    "faq3Label": "How can I find out the repair cost?",
+    "faq3Content": "Call us or leave a request on the website — we will consult you for free and provide an estimated cost. The exact price is determined after diagnostics.",
+    "faq4Label": "Can I book in advance?",
+    "faq4Content": "Yes, and we recommend it. Book by phone or through the website form — this will allow us to prepare and save your time."
   },
 
   "lang": {
