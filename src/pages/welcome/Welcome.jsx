@@ -216,6 +216,8 @@ const Welcome = () => {
   const [form, setForm] = useState({ name: '', phone: '', message: '' });
   const [formState, setFormState] = useState('idle');
   const [formError, setFormError] = useState('');
+  const [honeypot, setHoneypot] = useState('');
+  const [formLoadedAt] = useState(() => Date.now());
 
   const SERVICES = [
     {
@@ -267,6 +269,9 @@ const Welcome = () => {
 
   const handleFormSubmit = async (e) => {
     e.preventDefault();
+    if (honeypot) return;
+    const elapsed = (Date.now() - formLoadedAt) / 1000;
+    if (elapsed < 3) return;
     if (!form.name.trim() || !form.phone.trim()) { setFormError(t('common.required')); return; }
     setFormError('');
     setFormState('loading');
@@ -274,7 +279,7 @@ const Welcome = () => {
       const res = await fetch(`${API_URL}/contact/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        body: JSON.stringify({ ...form, website: honeypot, _t: formLoadedAt }),
       });
       if (res.ok) { setFormState('success'); setForm({ name: '', phone: '', message: '' }); }
       else { setFormState('error'); setFormError(t('welcome.formSendError')); }
@@ -617,6 +622,15 @@ const Welcome = () => {
               </div>
             ) : (
               <form onSubmit={handleFormSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                <input
+                  type="text"
+                  name="website"
+                  value={honeypot}
+                  onChange={e => setHoneypot(e.target.value)}
+                  autoComplete="off"
+                  tabIndex={-1}
+                  style={{ position: 'absolute', left: '-9999px', opacity: 0, height: 0, width: 0 }}
+                />
                 {[
                   { label: t('welcome.formName'), key: 'name', placeholder: t('welcome.formNamePlaceholder'), type: 'text' },
                   { label: t('welcome.formPhone'), key: 'phone', placeholder: '+380 __ ___ __ __', type: 'tel' },
