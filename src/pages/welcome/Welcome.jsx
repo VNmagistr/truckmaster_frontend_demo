@@ -277,8 +277,8 @@ const Welcome = () => {
         body: JSON.stringify(form),
       });
       if (res.ok) { setFormState('success'); setForm({ name: '', phone: '', message: '' }); }
-      else { setFormState('error'); setFormError('Помилка надсилання. Спробуйте зателефонувати.'); }
-    } catch { setFormState('error'); setFormError("Помилка з'єднання. Спробуйте зателефонувати."); }
+      else { setFormState('error'); setFormError(t('welcome.formSendError')); }
+    } catch { setFormState('error'); setFormError(t('welcome.formConnectionError')); }
   };
 
   const NAV = [['why', t('welcome.navAbout')], ['services', t('welcome.navServices')], ['gallery', t('welcome.navGallery')], ['faq', t('welcome.navFaq')], ['contacts', t('welcome.navContacts')]];

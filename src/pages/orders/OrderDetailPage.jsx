@@ -142,7 +142,7 @@ function OrderDetailPage() {
         setWorksList(worksData.results || worksData || []);
         setEmployeesList(ensureArray(empResp));
     } catch (e) {
-        message.error('Не вдалося завантажити довідники');
+        message.error(t('orderDetail.loadDirectoriesError'));
     }
   };
 
@@ -243,7 +243,7 @@ function OrderDetailPage() {
 
   const handleOpenKitModal = async () => {
     const truckId = order?.truck?.id || order?.truck;
-    if (!truckId) return message.warning('Авто не визначено');
+    if (!truckId) return message.warning(t('orderDetail.truckNotDefined'));
     setKitLoading(true);
     setIsKitModalOpen(true);
     try {
@@ -266,7 +266,7 @@ function OrderDetailPage() {
       const data = res.data || res;
       setStatusHistory(Array.isArray(data) ? data : (data.results || []));
     } catch (error) {
-      message.error('Не вдалося завантажити історію статусів');
+      message.error(t('orderDetail.statusHistoryLoadError'));
     } finally {
       setStatusHistoryLoading(false);
     }
@@ -903,7 +903,7 @@ function OrderDetailPage() {
                       cover={
                         <Image
                           src={photo.image}
-                          alt={photo.description || 'Фото ремонту'}
+                          alt={photo.description || t('orderDetail.repairPhotoAlt')}
                           style={{ height: 140, objectFit: 'cover' }}
                         />
                       }
@@ -974,7 +974,7 @@ function OrderDetailPage() {
       {isDeleted && (
         <Alert 
           message={t('orders.markedForDeletionBanner')} 
-          description={`Причина: ${order.deletion_reason || 'Не вказано'}. Позначив: ${order.marked_for_deletion_by_name || 'Невідомо'}`}
+          description={`${t('orders.deletionReason')} ${order.deletion_reason || t('orderDetail.notSpecified')}. ${t('orders.deletionMarkedBy')} ${order.marked_for_deletion_by_name || t('orderDetail.unknown')}`}
           type="error" 
           showIcon 
           style={{ marginBottom: 16 }}
@@ -1366,7 +1366,7 @@ function OrderDetailPage() {
                     onChange={onPartSelect}
                     options={safePartsList.map(p => ({
                         value: p.id,
-                        label: `${p.sku_code || ''} — ${p.name} (${p.current_stock || 0} ${p.unit || 'шт'})`,
+                        label: `${p.sku_code || ''} — ${p.name} (${p.current_stock || 0} ${p.unit || t('common.pcsShort')})`,
                     }))}
                 />
             </Form.Item>

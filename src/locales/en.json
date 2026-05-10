@@ -655,7 +655,13 @@
     "uploadCount": "Upload {{count}} photos",
     "maintenanceSetApplyBtn": "Apply",
     "maintenanceTOSet": "Maintenance (set)",
-    "orderLabel": "Order"
+    "orderLabel": "Order",
+    "loadDirectoriesError": "Failed to load directories",
+    "truckNotDefined": "Vehicle not defined",
+    "statusHistoryLoadError": "Failed to load status history",
+    "repairPhotoAlt": "Repair photo",
+    "notSpecified": "Not specified",
+    "unknown": "Unknown"
   },
 
   "orderForm": {
@@ -1463,7 +1469,9 @@
     "faq3Label": "How can I find out the repair cost?",
     "faq3Content": "Call us or leave a request on the website — we will consult you for free and provide an estimated cost. The exact price is determined after diagnostics.",
     "faq4Label": "Can I book in advance?",
-    "faq4Content": "Yes, and we recommend it. Book by phone or through the website form — this will allow us to prepare and save your time."
+    "faq4Content": "Yes, and we recommend it. Book by phone or through the website form — this will allow us to prepare and save your time.",
+    "formSendError": "Failed to send. Try calling us.",
+    "formConnectionError": "Connection error. Try calling us."
   },
 
   "lang": {
