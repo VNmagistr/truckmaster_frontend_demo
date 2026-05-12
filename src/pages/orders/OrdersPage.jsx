@@ -11,7 +11,7 @@ import {
   CameraOutlined,
   FileTextOutlined,
 } from '@ant-design/icons';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ordersAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
@@ -51,6 +51,9 @@ function OrdersPage() {
   const [editingClosedAtId, setEditingClosedAtId] = useState(null);
   const [editingClosedAtValue, setEditingClosedAtValue] = useState(null);
   const [savingClosedAtId, setSavingClosedAtId] = useState(null);
+
+  const [staleOrders, setStaleOrders] = useState([]);
+  const [staleModalOpen, setStaleModalOpen] = useState(false);
 
   const navigate = useNavigate();
 
@@ -157,7 +160,21 @@ function OrdersPage() {
     ordersAPI.getStats()
       .then(res => setStats(res.data || res))
       .catch(() => {});
+    fetchStaleOrders();
   }, []);
+
+  const fetchStaleOrders = async () => {
+    try {
+      const res = await ordersAPI.getStaleInProgress();
+      const data = res.data || res;
+      if (data.length > 0) {
+        setStaleOrders(data);
+        setStaleModalOpen(true);
+      }
+    } catch {
+      // silent
+    }
+  };
 
   // Debounce для пошуку
   useEffect(() => {
@@ -682,6 +699,61 @@ function OrdersPage() {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        open={staleModalOpen}
+        onCancel={() => setStaleModalOpen(false)}
+        onOk={() => setStaleModalOpen(false)}
+        okText={t('common.understood')}
+        cancelButtonProps={{ style: { display: 'none' } }}
+        width={560}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ExclamationCircleOutlined style={{ color: '#faad14', fontSize: 22 }} />
+            <span>{t('dashboard.staleOrdersTitle')}</span>
+          </div>
+        }
+      >
+        <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
+          {t('dashboard.staleOrdersDesc')}
+        </Typography.Text>
+        <Table
+          dataSource={staleOrders}
+          rowKey="id"
+          pagination={false}
+          size="small"
+          columns={[
+            {
+              title: t('dashboard.staleOrderNumber'),
+              dataIndex: 'order_number',
+              key: 'order_number',
+              render: (text, record) => (
+                <Link to={`/orders/${record.id}`} style={{ color: '#1a1a1a', fontWeight: 600 }}>
+                  {text || `#${record.id}`}
+                </Link>
+              ),
+            },
+            {
+              title: t('common.client'),
+              dataIndex: 'client_name',
+              key: 'client_name',
+              render: (v) => v || '—',
+            },
+            {
+              title: t('common.truck'),
+              dataIndex: 'truck_plate',
+              key: 'truck_plate',
+              render: (v) => v || '—',
+            },
+            {
+              title: t('dashboard.staleInProgressSince'),
+              dataIndex: 'in_progress_since',
+              key: 'in_progress_since',
+              render: (v) => v ? dayjs(v).format('DD.MM.YYYY') : '—',
+            },
+          ]}
+        />
       </Modal>
 
     </div>

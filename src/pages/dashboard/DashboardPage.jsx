@@ -52,13 +52,10 @@ function DashboardPage() {
     mileageToday: null,
   });
   const [recentOrders, setRecentOrders] = useState([]);
-  const [staleOrders, setStaleOrders] = useState([]);
-  const [staleModalOpen, setStaleModalOpen] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchDashboardData();
-    fetchStaleOrders();
   }, []);
 
   const fetchDashboardData = async () => {
@@ -97,21 +94,6 @@ function DashboardPage() {
     }
   };
 
-  const fetchStaleOrders = async () => {
-    try {
-      const res = await ordersAPI.getStaleInProgress();
-      const data = res.data || res;
-      if (data.length > 0) {
-        setStaleOrders(data);
-        const dismissed = sessionStorage.getItem('stale_orders_dismissed');
-        if (!dismissed) {
-          setStaleModalOpen(true);
-        }
-      }
-    } catch {
-      // silent
-    }
-  };
 
   const recentOrdersColumns = [
     {
@@ -207,67 +189,6 @@ function DashboardPage() {
 
   if (loading) return <LoadingSpinner />;
 
-  const handleStaleModalClose = () => {
-    sessionStorage.setItem('stale_orders_dismissed', '1');
-    setStaleModalOpen(false);
-  };
-
-  const staleOrdersModal = (
-    <Modal
-      open={staleModalOpen}
-      onCancel={handleStaleModalClose}
-      onOk={handleStaleModalClose}
-      okText={t('common.understood')}
-      cancelButtonProps={{ style: { display: 'none' } }}
-      width={560}
-      title={
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <ExclamationCircleOutlined style={{ color: '#faad14', fontSize: 22 }} />
-          <span>{t('dashboard.staleOrdersTitle')}</span>
-        </div>
-      }
-    >
-      <Typography.Text type="secondary" style={{ display: 'block', marginBottom: 16 }}>
-        {t('dashboard.staleOrdersDesc')}
-      </Typography.Text>
-      <Table
-        dataSource={staleOrders}
-        rowKey="id"
-        pagination={false}
-        size="small"
-        columns={[
-          {
-            title: t('dashboard.staleOrderNumber'),
-            dataIndex: 'order_number',
-            key: 'order_number',
-            render: (text, record) => (
-              <Link to={`/orders/${record.id}`} style={{ color: INK, fontWeight: 600 }}>
-                {text || `#${record.id}`}
-              </Link>
-            ),
-          },
-          {
-            title: t('common.client'),
-            dataIndex: 'client_name',
-            key: 'client_name',
-            render: (v) => v || '—',
-          },
-          {
-            title: t('common.truck'),
-            dataIndex: 'truck_plate',
-            key: 'truck_plate',
-            render: (v) => v || '—',
-          },
-          {
-            title: t('dashboard.staleInProgressSince'),
-            dataIndex: 'in_progress_since',
-            key: 'in_progress_since',
-            render: (v) => v ? dayjs(v).format('DD.MM.YYYY') : '—',
-          },
-        ]}
-      />
-    </Modal>
-  );
 
   const setupWizardModal = (
     <Modal
@@ -355,7 +276,6 @@ function DashboardPage() {
   if (isFirstRun) {
     return (
       <div>
-        {staleOrdersModal}
         {setupWizardModal}
         <PageHeader title={t('dashboard.title')} />
         <Card
