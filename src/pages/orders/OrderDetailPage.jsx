@@ -68,6 +68,11 @@ function OrderDetailPage() {
   const [statusHistory, setStatusHistory] = useState([]);
   const [statusHistoryLoading, setStatusHistoryLoading] = useState(false);
 
+  const [suggestParts, setSuggestParts] = useState([]);
+  const [isSuggestModalOpen, setIsSuggestModalOpen] = useState(false);
+  const [suggestWorkId, setSuggestWorkId] = useState(null);
+  const [suggestLoading, setSuggestLoading] = useState(false);
+
   const [pdfLoading, setPdfLoading] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
@@ -367,7 +372,7 @@ function OrderDetailPage() {
       const selectedWork = safeWorksList.find(w => w.id === values.work);
       const defaultName = selectedWork?.name || '';
       const customName = (values.custom_name || '').trim();
-      await ordersAPI.addWork(id, {
+      const res = await ordersAPI.addWork(id, {
         service_order: id,
         work: values.work,
         custom_name: customName && customName !== defaultName ? customName : '',
@@ -377,7 +382,19 @@ function OrderDetailPage() {
       message.success(t('orderDetail.workAdded'));
       setIsWorkModalOpen(false);
       formWork.resetFields();
-      initPage();
+      await initPage();
+
+      const newWorkId = res.data?.id;
+      if (newWorkId) {
+        try {
+          const suggestRes = await ordersAPI.suggestParts(newWorkId);
+          if (suggestRes.data?.length > 0) {
+            setSuggestParts(suggestRes.data);
+            setSuggestWorkId(newWorkId);
+            setIsSuggestModalOpen(true);
+          }
+        } catch { /* ignore */ }
+      }
     } catch (error) {
        console.error('addWork error response:', error.response?.data);
        const data = error.response?.data;
@@ -385,6 +402,30 @@ function OrderDetailPage() {
        message.error(errorMsg);
     } finally {
       setModalLoading(false);
+    }
+  };
+
+  const handleApplySuggestedParts = async () => {
+    if (!suggestWorkId || suggestParts.length === 0) return;
+    setSuggestLoading(true);
+    try {
+      for (const sp of suggestParts) {
+        await ordersAPI.addPartToWork(suggestWorkId, {
+          part: sp.part_id,
+          quantity: sp.quantity,
+          unit_price: sp.unit_price,
+        });
+      }
+      message.success(t('orderDetail.suggestedPartsAdded', { count: suggestParts.length }));
+      setIsSuggestModalOpen(false);
+      setSuggestParts([]);
+      setSuggestWorkId(null);
+      initPage();
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || error.response?.data?.detail || t('orderDetail.partWriteOffError');
+      message.error(errorMsg);
+    } finally {
+      setSuggestLoading(false);
     }
   };
 
@@ -1617,6 +1658,51 @@ function OrderDetailPage() {
         >
           {photoFileList.length > 1 ? t('orderDetail.uploadCount', { count: photoFileList.length }) : t('orderDetail.upload')}
         </Button>
+      </Modal>
+
+      {/* Модалка підказки запчастин з попереднього наряду */}
+      <Modal
+        title={t('orderDetail.suggestPartsTitle')}
+        open={isSuggestModalOpen}
+        onCancel={() => { setIsSuggestModalOpen(false); setSuggestParts([]); setSuggestWorkId(null); }}
+        footer={[
+          <Button key="skip" onClick={() => { setIsSuggestModalOpen(false); setSuggestParts([]); setSuggestWorkId(null); }}>
+            {t('orderDetail.suggestSkip')}
+          </Button>,
+          <Button key="apply" type="primary" loading={suggestLoading} onClick={handleApplySuggestedParts}>
+            {t('orderDetail.suggestApply')}
+          </Button>,
+        ]}
+        destroyOnClose
+        width={600}
+      >
+        {suggestParts.length > 0 && (
+          <>
+            <Alert
+              message={t('orderDetail.suggestInfo', { orderNumber: suggestParts[0].order_number })}
+              type="info"
+              showIcon
+              style={{ marginBottom: 16 }}
+            />
+            <Table
+              dataSource={suggestParts.map((sp, i) => ({ ...sp, key: i }))}
+              pagination={false}
+              size="small"
+              columns={[
+                { title: t('orderDetail.partName'), dataIndex: 'part_name', key: 'part_name' },
+                { title: t('orderDetail.kitSku'), dataIndex: 'part_sku', key: 'part_sku', width: 120 },
+                { title: t('orderDetail.kitQty'), dataIndex: 'quantity', key: 'quantity', width: 70 },
+                {
+                  title: t('orderDetail.partPrice'),
+                  dataIndex: 'unit_price',
+                  key: 'unit_price',
+                  width: 100,
+                  render: (v) => v ? formatMoney(v) : '—',
+                },
+              ]}
+            />
+          </>
+        )}
       </Modal>
 
       <BarcodeScanner

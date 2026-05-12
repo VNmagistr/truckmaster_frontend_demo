@@ -175,6 +175,7 @@ export const ordersAPI = {
   updateWork: (workId, data) => instance.patch(`/service-works/${workId}/`, data),
   removeWork: (workId) => instance.delete(`/service-works/${workId}/`),
 
+  suggestParts: (workId) => instance.get(`/service-works/${workId}/suggest-parts/`),
   addPartToWork: (workId, data) => instance.post(`/service-works/${workId}/add-part/`, data),
   removePartFromWork: (workId, partId) => instance.delete(`/service-works/${workId}/remove-part/${partId}/`),
   applyMaintenanceSet: (orderId, data) => instance.post(`/orders/${orderId}/apply_maintenance_set/`, data),
