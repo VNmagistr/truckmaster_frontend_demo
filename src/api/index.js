@@ -88,8 +88,11 @@ instance.interceptors.response.use(
           refresh: refreshToken,
         });
 
-        const { access } = response.data;
+        const { access, refresh: newRefresh } = response.data;
         useAuthStore.getState().updateAccessToken(access);
+        if (newRefresh) {
+          localStorage.setItem('refresh_token', newRefresh);
+        }
         processQueue(null, access);
 
         originalRequest.headers.Authorization = `Bearer ${access}`;
