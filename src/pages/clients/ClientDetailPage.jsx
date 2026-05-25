@@ -82,9 +82,15 @@ function ClientDetailPage() {
     },
     {
       title: t('trucks.euroStandard'),
-      dataIndex: 'euro_standard',
+      dataIndex: 'euro_standard_display',
       key: 'euro',
-      render: (euro) => euro ? <Tag>{euro}</Tag> : '-',
+      render: (text) => text ? <Tag>{text}</Tag> : '-',
+    },
+    {
+      title: t('trucks.transmissionType'),
+      dataIndex: 'transmission_type_display',
+      key: 'transmission',
+      render: (text) => text ? <Tag color="purple">{text}</Tag> : '-',
     },
   ];
 
