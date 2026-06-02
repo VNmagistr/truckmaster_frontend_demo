@@ -9,7 +9,6 @@ const baseURL = import.meta.env.VITE_API_URL;
 
 const instance = axios.create({
   baseURL,
-  headers: { 'Content-Type': 'application/json' },
   timeout: 30000,
 });
 
@@ -27,15 +26,15 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Request interceptor — add auth token, fix multipart uploads
+// Request interceptor — add auth token, set Content-Type
 instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
-    if (config.data instanceof FormData) {
-      delete config.headers['Content-Type'];
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
     }
     return config;
   },
