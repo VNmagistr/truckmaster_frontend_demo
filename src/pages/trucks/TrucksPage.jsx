@@ -105,6 +105,12 @@ function TrucksPage() {
       render: (text) => text || '-',
     },
     {
+      title: t('trucks.transmissionType'),
+      dataIndex: 'transmission_type_display',
+      key: 'transmission',
+      render: (text) => text || '-',
+    },
+    {
       title: t('trucks.lastSevenVin'),
       dataIndex: 'last_seven_vin',
       key: 'vin',

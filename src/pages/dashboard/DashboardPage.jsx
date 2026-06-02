@@ -371,7 +371,6 @@ function DashboardPage() {
 
   return (
     <div>
-      {staleOrdersModal}
       {setupWizardModal}
       <PageHeader title={t('dashboard.title')} />
 
