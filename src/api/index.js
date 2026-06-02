@@ -191,9 +191,11 @@ export const ordersAPI = {
 export const repairPhotosAPI = {
   upload: (formData) => instance.post('/repair-photos/', formData, {
     timeout: 300000,
+    headers: { 'Content-Type': undefined },
   }),
   bulkUpload: (formData) => instance.post('/repair-photos/bulk_upload/', formData, {
     timeout: 300000,
+    headers: { 'Content-Type': undefined },
   }),
   delete: (id) => instance.delete(`/repair-photos/${id}/`),
 };
