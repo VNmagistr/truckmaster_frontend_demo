@@ -212,8 +212,15 @@ function OrderDetailPage() {
         const response = await ordersAPI.getById(id);
         setOrder(response.data || response);
       } catch { /* ignore refresh error */ }
-    } catch {
-      message.error(t('orderDetail.photoUploadError'));
+    } catch (err) {
+      const detail = err?.response?.data?.detail || err?.response?.data?.error;
+      if (err?.code === 'ECONNABORTED') {
+        message.error(t('orderDetail.photoUploadTimeout', 'Час завантаження вичерпано. Спробуйте менше фото або краще з\'єднання.'));
+      } else if (detail) {
+        message.error(detail);
+      } else {
+        message.error(t('orderDetail.photoUploadError'));
+      }
     } finally {
       setPhotoModalLoading(false);
     }
