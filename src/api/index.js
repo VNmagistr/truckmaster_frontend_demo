@@ -27,12 +27,15 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Request interceptor — add auth token
+// Request interceptor — add auth token, fix multipart uploads
 instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
     }
     return config;
   },
@@ -191,11 +194,9 @@ export const ordersAPI = {
 export const repairPhotosAPI = {
   upload: (formData) => instance.post('/repair-photos/', formData, {
     timeout: 300000,
-    headers: { 'Content-Type': undefined },
   }),
   bulkUpload: (formData) => instance.post('/repair-photos/bulk_upload/', formData, {
     timeout: 300000,
-    headers: { 'Content-Type': undefined },
   }),
   delete: (id) => instance.delete(`/repair-photos/${id}/`),
 };
