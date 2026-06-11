@@ -486,11 +486,12 @@ function OrderDetailPage() {
     const hours = parseFloat(record.hours_spent) || 1;
     const workId = record.work?.id || record.work;
     const catalogName = record.work?.name || safeWorksList.find(w => w.id === workId)?.name || '';
+    const effectiveName = record.custom_name || catalogName || record.display_name || record.description || '';
     formEditWork.setFieldsValue({
-      work: workId,
+      work: workId || undefined,
       mechanic: record.mechanic?.id || record.mechanic,
       hours_spent: hours,
-      custom_name: record.custom_name || catalogName,
+      custom_name: effectiveName,
       description: record.description || ''
     });
     // Живий розрахунок при відкритті
@@ -566,7 +567,11 @@ function OrderDetailPage() {
   const handleApplyMaintenanceSet = async (values) => {
     setMaintenanceModalLoading(true);
     try {
-      await ordersAPI.applyMaintenanceSet(id, { rule_id: values.rule_id });
+      await ordersAPI.applyMaintenanceSet(id, {
+        rule_id: values.rule_id,
+        work: values.work || null,
+        mechanic: values.mechanic || null,
+      });
       message.success(t('orderDetail.maintenanceSetApplied'));
       setIsMaintenanceModalOpen(false);
       formMaintenance.resetFields();
@@ -1521,9 +1526,10 @@ function OrderDetailPage() {
         destroyOnClose
       >
         <Form form={formEditWork} layout="vertical" onFinish={handleSaveEditWork}>
-            <Form.Item name="work" label={t('orderDetail.serviceFromCatalog')} rules={[{ required: true, message: t('orderDetail.selectService') }]}>
+            <Form.Item name="work" label={t('orderDetail.serviceFromCatalog')}>
                  <Select
                     showSearch
+                    allowClear
                     placeholder={t('orderDetail.selectService')}
                     optionFilterProp="label"
                     options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
@@ -1606,6 +1612,28 @@ function OrderDetailPage() {
                 </Select.Option>
               ))}
             </Select>
+          </Form.Item>
+          <Form.Item
+            name="work"
+            label={t('orderDetail.serviceFromCatalog')}
+            tooltip={t('orderDetail.maintenanceWorkHint')}
+          >
+            <Select
+              showSearch
+              allowClear
+              placeholder={t('orderDetail.selectService')}
+              optionFilterProp="label"
+              options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
+            />
+          </Form.Item>
+          <Form.Item name="mechanic" label={t('orderDetail.mechanic')}>
+            <Select
+              showSearch
+              allowClear
+              placeholder={t('orderDetail.selectMechanic')}
+              optionFilterProp="label"
+              options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))}
+            />
           </Form.Item>
           <Form.Item>
             <Button

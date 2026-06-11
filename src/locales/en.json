@@ -659,6 +659,7 @@
     "upload": "Upload",
     "uploadCount": "Upload {{count}} photos",
     "maintenanceSetApplyBtn": "Apply",
+    "maintenanceWorkHint": "Select a service from catalog for correct mileage countdown to next maintenance",
     "maintenanceTOSet": "Maintenance (set)",
     "orderLabel": "Order",
     "loadDirectoriesError": "Failed to load directories",

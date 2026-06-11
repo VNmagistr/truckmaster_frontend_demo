@@ -659,6 +659,7 @@
     "upload": "Завантажити",
     "uploadCount": "Завантажити {{count}} фото",
     "maintenanceSetApplyBtn": "Застосувати",
+    "maintenanceWorkHint": "Оберіть послугу з довідника для коректного відліку пробігу до наступного ТО",
     "maintenanceTOSet": "ТО (набір)",
     "orderLabel": "Замовлення",
     "loadDirectoriesError": "Не вдалося завантажити довідники",
