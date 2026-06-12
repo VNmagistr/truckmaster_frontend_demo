@@ -63,8 +63,8 @@ function TrucksPage() {
       const data = response.data || response;
       setTrucks(data.results || []);
       setPagination(p => ({ ...p, current: page, total: data.count || 0 }));
-    } catch {
-      message.error(t('trucks.loadError'));
+    } catch (err) {
+      if (!err?.isSessionExpired) message.error(t('trucks.loadError'));
     } finally {
       setLoading(false);
     }

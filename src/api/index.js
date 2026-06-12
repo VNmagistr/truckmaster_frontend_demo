@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { notification } from 'antd';
+import { notification, message } from 'antd';
 import useAuthStore from '../store/authStore';
 import i18n from '../i18n';
 
@@ -14,7 +14,19 @@ const instance = axios.create({
 });
 
 let isRefreshing = false;
+let isLoggingOut = false;
 let failedQueue = [];
+
+const SESSION_EXPIRED_ERROR = new Error('SESSION_EXPIRED');
+SESSION_EXPIRED_ERROR.isSessionExpired = true;
+
+const doLogout = () => {
+  if (isLoggingOut) return;
+  isLoggingOut = true;
+  useAuthStore.getState().logout();
+  message.warning(i18n.t('errors.sessionExpired', { defaultValue: 'Сесія закінчилась. Увійдіть заново.' }));
+  setTimeout(() => { window.location.href = '/login'; }, 300);
+};
 
 const processQueue = (error, token = null) => {
   failedQueue.forEach(prom => {
@@ -30,6 +42,12 @@ const processQueue = (error, token = null) => {
 // Request interceptor — add auth token
 instance.interceptors.request.use(
   (config) => {
+    if (isLoggingOut) {
+      const controller = new AbortController();
+      controller.abort();
+      config.signal = controller.signal;
+      return config;
+    }
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -44,6 +62,10 @@ instance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+
+    if (isLoggingOut) {
+      return Promise.reject(SESSION_EXPIRED_ERROR);
+    }
 
     // Network error (server unavailable)
     if (!error.response) {
@@ -78,9 +100,9 @@ instance.interceptors.response.use(
       const refreshToken = localStorage.getItem('refresh_token');
 
       if (!refreshToken) {
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
-        return Promise.reject(error);
+        processQueue(SESSION_EXPIRED_ERROR, null);
+        doLogout();
+        return Promise.reject(SESSION_EXPIRED_ERROR);
       }
 
       try {
@@ -98,10 +120,9 @@ instance.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${access}`;
         return instance(originalRequest);
       } catch (refreshError) {
-        processQueue(refreshError, null);
-        useAuthStore.getState().logout();
-        window.location.href = '/login';
-        return Promise.reject(refreshError);
+        processQueue(SESSION_EXPIRED_ERROR, null);
+        doLogout();
+        return Promise.reject(SESSION_EXPIRED_ERROR);
       } finally {
         isRefreshing = false;
       }

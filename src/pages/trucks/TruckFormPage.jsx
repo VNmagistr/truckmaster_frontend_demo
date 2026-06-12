@@ -45,7 +45,7 @@ function TruckFormPage() {
           form.setFieldsValue({ license_plate: prefillPlate.toUpperCase() });
         }
       } catch (error) {
-        message.error(t('common.initError'));
+        if (!error?.isSessionExpired) message.error(t('common.initError'));
       } finally {
         setLoading(false);
       }
@@ -128,8 +128,10 @@ function TruckFormPage() {
       });
 
     } catch (error) {
-      message.error(t('trucks.loadError'));
-      navigate('/trucks');
+      if (!error?.isSessionExpired) {
+        message.error(t('trucks.loadError'));
+        navigate('/trucks');
+      }
     }
   };
 
