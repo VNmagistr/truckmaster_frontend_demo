@@ -96,6 +96,7 @@
 
   "errors": {
     "serverUnavailable": "Server unavailable. Check your network connection.",
+    "sessionExpired": "Session expired. Please log in again.",
     "moduleUnavailable": "Module unavailable",
     "moduleUnavailableDesc": "\"{{label}}\" is not available in your plan. Contact administrator for access.",
     "moduleUnavailableBanner": "Module \"{{name}}\" is not connected to your plan. Contact administrator for access.",
