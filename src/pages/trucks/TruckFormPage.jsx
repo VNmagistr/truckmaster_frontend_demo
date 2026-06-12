@@ -129,7 +129,8 @@ function TruckFormPage() {
 
     } catch (error) {
       if (!error?.isSessionExpired) {
-        message.error(t('trucks.loadError'));
+        console.error('fetchTruck failed:', error, error?.response?.status, error?.response?.data);
+        message.error(`${t('trucks.loadError')}: ${error?.response?.status || error?.message || 'unknown'}`);
         navigate('/trucks');
       }
     }
