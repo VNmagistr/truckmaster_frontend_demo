@@ -99,7 +99,7 @@ function TruckFormPage() {
       const data = response.data || response;
       
       // Визначаємо ID власника
-      const ownerId = typeof data.client === 'object' ? data.client.id : data.client;
+      const ownerId = data.client && typeof data.client === 'object' ? data.client.id : data.client;
 
       // --- ГОЛОВНЕ ВИПРАВЛЕННЯ ---
       // Перевіряємо, чи є власник у вже завантаженому списку
