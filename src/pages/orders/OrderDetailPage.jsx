@@ -41,6 +41,7 @@ function OrderDetailPage() {
   const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
   const [maintenanceRules, setMaintenanceRules] = useState([]);
   const [maintenanceModalLoading, setMaintenanceModalLoading] = useState(false);
+  const [selectedMaintenanceRule, setSelectedMaintenanceRule] = useState(null);
   const [formMaintenance] = Form.useForm();
 
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
@@ -575,6 +576,7 @@ function OrderDetailPage() {
       message.success(t('orderDetail.maintenanceSetApplied'));
       setIsMaintenanceModalOpen(false);
       formMaintenance.resetFields();
+      setSelectedMaintenanceRule(null);
       initPage();
     } catch (error) {
       const detail = error.response?.data?.detail || t('orderDetail.maintenanceSetError');
@@ -1591,7 +1593,7 @@ function OrderDetailPage() {
       <Modal
         title={t('orderDetail.maintenanceSetModal')}
         open={isMaintenanceModalOpen}
-        onCancel={() => { setIsMaintenanceModalOpen(false); formMaintenance.resetFields(); }}
+        onCancel={() => { setIsMaintenanceModalOpen(false); formMaintenance.resetFields(); setSelectedMaintenanceRule(null); }}
         footer={null}
         destroyOnClose
       >
@@ -1605,6 +1607,15 @@ function OrderDetailPage() {
               placeholder={t('orderDetail.selectMaintenanceRule')}
               loading={maintenanceModalLoading}
               notFoundContent={t('orderDetail.noSetsAvailable')}
+              onChange={(ruleId) => {
+                const rule = maintenanceRules.find(r => r.id === ruleId);
+                setSelectedMaintenanceRule(rule || null);
+                if (rule?.work) {
+                  formMaintenance.setFieldsValue({ work: rule.work });
+                } else {
+                  formMaintenance.setFieldsValue({ work: undefined });
+                }
+              }}
             >
               {maintenanceRules.map(r => (
                 <Select.Option key={r.id} value={r.id}>
@@ -1613,19 +1624,26 @@ function OrderDetailPage() {
               ))}
             </Select>
           </Form.Item>
-          <Form.Item
-            name="work"
-            label={t('orderDetail.serviceFromCatalog')}
-            tooltip={t('orderDetail.maintenanceWorkHint')}
-          >
-            <Select
-              showSearch
-              allowClear
-              placeholder={t('orderDetail.selectService')}
-              optionFilterProp="label"
-              options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
-            />
-          </Form.Item>
+          {selectedMaintenanceRule?.work_name ? (
+            <Form.Item label={t('orderDetail.serviceFromCatalog')}>
+              <Input value={selectedMaintenanceRule.work_name} disabled />
+              <Form.Item name="work" hidden noStyle><Input /></Form.Item>
+            </Form.Item>
+          ) : (
+            <Form.Item
+              name="work"
+              label={t('orderDetail.serviceFromCatalog')}
+              tooltip={t('orderDetail.maintenanceWorkHint')}
+            >
+              <Select
+                showSearch
+                allowClear
+                placeholder={t('orderDetail.selectService')}
+                optionFilterProp="label"
+                options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
+              />
+            </Form.Item>
+          )}
           <Form.Item name="mechanic" label={t('orderDetail.mechanic')}>
             <Select
               showSearch
