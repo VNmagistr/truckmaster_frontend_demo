@@ -9,7 +9,6 @@ const baseURL = import.meta.env.VITE_API_URL;
 
 const instance = axios.create({
   baseURL,
-  headers: { 'Content-Type': 'application/json' },
   timeout: 30000,
 });
 
@@ -39,7 +38,7 @@ const processQueue = (error, token = null) => {
   failedQueue = [];
 };
 
-// Request interceptor — add auth token
+// Request interceptor — add auth token, set Content-Type
 instance.interceptors.request.use(
   (config) => {
     if (isLoggingOut) {
@@ -51,6 +50,9 @@ instance.interceptors.request.use(
     const token = localStorage.getItem('access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    if (!(config.data instanceof FormData)) {
+      config.headers['Content-Type'] = 'application/json';
     }
     return config;
   },
@@ -211,10 +213,10 @@ export const ordersAPI = {
 
 export const repairPhotosAPI = {
   upload: (formData) => instance.post('/repair-photos/', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 300000,
   }),
   bulkUpload: (formData) => instance.post('/repair-photos/bulk_upload/', formData, {
-    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 300000,
   }),
   delete: (id) => instance.delete(`/repair-photos/${id}/`),
 };
