@@ -577,7 +577,6 @@ function OrderDetailPage() {
     try {
       await ordersAPI.applyMaintenanceSet(id, {
         rule_id: values.rule_id,
-        work: values.work || null,
         mechanic: values.mechanic || null,
       });
       message.success(t('orderDetail.maintenanceSetApplied'));
@@ -1617,11 +1616,6 @@ function OrderDetailPage() {
               onChange={(ruleId) => {
                 const rule = maintenanceRules.find(r => r.id === ruleId);
                 setSelectedMaintenanceRule(rule || null);
-                if (rule?.work) {
-                  formMaintenance.setFieldsValue({ work: rule.work });
-                } else {
-                  formMaintenance.setFieldsValue({ work: undefined });
-                }
               }}
             >
               {maintenanceRules.map(r => (
@@ -1631,24 +1625,9 @@ function OrderDetailPage() {
               ))}
             </Select>
           </Form.Item>
-          {selectedMaintenanceRule?.work_name ? (
+          {selectedMaintenanceRule?.work_name && (
             <Form.Item label={t('orderDetail.serviceFromCatalog')}>
               <Input value={selectedMaintenanceRule.work_name} disabled />
-              <Form.Item name="work" hidden noStyle><Input /></Form.Item>
-            </Form.Item>
-          ) : (
-            <Form.Item
-              name="work"
-              label={t('orderDetail.serviceFromCatalog')}
-              tooltip={t('orderDetail.maintenanceWorkHint')}
-            >
-              <Select
-                showSearch
-                allowClear
-                placeholder={t('orderDetail.selectService')}
-                optionFilterProp="label"
-                options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
-              />
             </Form.Item>
           )}
           <Form.Item name="mechanic" label={t('orderDetail.mechanic')}>
