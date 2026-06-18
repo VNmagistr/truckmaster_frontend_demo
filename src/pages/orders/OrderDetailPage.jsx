@@ -64,6 +64,7 @@ function OrderDetailPage() {
   const [orderNumberValue, setOrderNumberValue] = useState('');
   const [savingOrderNumber, setSavingOrderNumber] = useState(false);
   const orderNumberInputRef = useRef(null);
+  const addWorkInFlight = useRef(false);
 
   const [activeTab, setActiveTab] = useState('works');
   const [statusHistory, setStatusHistory] = useState([]);
@@ -375,6 +376,8 @@ function OrderDetailPage() {
   };
 
   const handleAddWork = async (values) => {
+    if (addWorkInFlight.current) return;
+    addWorkInFlight.current = true;
     setModalLoading(true);
     try {
       const selectedWork = safeWorksList.find(w => w.id === values.work);
@@ -410,6 +413,7 @@ function OrderDetailPage() {
        message.error(errorMsg);
     } finally {
       setModalLoading(false);
+      addWorkInFlight.current = false;
     }
   };
 
