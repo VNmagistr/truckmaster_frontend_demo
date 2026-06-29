@@ -18,8 +18,8 @@ import {
 } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, BarChart, Bar, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip,
+  ResponsiveContainer, BarChart, Bar,
 } from 'recharts';
 import dayjs from 'dayjs';
 import { useTranslation } from 'react-i18next';
@@ -46,9 +46,9 @@ function DashboardPage() {
     totalOrders: 0,
     openOrders: 0,
     inProgressOrders: 0,
+    monthlyOrders: 0,
     monthlyRevenue: 0,
-    yearlyRevenue: 0,
-    revenueChart: [],
+    clientsChart: [],
     mileageToday: null,
   });
   const [recentOrders, setRecentOrders] = useState([]);
@@ -80,9 +80,9 @@ function DashboardPage() {
         totalOrders: dash.total_orders || ordersData.count || 0,
         openOrders: dash.open_orders || 0,
         inProgressOrders: dash.in_progress_orders || 0,
+        monthlyOrders: dash.monthly_orders || 0,
         monthlyRevenue: dash.monthly_revenue || 0,
-        yearlyRevenue: dash.yearly_revenue || 0,
-        revenueChart: dash.revenue_chart || [],
+        clientsChart: dash.clients_chart || [],
         mileageToday: botStatsRes ? (botStatsRes.data?.mileage_today ?? null) : null,
       });
 
@@ -429,6 +429,16 @@ function DashboardPage() {
         <Col xs={12} sm={8} lg={4}>
           <Card style={cardStyle}>
             <Statistic
+              title={t('dashboard.monthOrders')}
+              value={stats.monthlyOrders}
+              prefix={<FileTextOutlined />}
+              valueStyle={{ color: INK }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <Card style={cardStyle}>
+            <Statistic
               title={t('dashboard.monthRevenue')}
               value={stats.monthlyRevenue}
               prefix={<DollarOutlined />}
@@ -454,43 +464,29 @@ function DashboardPage() {
         )}
       </Row>
 
-      {/* Рядок 2: графік виторгу + останні замовлення */}
+      {/* Рядок 2: графік клієнтів + останні замовлення */}
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={16}>
           <Card
-            title={t('dashboard.revenue12months')}
+            title={t('dashboard.clients12months')}
             style={cardStyle}
-            extra={
-              <span style={{ color: '#3f8600', fontWeight: 600 }}>
-                {stats.yearlyRevenue.toLocaleString('uk-UA')} ₴ / {t('dashboard.year')}
-              </span>
-            }
           >
             <div style={{ height: 280 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={stats.revenueChart}>
-                  <defs>
-                    <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor={Y} stopOpacity={0.4} />
-                      <stop offset="95%" stopColor={Y} stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
+                <BarChart data={stats.clientsChart}>
                   <CartesianGrid stroke="#f5f5f5" />
                   <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                  <YAxis tick={{ fontSize: 12 }} allowDecimals={false} />
                   <Tooltip
-                    formatter={(v) => [`${v.toLocaleString('uk-UA')} ₴`, t('dashboard.revenue')]}
+                    formatter={(v) => [v, t('dashboard.clientsLabel')]}
                   />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    stroke={Y}
-                    strokeWidth={2}
-                    fill="url(#revenueGrad)"
-                    activeDot={{ r: 6, strokeWidth: 0 }}
+                  <Bar
+                    dataKey="clients"
+                    fill={Y}
+                    radius={[4, 4, 0, 0]}
                     animationDuration={800}
                   />
-                </AreaChart>
+                </BarChart>
               </ResponsiveContainer>
             </div>
           </Card>
