@@ -234,6 +234,7 @@
     "openOrders": "Open",
     "inProgress": "In Progress",
     "monthRevenue": "Revenue (month)",
+    "monthOrders": "Orders (month)",
     "botMileageToday": "Mileage via bot (today)",
     "reports": "reports",
     "clients12months": "Clients over last 12 months",

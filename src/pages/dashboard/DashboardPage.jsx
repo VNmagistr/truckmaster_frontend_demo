@@ -46,6 +46,7 @@ function DashboardPage() {
     totalOrders: 0,
     openOrders: 0,
     inProgressOrders: 0,
+    monthlyOrders: 0,
     monthlyRevenue: 0,
     clientsChart: [],
     mileageToday: null,
@@ -79,6 +80,7 @@ function DashboardPage() {
         totalOrders: dash.total_orders || ordersData.count || 0,
         openOrders: dash.open_orders || 0,
         inProgressOrders: dash.in_progress_orders || 0,
+        monthlyOrders: dash.monthly_orders || 0,
         monthlyRevenue: dash.monthly_revenue || 0,
         clientsChart: dash.clients_chart || [],
         mileageToday: botStatsRes ? (botStatsRes.data?.mileage_today ?? null) : null,
@@ -421,6 +423,16 @@ function DashboardPage() {
               value={stats.inProgressOrders}
               prefix={<CheckCircleOutlined />}
               valueStyle={{ color: '#1890ff' }}
+            />
+          </Card>
+        </Col>
+        <Col xs={12} sm={8} lg={4}>
+          <Card style={cardStyle}>
+            <Statistic
+              title={t('dashboard.monthOrders')}
+              value={stats.monthlyOrders}
+              prefix={<FileTextOutlined />}
+              valueStyle={{ color: INK }}
             />
           </Card>
         </Col>
