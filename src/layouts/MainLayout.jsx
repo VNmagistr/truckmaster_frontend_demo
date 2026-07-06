@@ -5,7 +5,7 @@ import {
   AppstoreOutlined, RobotOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   LogoutOutlined, SettingOutlined, MenuOutlined, PlusOutlined, CalendarOutlined,
   CameraOutlined, BellOutlined, FileDoneOutlined, DownloadOutlined,
-  ToolOutlined, GlobalOutlined,
+  ToolOutlined, GlobalOutlined, CloudServerOutlined,
 } from '@ant-design/icons';
 import PWAUpdatePrompt from '../components/PWAUpdatePrompt';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -101,6 +101,7 @@ function MainLayout() {
     { key: '/maintenance-templates', module: 'maintenance', icon: <ToolOutlined />, label: t('nav.templates') },
     { key: '/invoices',     module: 'invoices',    icon: <FileDoneOutlined />,  label: t('nav.invoices') },
     { key: '/alpr',         module: 'alpr',        icon: <CameraOutlined />,    label: t('nav.alpr') },
+    { key: '/backups',      module: null,          icon: <CloudServerOutlined />, label: t('nav.backups') },
   ];
 
   const menuItems = ALL_MENU_ITEMS
