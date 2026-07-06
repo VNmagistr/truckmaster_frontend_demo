@@ -1482,6 +1482,12 @@
     "formConnectionError": "Connection error. Try calling us."
   },
 
+  "staleOrders": {
+    "snooze1h": "Remind in 1 hour",
+    "snooze3h": "Remind in 3 hours",
+    "snooze1d": "Remind tomorrow"
+  },
+
   "backup": {
     "title": "Database Backups",
     "filename": "File",
