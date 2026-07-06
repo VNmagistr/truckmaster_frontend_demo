@@ -65,6 +65,9 @@ const MaintenanceTemplatesPage = lazy(() => import('./pages/maintenance/Template
 const InvoicesPage      = lazy(() => import('./pages/invoices/InvoicesPage'));
 const InvoiceDetailPage = lazy(() => import('./pages/invoices/InvoiceDetailPage'));
 
+// Settings
+const BackupPage = lazy(() => import('./pages/settings/BackupPage'));
+
 // Cabinet
 const CabinetLoginPage = lazy(() => import('./pages/cabinet/CabinetLoginPage'));
 const CabinetRegisterPage = lazy(() => import('./pages/cabinet/CabinetRegisterPage'));
@@ -152,6 +155,7 @@ function AppRoutes() {
         <Route path="/maintenance-templates" element={<MaintenanceTemplatesPage />} />
         <Route path="/invoices" element={<InvoicesPage />} />
         <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
+        <Route path="/backups" element={<BackupPage />} />
       </Route>
 
       {/* Cabinet — client portal */}

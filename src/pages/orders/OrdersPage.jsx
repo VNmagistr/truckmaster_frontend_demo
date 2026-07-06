@@ -165,6 +165,9 @@ function OrdersPage() {
 
   const fetchStaleOrders = async () => {
     try {
+      const snoozedUntil = localStorage.getItem('stale_orders_snoozed_until');
+      if (snoozedUntil && Date.now() < Number(snoozedUntil)) return;
+
       const res = await ordersAPI.getStaleInProgress();
       const data = res.data || res;
       if (data.length > 0) {
@@ -174,6 +177,11 @@ function OrdersPage() {
     } catch {
       // silent
     }
+  };
+
+  const handleSnooze = (hours) => {
+    localStorage.setItem('stale_orders_snoozed_until', String(Date.now() + hours * 3600000));
+    setStaleModalOpen(false);
   };
 
   // Debounce для пошуку
@@ -704,14 +712,29 @@ function OrdersPage() {
       <Modal
         open={staleModalOpen}
         onCancel={() => setStaleModalOpen(false)}
-        onOk={() => setStaleModalOpen(false)}
-        okText={t('common.understood')}
-        cancelButtonProps={{ style: { display: 'none' } }}
         width={560}
         title={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <ExclamationCircleOutlined style={{ color: '#faad14', fontSize: 22 }} />
             <span>{t('dashboard.staleOrdersTitle')}</span>
+          </div>
+        }
+        footer={
+          <div style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+            <Space size="small" wrap>
+              <Button size="small" onClick={() => handleSnooze(1)}>
+                {t('staleOrders.snooze1h')}
+              </Button>
+              <Button size="small" onClick={() => handleSnooze(3)}>
+                {t('staleOrders.snooze3h')}
+              </Button>
+              <Button size="small" onClick={() => handleSnooze(24)}>
+                {t('staleOrders.snooze1d')}
+              </Button>
+            </Space>
+            <Button type="primary" onClick={() => setStaleModalOpen(false)}>
+              {t('common.understood')}
+            </Button>
           </div>
         }
       >

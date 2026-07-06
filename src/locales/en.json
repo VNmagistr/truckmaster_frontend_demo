@@ -70,6 +70,7 @@
     "templates": "Maintenance Templates",
     "invoices": "Invoices",
     "alpr": "Vehicle Log",
+    "backups": "Backups",
     "addTooltip": "Add",
     "settings": "Settings",
     "logout": "Logout",
@@ -1479,6 +1480,38 @@
     "faq4Content": "Yes, and we recommend it. Book by phone or through the website form — this will allow us to prepare and save your time.",
     "formSendError": "Failed to send. Try calling us.",
     "formConnectionError": "Connection error. Try calling us."
+  },
+
+  "staleOrders": {
+    "snooze1h": "Remind in 1 hour",
+    "snooze3h": "Remind in 3 hours",
+    "snooze1d": "Remind tomorrow"
+  },
+
+  "backup": {
+    "title": "Database Backups",
+    "filename": "File",
+    "size": "Size",
+    "createdAt": "Created",
+    "createBackup": "Create Backup",
+    "download": "Download",
+    "restore": "Restore",
+    "restoreFromFile": "Restore from file",
+    "restoreBtn": "Yes, restore",
+    "restoreConfirmTitle": "Restore database?",
+    "restoreConfirmDesc": "ALL current data will be replaced with backup data. This action is irreversible. We recommend creating a backup of the current state first.",
+    "restoreUploadConfirmDesc": "ALL current data will be replaced with data from the uploaded file. This action is irreversible.",
+    "restoringTip": "Restoring database...",
+    "deleteConfirm": "Delete this backup?",
+    "noBackups": "No backups yet",
+    "loadError": "Failed to load backups",
+    "createSuccess": "Backup created",
+    "createError": "Failed to create backup",
+    "downloadError": "Failed to download backup",
+    "deleteSuccess": "Backup deleted",
+    "deleteError": "Failed to delete backup",
+    "restoreSuccess": "Database restored",
+    "restoreError": "Failed to restore database"
   },
 
   "lang": {

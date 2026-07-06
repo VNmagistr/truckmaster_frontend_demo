@@ -414,4 +414,20 @@ export const modulesAPI = {
   getAll: () => instance.get('/modules/'),
 };
 
+export const backupsAPI = {
+  getAll: () => instance.get('/backups/'),
+  create: () => instance.post('/backups/'),
+  download: (filename) => instance.get(`/backups/${filename}/download/`, { responseType: 'blob' }),
+  remove: (filename) => instance.delete(`/backups/${filename}/`),
+  restore: (filename) => instance.post('/backups/restore/', { filename }),
+  restoreFromFile: (file) => {
+    const fd = new FormData();
+    fd.append('file', file);
+    return instance.post('/backups/restore/', fd, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 300000,
+    });
+  },
+};
+
 export default instance;
