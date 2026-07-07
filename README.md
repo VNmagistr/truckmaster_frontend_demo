@@ -1,114 +1,114 @@
 # TruckMaster — Frontend
 
-React-додаток CRM для сервісного центру вантажних автомобілів Iveco («Італ Трак»).
+React CRM application for an Iveco heavy truck service center ("Ital Truck").
 
-## Стек
+## Stack
 
 - React 18 + Vite
-- Ant Design 5 (UI-компоненти)
-- Zustand (стейт-менеджмент)
+- Ant Design 5 (UI components)
+- Zustand (state management)
 - Axios (HTTP)
 - React Router v6
 
-## Запуск локально
+## Local Setup
 
 ```bash
 npm install
-cp .env.example .env   # вказати VITE_API_URL
+cp .env.example .env   # set VITE_API_URL
 npm run dev
 ```
 
-## Змінні середовища
+## Environment Variables
 
 ```env
 VITE_API_URL=https://api.ital-truck.com.ua
 ```
 
-## Структура
+## Structure
 
 ```
 src/
-├── api/           — axios-клієнти (staff + cabinet)
-├── assets/        — логотип, фото вантажівок
-├── components/    — загальні компоненти
+├── api/           — Axios clients (staff + cabinet)
+├── assets/        — Logo, truck images
+├── components/    — Shared components
 ├── layouts/       — MainLayout, AuthLayout, CabinetLayout
 ├── pages/
-│   ├── auth/      — логін staff
-│   ├── cabinet/   — особистий кабінет клієнта (8 сторінок)
-│   ├── clients/   — клієнти та автомобілі
-│   ├── dashboard/ — головна
-│   ├── inventory/ — склад запчастин
-│   ├── invoices/  — рахунки
-│   ├── orders/    — наряди-замовлення
-│   ├── appointments/ — записи на сервіс
-│   └── welcome/   — публічний лендінг
-└── store/         — Zustand-стори (auth, cabinetAuth, modules)
+│   ├── auth/      — Staff login
+│   ├── cabinet/   — Client personal portal (8 pages)
+│   ├── clients/   — Clients and vehicles
+│   ├── dashboard/ — Main dashboard
+│   ├── inventory/ — Spare parts warehouse
+│   ├── invoices/  — Invoices
+│   ├── orders/    — Service orders
+│   ├── appointments/ — Service bookings
+│   └── welcome/   — Public landing page
+└── store/         — Zustand stores (auth, cabinetAuth, modules)
 ```
 
-## Розділ «Склад»
+## Inventory Section
 
-| Вкладка | Опис |
-|---------|------|
-| Всі товари | Повний список з пошуком і фільтрами |
-| Закінчуються | Товари нижче мінімального залишку |
-| Оптовий | Залишки по складах, надходження, переміщення |
-| Замовити | Папки зі списками товарів для замовлення |
+| Tab | Description |
+|-----|-------------|
+| All Products | Full list with search and filters |
+| Low Stock | Products below minimum stock level |
+| Wholesale | Stock levels by warehouse, incoming, transfers |
+| Order | Folders with product lists for ordering |
 
-### Вкладка «Замовити» — повний цикл
+### "Order" Tab — Full Cycle
 
 ```
-Потрібно замовити → (toggle) → Замовлено → (кнопка ⬆) → Отримано
+Need to order → (toggle) → Ordered → (button) → Received
 ```
 
-- **Папки** — групують позиції (архів, пошук з підсвіткою)
-- **Позиція** — назва, кількість, одиниця, ціна закупівлі, примітки
-- **Оприбуткування** — пошук збігу в базі складу або створення нового товару → вибір складу → автоматичне оновлення залишків + StockMovement
-- **Прийняти все** — масове оприбуткування всіх замовлених+прив'язаних позицій папки одним кліком
-- **Ціна закупівлі** — обов'язкова при оприбуткуванні (> 0), фіксується в StockMovement для аналітики
+- **Folders** — group items (archive, search with highlighting)
+- **Item** — name, quantity, unit, purchase price, notes
+- **Stocking** — search for match in product database or create new product → select warehouse → auto-update stock levels + StockMovement
+- **Receive All** — bulk stocking of all ordered+linked items in a folder with one click
+- **Purchase price** — required for stocking (> 0), recorded in StockMovement for profitability analytics
 
-## Дизайн-токени
+## Design Tokens
 
-| Змінна | Значення | Використання |
-|--------|----------|--------------|
-| Primary | `#f5c518` | Жовтий акцент |
-| Ink | `#1a1a1a` | Основний текст |
-| BG | `#ffffff` | Фон |
-| BG2 | `#f7f7f7` | Другорядний фон |
+| Token | Value | Usage |
+|-------|-------|-------|
+| Primary | `#f5c518` | Yellow accent |
+| Ink | `#1a1a1a` | Primary text |
+| BG | `#ffffff` | Background |
+| BG2 | `#f7f7f7` | Secondary background |
 
 ## Changelog
 
 ### v2.7 — 2026-04-02
-- **Склад / Замовити — оприбуткування**: кнопка «Приїхало» на кожній замовленій позиції; модалка з авто-пошуком товару за назвою; вибір «Є в базі» або «Новий товар»; прив'язка `linked_product`; автоматичне оновлення `StockItem` + `StockMovement`
-- **Масове оприбуткування**: кнопка ⚡ «Прийняти все» в заголовку папки — оприбутковує всі замовлені+прив'язані позиції одним кліком
-- **Ціна закупівлі**: поле в позиції та обов'язкова валідація (> 0) при оприбуткуванні; фіксується в русі товарів для аналітики прибутковості
-- **Архів папок**: кнопка архівування, фільтр «Показати архів», відновлення з архіву, видалення лише для архівних
-- **Пошук по вмісту**: фільтр у реальному часі по назвах папок і позицій з підсвіткою збігів
+- **Inventory / Order — Stocking**: "Arrived" button on each ordered item; modal with auto-search by name; "Exists in DB" or "New product" options; `linked_product` binding; automatic `StockItem` + `StockMovement` update
+- **Bulk stocking**: "Receive All" button in folder header — stocks all ordered+linked items with one click
+- **Purchase price**: field on item and required validation (> 0) on stocking; recorded in stock movements for profitability analytics
+- **Folder archive**: archive button, "Show archive" filter, restore from archive, delete only for archived
+- **Content search**: real-time filter by folder and item names with match highlighting
 
 ### v2.6 — 2026-04-02
-- **Склад / Оптовий**: перегляд залишків по будь-якому складу; модалка «Надходження»; модалка «Переміщення» між складами
-- **Склад / Замовити**: папки замовлень; позиції з статусами; «Замовлено все»
-- **Пошук товарів**: серверний пошук в дропдаунах (підтримка 11k+ товарів)
+- **Inventory / Wholesale**: stock levels by any warehouse; "Incoming" modal; "Transfer" modal between warehouses
+- **Inventory / Order**: order folders; items with statuses; "Mark all ordered"
+- **Product search**: server-side search in dropdowns (supports 11k+ products)
 
 ### v2.5 — 2026-03-23
-- Особистий кабінет клієнта (8 сторінок)
-- Підтвердження email клієнта
+- Client personal portal (8 pages)
+- Client email verification
 
 ### v2.4
-- Відстеження відправок Нова Пошта в боті та рахунках
-- Авто-завантаження статусу ТТН при відкритті рахунку
+- Nova Poshta shipment tracking in bot and invoices
+- Auto-load tracking number status on invoice open
 
 ### v2.3
-- Приховування вимкнених модулів у меню
-- Сторінка лендінгу з відгуками Google та картою
+- Hide disabled modules from menu
+- Landing page with Google reviews and map
 
 ### v2.2
-- Склад запчастин: список товарів, деталі, форма
+- Spare parts warehouse: product list, details, form
 
 ### v2.1
-- Рахунки з позиціями та статусами
+- Invoices with line items and statuses
 
 ### v2.0
-- Наряди-замовлення, роботи, запчастини, фото
+- Service orders, work items, spare parts, photos
 
 ### v1.x
-- Клієнти, автомобілі, авторизація
+- Clients, vehicles, authorization
