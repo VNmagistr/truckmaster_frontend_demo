@@ -185,6 +185,9 @@ export const ordersAPI = {
     truck_id: truckId,
     current_mileage: mileage,
   }),
+  lastMileage: (truckId, excludeId) => instance.get('/orders/last-mileage/', {
+    params: { truck: truckId, ...(excludeId ? { exclude_id: excludeId } : {}) },
+  }),
   markForDeletion: (id, reason) => instance.post(`/orders/${id}/mark_for_deletion/`, { reason }),
   unmarkForDeletion: (id) => instance.post(`/orders/${id}/unmark_for_deletion/`),
   getDashboardStats: () => instance.get('/orders/dashboard_stats/'),

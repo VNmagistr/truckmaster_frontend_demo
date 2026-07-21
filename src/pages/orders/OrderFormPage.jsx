@@ -27,6 +27,8 @@ function OrderFormPage() {
   const [lockedClientName, setLockedClientName] = useState('');
   
   const [alerts, setAlerts] = useState([]);
+  const [lastMileageInfo, setLastMileageInfo] = useState(null);
+  const [mileageError, setMileageError] = useState('');
   const [carPhotoList, setCarPhotoList] = useState([]);
   const [odometerPhotoList, setOdometerPhotoList] = useState([]);
   const [dashboardPhotoList, setDashboardPhotoList] = useState([]);
@@ -101,8 +103,12 @@ function OrderFormPage() {
               closed_at: orderData.closed_at ? dayjs(orderData.closed_at) : null,
             });
             
-            if (orderData.truck && orderData.current_mileage) {
-              checkMaintenance(orderData.truck.id || orderData.truck, orderData.current_mileage);
+            if (orderData.truck) {
+              const truckId = orderData.truck.id || orderData.truck;
+              fetchLastMileage(truckId);
+              if (orderData.current_mileage) {
+                checkMaintenance(truckId, orderData.current_mileage);
+              }
             }
 
             if (orderData.car_photo) {
@@ -153,12 +159,39 @@ function OrderFormPage() {
     };
   }, [debouncedSearch]);
 
-  const handleTruckSelect = (truckId, option) => {
+  const fetchLastMileage = async (truckId) => {
+    try {
+      const res = await ordersAPI.lastMileage(truckId, isEdit ? id : undefined);
+      const data = res.data || res;
+      if (data.last_mileage != null) {
+        setLastMileageInfo(data);
+        return data.last_mileage;
+      }
+      setLastMileageInfo(null);
+      return null;
+    } catch {
+      setLastMileageInfo(null);
+      return null;
+    }
+  };
+
+  const validateMileage = (mileage, lastMileage) => {
+    if (lastMileage != null && mileage && Number(mileage) < lastMileage) {
+      setMileageError(
+        `Пробіг ${mileage} км менший за останній зафіксований ${lastMileage} км. Перевірте коректність.`
+      );
+      return false;
+    }
+    setMileageError('');
+    return true;
+  };
+
+  const handleTruckSelect = async (truckId, option) => {
     const truckData = option.truck;
-    
+
     if (truckData) {
       setSelectedTruck(truckData);
-      
+
       if (truckData.client_id) {
         form.setFieldsValue({ client: truckData.client_id });
         setLockedClientName(truckData.client_name || '');
@@ -170,11 +203,14 @@ function OrderFormPage() {
         message.warning(t('orders.noOwnerWarning'));
       }
     }
-    
+
     setAlerts([]);
-    
+    setMileageError('');
+
+    const lastMileage = await fetchLastMileage(truckId);
     const mileage = form.getFieldValue('current_mileage');
     if (mileage) {
+      validateMileage(mileage, lastMileage);
       checkMaintenance(truckId, mileage);
     }
   };
@@ -186,6 +222,8 @@ function OrderFormPage() {
     form.setFieldsValue({ client: undefined });
     setAlerts([]);
     setTruckOptions([]);
+    setLastMileageInfo(null);
+    setMileageError('');
   };
 
   const handleUnlockClient = () => {
@@ -282,12 +320,19 @@ function OrderFormPage() {
     img.src = url;
   });
 
-  const handleMileageBlur = (e) => {
+  const handleMileageBlur = async (e) => {
     const mileage = e.target.value;
     const truckId = form.getFieldValue('truck');
-    
+
     if (truckId && mileage) {
+      let lastMileage = lastMileageInfo?.last_mileage;
+      if (lastMileage == null) {
+        lastMileage = await fetchLastMileage(truckId);
+      }
+      validateMileage(mileage, lastMileage);
       checkMaintenance(truckId, mileage);
+    } else {
+      setMileageError('');
     }
   };
 
@@ -695,6 +740,26 @@ function OrderFormPage() {
                 )}
               </Row>
 
+              {/* Помилка пробігу */}
+              {mileageError && (
+                <Alert
+                  message={mileageError}
+                  type="error"
+                  showIcon
+                  style={{ marginBottom: 16 }}
+                />
+              )}
+
+              {/* Інфо про останній пробіг */}
+              {lastMileageInfo && !mileageError && (
+                <div style={{ marginBottom: 16 }}>
+                  <Text type="secondary">
+                    Останній зафіксований пробіг: <Text strong>{lastMileageInfo.last_mileage?.toLocaleString()} км</Text>
+                    {lastMileageInfo.order_number && <> (наряд {lastMileageInfo.order_number})</>}
+                  </Text>
+                </div>
+              )}
+
               {/* Алерти про регламенти */}
               {alerts.length > 0 && (
                 <div style={{ marginBottom: 24 }}>
@@ -829,10 +894,11 @@ function OrderFormPage() {
               {/* Кнопки */}
               <Form.Item>
                 <Space size="middle">
-                  <Button 
-                    type="primary" 
-                    htmlType="submit" 
-                    loading={saving} 
+                  <Button
+                    type="primary"
+                    htmlType="submit"
+                    loading={saving}
+                    disabled={!!mileageError}
                     icon={<SaveOutlined />}
                     size="large"
                   >
