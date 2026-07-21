@@ -75,10 +75,7 @@ instance.interceptors.response.use(
     }
 
     // Skip token refresh for auth endpoints
-    if (
-      originalRequest.url?.includes('/token/') ||
-      originalRequest.url?.includes('/register/')
-    ) {
+    if (originalRequest.url?.includes('/token/')) {
       return Promise.reject(error);
     }
 
@@ -158,7 +155,6 @@ instance.interceptors.response.use(
 
 export const authAPI = {
   login: (credentials) => instance.post('/token/', credentials),
-  register: (data) => instance.post('/register/', data),
   refreshToken: (refresh) => instance.post('/token/refresh/', { refresh }),
 };
 
