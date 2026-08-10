@@ -232,3 +232,254 @@ html { scroll-behavior: smooth; }
 .order-detail-right-descriptions .ant-descriptions-row:nth-child(3) {
   height: 100%;
 }
+
+/* ══ QR Card Page ══ */
+.qr-page {
+  min-height: 100vh;
+  background: linear-gradient(170deg, #111111 0%, #1a1a1a 40%, #2a2a2a 75%, #333333 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 16px 24px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+}
+
+.qr-container {
+  width: 100%;
+  max-width: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.qr-logo-wrap {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3), 0 0 0 3px rgba(245, 197, 24, 0.3);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.qr-logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+}
+
+.qr-title {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: 0.5px;
+}
+.qr-subtitle {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+.qr-desc {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-style: italic;
+  margin: 0 0 32px;
+}
+
+/* Menu cards */
+.qr-cards {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.qr-card-link {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 14px;
+  padding: 16px 18px;
+  text-decoration: none;
+  color: #1a1a1a;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+.qr-card-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(245, 197, 24, 0.3);
+}
+.qr-card-link:active {
+  transform: scale(0.98);
+}
+
+.qr-card-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #d4a800, #f5c518);
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.qr-card-label {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.qr-card-share {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: color 0.2s;
+}
+.qr-card-share:hover {
+  color: #f5c518;
+}
+
+/* Phones dropdown */
+.qr-phones-list {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 14px;
+  padding: 8px 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+}
+.qr-phone-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 18px;
+  text-decoration: none;
+  color: #1a1a1a;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.qr-phone-item:hover {
+  background: rgba(245, 197, 24, 0.08);
+}
+.qr-phone-item svg {
+  color: #f5c518;
+  flex-shrink: 0;
+}
+.qr-phone-operator {
+  font-size: 11px;
+  font-weight: 500;
+  color: #999;
+  margin-left: auto;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Contact info section */
+.qr-contacts-section {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  margin-bottom: 24px;
+}
+.qr-contacts-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  padding: 16px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  cursor: pointer;
+}
+.qr-contacts-toggle svg {
+  color: #f5c518;
+}
+
+.qr-contacts-body {
+  padding: 0 18px 18px;
+  border-top: 1px solid #eee;
+}
+.qr-contacts-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin-top: 16px;
+  margin-bottom: 4px;
+}
+.qr-contacts-schedule {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 16px;
+  line-height: 1.5;
+}
+.qr-contacts-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  color: #333;
+  padding: 6px 0;
+}
+.qr-contacts-row svg {
+  color: #f5c518;
+  flex-shrink: 0;
+}
+.qr-contacts-weekend {
+  color: #999;
+  margin-bottom: 16px;
+}
+.qr-contacts-phones-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 8px;
+}
+.qr-contacts-phone {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background: #f5f7fa;
+  text-decoration: none;
+  color: #1a1a1a;
+  font-size: 14px;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+.qr-contacts-phone:hover {
+  background: #fdf6e0;
+}
+.qr-contacts-phone svg {
+  color: #f5c518;
+  flex-shrink: 0;
+}
+
+.qr-footer {
+  margin-top: auto;
+  padding-top: 24px;
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 12px;
+}
