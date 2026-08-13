@@ -616,8 +616,13 @@ function OrderDetailPage() {
         mechanic: values.mechanic || null,
       };
       if (values.rule_id) payload.rule_id = values.rule_id;
-      await ordersAPI.applyMaintenanceSet(id, payload);
-      message.success(t('orderDetail.maintenanceSetApplied'));
+      const res = await ordersAPI.applyMaintenanceSet(id, payload);
+      const resData = res.data || res;
+      console.log('apply_maintenance_set response:', resData);
+      const partsInfo = resData.parts_added?.length
+        ? `(${resData.parts_added.join(', ')})`
+        : '';
+      message.success(`${t('orderDetail.maintenanceSetApplied')} ${partsInfo}`, 6);
       setIsMaintenanceModalOpen(false);
       formMaintenance.resetFields();
       setSelectedMaintenanceRule(null);
