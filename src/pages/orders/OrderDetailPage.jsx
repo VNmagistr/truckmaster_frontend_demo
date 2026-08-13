@@ -42,6 +42,7 @@ function OrderDetailPage() {
   const [maintenanceRules, setMaintenanceRules] = useState([]);
   const [maintenanceModalLoading, setMaintenanceModalLoading] = useState(false);
   const [selectedMaintenanceRule, setSelectedMaintenanceRule] = useState(null);
+  const [selectedMaintenanceCategory, setSelectedMaintenanceCategory] = useState(null);
   const [formMaintenance] = Form.useForm();
 
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
@@ -580,6 +581,7 @@ function OrderDetailPage() {
   };
 
   const handleOpenMaintenanceModal = async (category) => {
+    setSelectedMaintenanceCategory(category);
     setIsMaintenanceModalOpen(true);
     setMaintenanceModalLoading(true);
     try {
@@ -610,6 +612,7 @@ function OrderDetailPage() {
     try {
       await ordersAPI.applyMaintenanceSet(id, {
         rule_id: values.rule_id,
+        category: selectedMaintenanceCategory || 'engine_oil',
         work: values.work || null,
         mechanic: values.mechanic || null,
       });
@@ -617,6 +620,7 @@ function OrderDetailPage() {
       setIsMaintenanceModalOpen(false);
       formMaintenance.resetFields();
       setSelectedMaintenanceRule(null);
+      setSelectedMaintenanceCategory(null);
       initPage();
     } catch (error) {
       const detail = error.response?.data?.detail || t('orderDetail.maintenanceSetError');
@@ -1646,7 +1650,7 @@ function OrderDetailPage() {
       <Modal
         title={t('orderDetail.maintenanceSetModal')}
         open={isMaintenanceModalOpen}
-        onCancel={() => { setIsMaintenanceModalOpen(false); formMaintenance.resetFields(); setSelectedMaintenanceRule(null); }}
+        onCancel={() => { setIsMaintenanceModalOpen(false); formMaintenance.resetFields(); setSelectedMaintenanceRule(null); setSelectedMaintenanceCategory(null); }}
         footer={null}
         destroyOnClose
       >
