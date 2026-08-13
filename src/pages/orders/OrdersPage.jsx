@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip, Typography, Divider, Pagination, Empty, DatePicker } from 'antd';
+import { Table, Button, Space, Input, message, Modal, Card, Select, Tag, Form, Tooltip, Typography, Divider, Pagination, Empty, DatePicker, Popover } from 'antd';
 import dayjs from 'dayjs';
 import {
   SearchOutlined,
@@ -10,6 +10,7 @@ import {
   UndoOutlined,
   CameraOutlined,
   FileTextOutlined,
+  HourglassOutlined,
 } from '@ant-design/icons';
 import { useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -54,6 +55,7 @@ function OrdersPage() {
 
   const [staleOrders, setStaleOrders] = useState([]);
   const [staleModalOpen, setStaleModalOpen] = useState(false);
+  const [postponePopoverId, setPostponePopoverId] = useState(null);
 
   const navigate = useNavigate();
 
@@ -163,6 +165,27 @@ function OrdersPage() {
     fetchStaleOrders();
   }, []);
 
+  const getPostponedOrders = () => {
+    try {
+      return JSON.parse(localStorage.getItem('stale_orders_postponed') || '{}');
+    } catch {
+      return {};
+    }
+  };
+
+  const handlePostpone = (orderId, days) => {
+    const postponed = getPostponedOrders();
+    postponed[orderId] = Date.now() + days * 86400000;
+    localStorage.setItem('stale_orders_postponed', JSON.stringify(postponed));
+    setPostponePopoverId(null);
+    setStaleOrders(prev => {
+      const remaining = prev.filter(o => o.id !== orderId);
+      if (remaining.length === 0) setStaleModalOpen(false);
+      return remaining;
+    });
+    message.success(t('staleOrders.postponed', { days }));
+  };
+
   const fetchStaleOrders = async () => {
     try {
       const snoozedUntil = localStorage.getItem('stale_orders_snoozed_until');
@@ -170,8 +193,13 @@ function OrdersPage() {
 
       const res = await ordersAPI.getStaleInProgress();
       const data = res.data || res;
-      if (data.length > 0) {
-        setStaleOrders(data);
+
+      const postponed = getPostponedOrders();
+      const now = Date.now();
+      const active = data.filter(o => !postponed[o.id] || postponed[o.id] <= now);
+
+      if (active.length > 0) {
+        setStaleOrders(active);
         setStaleModalOpen(true);
       }
     } catch {
@@ -774,6 +802,38 @@ function OrdersPage() {
               dataIndex: 'in_progress_since',
               key: 'in_progress_since',
               render: (v) => v ? dayjs(v).format('DD.MM.YYYY') : '—',
+            },
+            {
+              title: '',
+              key: 'postpone',
+              width: 48,
+              render: (_, record) => (
+                <Popover
+                  open={postponePopoverId === record.id}
+                  onOpenChange={(open) => setPostponePopoverId(open ? record.id : null)}
+                  trigger="click"
+                  placement="left"
+                  title={t('staleOrders.postponeDays')}
+                  content={
+                    <Space direction="vertical" size={4} style={{ width: '100%' }}>
+                      {[3, 7, 14, 30].map(d => (
+                        <Button
+                          key={d}
+                          block
+                          size="small"
+                          onClick={() => handlePostpone(record.id, d)}
+                        >
+                          {t(`staleOrders.postpone${d}d`)}
+                        </Button>
+                      ))}
+                    </Space>
+                  }
+                >
+                  <Tooltip title={t('staleOrders.postpone')}>
+                    <Button size="small" icon={<HourglassOutlined />} />
+                  </Tooltip>
+                </Popover>
+              ),
             },
           ]}
         />

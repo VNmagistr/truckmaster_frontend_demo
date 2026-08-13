@@ -1485,7 +1485,14 @@
   "staleOrders": {
     "snooze1h": "Нагадати через 1 год",
     "snooze3h": "Нагадати через 3 год",
-    "snooze1d": "Нагадати завтра"
+    "snooze1d": "Нагадати завтра",
+    "postpone": "Відтермінувати",
+    "postponeDays": "На скільки днів?",
+    "postpone3d": "3 дні",
+    "postpone7d": "7 днів",
+    "postpone14d": "14 днів",
+    "postpone30d": "30 днів",
+    "postponed": "Наряд відтерміновано на {{days}} дн."
   },
 
   "backup": {

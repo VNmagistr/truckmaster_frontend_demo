@@ -1485,7 +1485,14 @@
   "staleOrders": {
     "snooze1h": "Remind in 1 hour",
     "snooze3h": "Remind in 3 hours",
-    "snooze1d": "Remind tomorrow"
+    "snooze1d": "Remind tomorrow",
+    "postpone": "Postpone",
+    "postponeDays": "How many days?",
+    "postpone3d": "3 days",
+    "postpone7d": "7 days",
+    "postpone14d": "14 days",
+    "postpone30d": "30 days",
+    "postponed": "Order postponed for {{days}} days"
   },
 
   "backup": {
