@@ -610,12 +610,13 @@ function OrderDetailPage() {
   const handleApplyMaintenanceSet = async (values) => {
     setMaintenanceModalLoading(true);
     try {
-      await ordersAPI.applyMaintenanceSet(id, {
-        rule_id: values.rule_id,
+      const payload = {
         category: selectedMaintenanceCategory || 'engine_oil',
         work: values.work || null,
         mechanic: values.mechanic || null,
-      });
+      };
+      if (values.rule_id) payload.rule_id = values.rule_id;
+      await ordersAPI.applyMaintenanceSet(id, payload);
       message.success(t('orderDetail.maintenanceSetApplied'));
       setIsMaintenanceModalOpen(false);
       formMaintenance.resetFields();
@@ -876,15 +877,6 @@ function OrderDetailPage() {
                 style={{ marginBottom: 8, width: '100%' }}
             >
                 {t('orderDetail.writeOffPart')}
-            </Button>
-            <Button
-                type="dashed"
-                icon={<PlusOutlined />}
-                onClick={handleOpenKitModal}
-                disabled={isDeleted || orderWorks.length === 0}
-                style={{ marginBottom: 16, width: '100%' }}
-            >
-                {t('orderDetail.addMaintenanceKit')}
             </Button>
             {orderWorks.length === 0 && (
               <Alert
@@ -1655,32 +1647,33 @@ function OrderDetailPage() {
         destroyOnClose
       >
         <Form form={formMaintenance} layout="vertical" onFinish={handleApplyMaintenanceSet}>
-          <Form.Item
-            label={t('orderDetail.maintenanceSet')}
-            name="rule_id"
-            rules={[{ required: true, message: t('orderDetail.selectMaintenanceSet') }]}
-          >
-            <Select
-              placeholder={t('orderDetail.selectMaintenanceRule')}
-              loading={maintenanceModalLoading}
-              notFoundContent={t('orderDetail.noSetsAvailable')}
-              onChange={(ruleId) => {
-                const rule = maintenanceRules.find(r => r.id === ruleId);
-                setSelectedMaintenanceRule(rule || null);
-                if (rule?.work) {
-                  formMaintenance.setFieldsValue({ work: rule.work });
-                } else {
-                  formMaintenance.setFieldsValue({ work: undefined });
-                }
-              }}
+          {maintenanceRules.length > 0 && (
+            <Form.Item
+              label={t('orderDetail.maintenanceSet')}
+              name="rule_id"
             >
-              {maintenanceRules.map(r => (
-                <Select.Option key={r.id} value={r.id}>
-                  {r.rule_name || r.name || `Набір #${r.id}`}
-                </Select.Option>
-              ))}
-            </Select>
-          </Form.Item>
+              <Select
+                placeholder={t('orderDetail.selectMaintenanceRule')}
+                loading={maintenanceModalLoading}
+                allowClear
+                onChange={(ruleId) => {
+                  const rule = maintenanceRules.find(r => r.id === ruleId);
+                  setSelectedMaintenanceRule(rule || null);
+                  if (rule?.work) {
+                    formMaintenance.setFieldsValue({ work: rule.work });
+                  } else {
+                    formMaintenance.setFieldsValue({ work: undefined });
+                  }
+                }}
+              >
+                {maintenanceRules.map(r => (
+                  <Select.Option key={r.id} value={r.id}>
+                    {r.rule_name || r.name || `Набір #${r.id}`}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
           {selectedMaintenanceRule?.work_name ? (
             <Form.Item label={t('orderDetail.serviceFromCatalog')}>
               <Input value={selectedMaintenanceRule.work_name} disabled />
