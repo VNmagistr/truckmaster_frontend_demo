@@ -547,7 +547,12 @@
   "orderDetail": {
     "works": "Works ({{count}})",
     "addWork": "Add work",
-    "addMaintenanceSet": "Add maintenance set",
+    "maintenanceMenu": "Scheduled maintenance",
+    "maintenanceEngineOil": "Engine oil & filter change",
+    "maintenanceGearboxOil": "Gearbox / auto gearbox oil change",
+    "maintenanceRearAxleOil": "Rear axle oil change",
+    "maintenanceBelts": "Belts & rollers replacement",
+    "maintenanceChains": "Timing chains / belts replacement",
     "noWorks": "No works added",
     "parts": "Parts ({{count}})",
     "writeOffPart": "Write off part",

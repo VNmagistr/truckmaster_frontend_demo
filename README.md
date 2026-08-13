@@ -78,6 +78,7 @@ Need to order → (toggle) → Ordered → (button) → Received
 ## Changelog
 
 ### v2.15 — 2026-08-13
+- **Scheduled maintenance dropdown**: replaced "Add maintenance set" button with a "Scheduled maintenance" dropdown (5 categories: engine oil & filters, gearbox/auto gearbox oil, rear axle oil, belts & rollers, timing chains); auto-selects matching maintenance rule by keyword matching on rule name
 - **Stale orders — per-order postpone**: individual orders can be postponed for 3, 7, 14 or 30 days via a popover button in the reminder modal; postponed orders are stored in localStorage and filtered out until expiry
 
 ### v2.7 — 2026-04-02

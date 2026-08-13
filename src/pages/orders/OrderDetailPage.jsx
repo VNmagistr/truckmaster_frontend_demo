@@ -562,13 +562,42 @@ function OrderDetailPage() {
     });
   };
 
-  const handleOpenMaintenanceModal = async () => {
+  const MAINTENANCE_KEYWORDS = {
+    engine_oil: ['двигун', 'engine oil', 'фільтр'],
+    gearbox_oil: ['кпп', 'акпп', 'коробк', 'gearbox'],
+    rear_axle_oil: ['задн', 'rear axle'],
+    belts: ['ремен', 'ролик', 'belt'],
+    chains: ['ланцюг', 'грм', 'chain', 'timing'],
+  };
+
+  const findRuleByCategory = (rules, category) => {
+    const keywords = MAINTENANCE_KEYWORDS[category];
+    if (!keywords) return null;
+    return rules.find(r => {
+      const name = (r.name || r.rule_name || '').toLowerCase();
+      return keywords.some(kw => name.includes(kw));
+    });
+  };
+
+  const handleOpenMaintenanceModal = async (category) => {
     setIsMaintenanceModalOpen(true);
     setMaintenanceModalLoading(true);
     try {
       const res = await maintenanceAPI.getRules();
       const data = res.data || res;
-      setMaintenanceRules(data.results || data || []);
+      const rules = data.results || data || [];
+      setMaintenanceRules(rules);
+
+      if (category && rules.length > 0) {
+        const match = findRuleByCategory(rules, category);
+        if (match) {
+          setSelectedMaintenanceRule(match);
+          formMaintenance.setFieldsValue({
+            rule_id: match.id,
+            work: match.work || undefined,
+          });
+        }
+      }
     } catch {
       message.error(t('orderDetail.maintenanceSetsError'));
     } finally {
@@ -786,15 +815,28 @@ function OrderDetailPage() {
       label: t('orderDetail.works', { count: orderWorks.length }),
       children: (
         <div>
-            <Button
-                type="dashed"
-                icon={<ToolOutlined />}
-                onClick={handleOpenMaintenanceModal}
+            <Dropdown
+                menu={{
+                  items: [
+                    { key: 'engine_oil', label: t('orderDetail.maintenanceEngineOil') },
+                    { key: 'gearbox_oil', label: t('orderDetail.maintenanceGearboxOil') },
+                    { key: 'rear_axle_oil', label: t('orderDetail.maintenanceRearAxleOil') },
+                    { key: 'belts', label: t('orderDetail.maintenanceBelts') },
+                    { key: 'chains', label: t('orderDetail.maintenanceChains') },
+                  ],
+                  onClick: ({ key }) => handleOpenMaintenanceModal(key),
+                }}
                 disabled={isDeleted}
-                style={{ marginBottom: 8, width: '100%' }}
             >
-                {t('orderDetail.addMaintenanceSet')}
-            </Button>
+                <Button
+                    type="dashed"
+                    icon={<ToolOutlined />}
+                    disabled={isDeleted}
+                    style={{ marginBottom: 8, width: '100%' }}
+                >
+                    {t('orderDetail.maintenanceMenu')} <DownOutlined />
+                </Button>
+            </Dropdown>
             <Button
                 type="dashed"
                 icon={<PlusOutlined />}

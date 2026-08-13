@@ -547,7 +547,12 @@
   "orderDetail": {
     "works": "Роботи ({{count}})",
     "addWork": "Додати роботу",
-    "addMaintenanceSet": "Додати набір для ТО",
+    "maintenanceMenu": "Регламентні роботи",
+    "maintenanceEngineOil": "Заміна оливи в двигуні та фільтрів",
+    "maintenanceGearboxOil": "Заміна оливи в КПП/АКПП",
+    "maintenanceRearAxleOil": "Заміна оливи в задньому мості",
+    "maintenanceBelts": "Заміна ремнів, роликів",
+    "maintenanceChains": "Заміна ланцюгів/ремнів ГРМ",
     "noWorks": "Роботи не додано",
     "parts": "Запчастини ({{count}})",
     "writeOffPart": "Списати запчастину",
