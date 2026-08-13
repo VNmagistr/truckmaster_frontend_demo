@@ -77,6 +77,9 @@ Need to order → (toggle) → Ordered → (button) → Received
 
 ## Changelog
 
+### v2.15 — 2026-08-13
+- **Stale orders — per-order postpone**: individual orders can be postponed for 3, 7, 14 or 30 days via a popover button in the reminder modal; postponed orders are stored in localStorage and filtered out until expiry
+
 ### v2.7 — 2026-04-02
 - **Inventory / Order — Stocking**: "Arrived" button on each ordered item; modal with auto-search by name; "Exists in DB" or "New product" options; `linked_product` binding; automatic `StockItem` + `StockMovement` update
 - **Bulk stocking**: "Receive All" button in folder header — stocks all ordered+linked items with one click
