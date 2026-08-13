@@ -34,14 +34,16 @@ src/
 ├── layouts/       — MainLayout, AuthLayout, CabinetLayout
 ├── pages/
 │   ├── auth/      — Staff login
-│   ├── cabinet/   — Client personal portal (8 pages)
-│   ├── clients/   — Clients and vehicles
-│   ├── dashboard/ — Main dashboard
-│   ├── inventory/ — Spare parts warehouse
-│   ├── invoices/  — Invoices
-│   ├── orders/    — Service orders
-│   ├── appointments/ — Service bookings
-│   └── welcome/   — Public landing page
+│   ├── cabinet/       — Client personal portal (9 pages)
+│   ├── clients/       — Clients and vehicles
+│   ├── dashboard/     — Main dashboard
+│   ├── inventory/     — Spare parts warehouse
+│   ├── invoices/      — Invoices
+│   ├── maintenance/   — Maintenance templates
+│   ├── orders/        — Service orders
+│   ├── appointments/  — Service bookings
+│   ├── settings/      — Backup/restore
+│   └── welcome/       — Public landing page
 └── store/         — Zustand stores (auth, cabinetAuth, modules)
 ```
 
@@ -76,6 +78,10 @@ Need to order → (toggle) → Ordered → (button) → Received
 | BG2 | `#f7f7f7` | Secondary background |
 
 ## Changelog
+
+### v2.16 — 2026-08-13
+- **Maintenance set — category-specific parts**: passes selected category (engine_oil / gearbox_oil / rear_axle_oil / belts / chains) to backend so only the relevant oil and filters are added instead of always engine oil + all filters
+- **Fix duplicate parts**: copper drain plug washer and similar parts no longer added twice
 
 ### v2.15 — 2026-08-13
 - **Scheduled maintenance dropdown**: replaced "Add maintenance set" button with a "Scheduled maintenance" dropdown (5 categories: engine oil & filters, gearbox/auto gearbox oil, rear axle oil, belts & rollers, timing chains); auto-selects matching maintenance rule by keyword matching on rule name
