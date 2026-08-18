@@ -70,6 +70,7 @@
     "templates": "Maintenance Templates",
     "invoices": "Invoices",
     "alpr": "Vehicle Log",
+    "qrCodes": "QR codes",
     "backups": "Backups",
     "addTooltip": "Add",
     "settings": "Settings",
@@ -1498,6 +1499,19 @@
     "postpone14d": "14 days",
     "postpone30d": "30 days",
     "postponed": "Order postponed for {{days}} days"
+  },
+
+  "qrCodes": {
+    "title": "QR Codes",
+    "description": "Enable or disable QR codes. A disabled code will show a stub page instead of redirecting.",
+    "colStatus": "Status",
+    "colName": "Name",
+    "colTarget": "Target URL",
+    "colHits": "Hits",
+    "enabled": "QR code enabled",
+    "disabled": "QR code disabled",
+    "loadError": "Failed to load QR codes",
+    "toggleError": "Failed to toggle QR code"
   },
 
   "backup": {

@@ -42,7 +42,7 @@ src/
 │   ├── maintenance/   — Maintenance templates
 │   ├── orders/        — Service orders
 │   ├── appointments/  — Service bookings
-│   ├── settings/      — Backup/restore
+│   ├── settings/      — Backup/restore, QR codes management
 │   └── welcome/       — Public landing page
 └── store/         — Zustand stores (auth, cabinetAuth, modules)
 ```
@@ -78,6 +78,9 @@ Need to order → (toggle) → Ordered → (button) → Received
 | BG2 | `#f7f7f7` | Secondary background |
 
 ## Changelog
+
+### v2.17 — 2026-08-18
+- **QR codes management page**: new `/qr-codes` page with toggle switches to enable/disable QR codes; disabled codes show a stub page instead of redirecting
 
 ### v2.16 — 2026-08-13
 - **Maintenance set — category-specific parts**: passes selected category (engine_oil / gearbox_oil / rear_axle_oil / belts / chains) to backend so only the relevant oil and filters are added instead of always engine oil + all filters

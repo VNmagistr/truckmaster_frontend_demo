@@ -413,6 +413,11 @@ export const modulesAPI = {
   getAll: () => instance.get('/modules/'),
 };
 
+export const shortlinksAPI = {
+  getAll: () => instance.get('/shortlinks/'),
+  toggle: (id) => instance.post(`/shortlinks/${id}/toggle/`),
+};
+
 export const backupsAPI = {
   getAll: () => instance.get('/backups/'),
   create: () => instance.post('/backups/'),
