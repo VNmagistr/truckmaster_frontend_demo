@@ -177,6 +177,12 @@ function OrderFormPage() {
 
   const validateMileage = (mileage, lastMileage) => {
     if (lastMileage != null && mileage && Number(mileage) < lastMileage) {
+      const orderDate = form.getFieldValue('created_at');
+      const lastOrderDate = lastMileageInfo?.created_at;
+      if (orderDate && lastOrderDate && dayjs(orderDate).isBefore(dayjs(lastOrderDate))) {
+        setMileageError('');
+        return true;
+      }
       setMileageError(
         `Пробіг ${mileage} км менший за останній зафіксований ${lastMileage} км. Перевірте коректність.`
       );
@@ -540,6 +546,12 @@ function OrderFormPage() {
                   size="large"
                   style={{ width: '100%' }}
                   placeholder="Сьогодні за замовчуванням"
+                  onChange={() => {
+                    const mileage = form.getFieldValue('current_mileage');
+                    if (mileage && lastMileageInfo?.last_mileage != null) {
+                      validateMileage(mileage, lastMileageInfo.last_mileage);
+                    }
+                  }}
                 />
               </Form.Item>
 
