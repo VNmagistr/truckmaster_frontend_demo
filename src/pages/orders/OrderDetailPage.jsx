@@ -38,12 +38,7 @@ function OrderDetailPage() {
   const [formPart] = Form.useForm();
   const [formEditWork] = Form.useForm();
 
-  const [isMaintenanceModalOpen, setIsMaintenanceModalOpen] = useState(false);
-  const [maintenanceRules, setMaintenanceRules] = useState([]);
-  const [maintenanceModalLoading, setMaintenanceModalLoading] = useState(false);
-  const [selectedMaintenanceRule, setSelectedMaintenanceRule] = useState(null);
-  const [selectedMaintenanceCategory, setSelectedMaintenanceCategory] = useState(null);
-  const [formMaintenance] = Form.useForm();
+  const [maintenanceLoadingCategory, setMaintenanceLoadingCategory] = useState(null);
 
   const [isPhotoModalOpen, setIsPhotoModalOpen] = useState(false);
   const [photoFileList, setPhotoFileList] = useState([]);
@@ -563,76 +558,21 @@ function OrderDetailPage() {
     });
   };
 
-  const MAINTENANCE_KEYWORDS = {
-    engine_oil: ['двигун', 'engine oil', 'фільтр'],
-    gearbox_oil: ['кпп', 'акпп', 'коробк', 'gearbox'],
-    rear_axle_oil: ['задн', 'rear axle'],
-    belts: ['ремен', 'ролик', 'belt'],
-    chains: ['ланцюг', 'грм', 'chain', 'timing'],
-  };
-
-  const findRuleByCategory = (rules, category) => {
-    const keywords = MAINTENANCE_KEYWORDS[category];
-    if (!keywords) return null;
-    return rules.find(r => {
-      const name = (r.name || r.rule_name || '').toLowerCase();
-      return keywords.some(kw => name.includes(kw));
-    });
-  };
-
-  const handleOpenMaintenanceModal = async (category) => {
-    setSelectedMaintenanceCategory(category);
-    setIsMaintenanceModalOpen(true);
-    setMaintenanceModalLoading(true);
+  const handleQuickMaintenanceApply = async (category) => {
+    setMaintenanceLoadingCategory(category);
     try {
-      const res = await maintenanceAPI.getRules();
-      const data = res.data || res;
-      const rules = data.results || data || [];
-      setMaintenanceRules(rules);
-
-      if (category && rules.length > 0) {
-        const match = findRuleByCategory(rules, category);
-        if (match) {
-          setSelectedMaintenanceRule(match);
-          formMaintenance.setFieldsValue({
-            rule_id: match.id,
-            work: match.work || undefined,
-          });
-        }
-      }
-    } catch {
-      message.error(t('orderDetail.maintenanceSetsError'));
-    } finally {
-      setMaintenanceModalLoading(false);
-    }
-  };
-
-  const handleApplyMaintenanceSet = async (values) => {
-    setMaintenanceModalLoading(true);
-    try {
-      const payload = {
-        category: selectedMaintenanceCategory || 'engine_oil',
-        work: values.work || null,
-        mechanic: values.mechanic || null,
-      };
-      if (values.rule_id) payload.rule_id = values.rule_id;
-      const res = await ordersAPI.applyMaintenanceSet(id, payload);
+      const res = await ordersAPI.applyMaintenanceSet(id, { category });
       const resData = res.data || res;
-      console.log('apply_maintenance_set response:', resData);
       const partsInfo = resData.parts_added?.length
         ? `(${resData.parts_added.join(', ')})`
         : '';
       message.success(`${t('orderDetail.maintenanceSetApplied')} ${partsInfo}`, 6);
-      setIsMaintenanceModalOpen(false);
-      formMaintenance.resetFields();
-      setSelectedMaintenanceRule(null);
-      setSelectedMaintenanceCategory(null);
       initPage();
     } catch (error) {
       const detail = error.response?.data?.detail || t('orderDetail.maintenanceSetError');
       message.error(detail);
     } finally {
-      setMaintenanceModalLoading(false);
+      setMaintenanceLoadingCategory(null);
     }
   };
 
@@ -836,8 +776,9 @@ function OrderDetailPage() {
                   <Button
                     key={item.key}
                     icon={<ToolOutlined />}
-                    onClick={() => handleOpenMaintenanceModal(item.key)}
-                    disabled={isDeleted}
+                    onClick={() => handleQuickMaintenanceApply(item.key)}
+                    disabled={isDeleted || maintenanceLoadingCategory !== null}
+                    loading={maintenanceLoadingCategory === item.key}
                   >
                     {item.label}
                   </Button>
@@ -1639,83 +1580,6 @@ function OrderDetailPage() {
         </Form>
       </Modal>
 
-      {/* Модалка набору ТО */}
-      <Modal
-        title={t('orderDetail.maintenanceSetModal')}
-        open={isMaintenanceModalOpen}
-        onCancel={() => { setIsMaintenanceModalOpen(false); formMaintenance.resetFields(); setSelectedMaintenanceRule(null); setSelectedMaintenanceCategory(null); }}
-        footer={null}
-        destroyOnClose
-      >
-        <Form form={formMaintenance} layout="vertical" onFinish={handleApplyMaintenanceSet}>
-          {maintenanceRules.length > 0 && (
-            <Form.Item
-              label={t('orderDetail.maintenanceSet')}
-              name="rule_id"
-            >
-              <Select
-                placeholder={t('orderDetail.selectMaintenanceRule')}
-                loading={maintenanceModalLoading}
-                allowClear
-                onChange={(ruleId) => {
-                  const rule = maintenanceRules.find(r => r.id === ruleId);
-                  setSelectedMaintenanceRule(rule || null);
-                  if (rule?.work) {
-                    formMaintenance.setFieldsValue({ work: rule.work });
-                  } else {
-                    formMaintenance.setFieldsValue({ work: undefined });
-                  }
-                }}
-              >
-                {maintenanceRules.map(r => (
-                  <Select.Option key={r.id} value={r.id}>
-                    {r.rule_name || r.name || `Набір #${r.id}`}
-                  </Select.Option>
-                ))}
-              </Select>
-            </Form.Item>
-          )}
-          {selectedMaintenanceRule?.work_name ? (
-            <Form.Item label={t('orderDetail.serviceFromCatalog')}>
-              <Input value={selectedMaintenanceRule.work_name} disabled />
-              <Form.Item name="work" hidden noStyle><Input /></Form.Item>
-            </Form.Item>
-          ) : (
-            <Form.Item
-              name="work"
-              label={t('orderDetail.serviceFromCatalog')}
-              tooltip={t('orderDetail.maintenanceWorkHint')}
-            >
-              <Select
-                showSearch
-                allowClear
-                placeholder={t('orderDetail.selectService')}
-                optionFilterProp="label"
-                options={safeWorksList.map(w => ({ value: w.id, label: w.name }))}
-              />
-            </Form.Item>
-          )}
-          <Form.Item name="mechanic" label={t('orderDetail.mechanic')}>
-            <Select
-              showSearch
-              allowClear
-              placeholder={t('orderDetail.selectMechanic')}
-              optionFilterProp="label"
-              options={safeEmployeesList.map(e => ({ value: e.id, label: e.full_name || e.username || `${e.first_name} ${e.last_name}`.trim() }))}
-            />
-          </Form.Item>
-          <Form.Item>
-            <Button
-              type="primary"
-              htmlType="submit"
-              loading={maintenanceModalLoading}
-              block
-            >
-              {t('orderDetail.maintenanceSetApplyBtn')}
-            </Button>
-          </Form.Item>
-        </Form>
-      </Modal>
 
       {/* Модалка завантаження фото з ремонту */}
       <Modal
