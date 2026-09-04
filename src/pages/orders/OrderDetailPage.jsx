@@ -825,28 +825,24 @@ function OrderDetailPage() {
       label: t('orderDetail.works', { count: orderWorks.length }),
       children: (
         <div>
-            <Dropdown
-                menu={{
-                  items: [
-                    { key: 'engine_oil', label: t('orderDetail.maintenanceEngineOil') },
-                    { key: 'gearbox_oil', label: t('orderDetail.maintenanceGearboxOil') },
-                    { key: 'rear_axle_oil', label: t('orderDetail.maintenanceRearAxleOil') },
-                    { key: 'belts', label: t('orderDetail.maintenanceBelts') },
-                    { key: 'chains', label: t('orderDetail.maintenanceChains') },
-                  ],
-                  onClick: ({ key }) => handleOpenMaintenanceModal(key),
-                }}
-                disabled={isDeleted}
-            >
-                <Button
-                    type="dashed"
+            <Space wrap style={{ marginBottom: 8, width: '100%' }}>
+                {[
+                  { key: 'engine_oil', label: t('orderDetail.maintenanceEngineOil') },
+                  { key: 'gearbox_oil', label: t('orderDetail.maintenanceGearboxOil') },
+                  { key: 'rear_axle_oil', label: t('orderDetail.maintenanceRearAxleOil') },
+                  { key: 'belts', label: t('orderDetail.maintenanceBelts') },
+                  { key: 'chains', label: t('orderDetail.maintenanceChains') },
+                ].map(item => (
+                  <Button
+                    key={item.key}
                     icon={<ToolOutlined />}
+                    onClick={() => handleOpenMaintenanceModal(item.key)}
                     disabled={isDeleted}
-                    style={{ marginBottom: 8, width: '100%' }}
-                >
-                    {t('orderDetail.maintenanceMenu')} <DownOutlined />
-                </Button>
-            </Dropdown>
+                  >
+                    {item.label}
+                  </Button>
+                ))}
+            </Space>
             <Button
                 type="dashed"
                 icon={<PlusOutlined />}
