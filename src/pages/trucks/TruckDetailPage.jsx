@@ -796,7 +796,6 @@ function TruckDetailPage() {
             ) : '-'}
           </Descriptions.Item>
           <Descriptions.Item label="Власник">
-             {/* Використовуємо clientName, який ми довантажили */}
              {clientName ? (
                 <Link to={`/clients/${typeof truck.client === 'object' ? truck.client.id : truck.client}`}>
                     {clientName}
@@ -805,6 +804,11 @@ function TruckDetailPage() {
                  truck.client ? truck.client : '-'
              )}
           </Descriptions.Item>
+          {truck.notes && (
+            <Descriptions.Item label={t('truckDetail.notes')} span={3}>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{truck.notes}</div>
+            </Descriptions.Item>
+          )}
         </Descriptions>
       </Card>
 

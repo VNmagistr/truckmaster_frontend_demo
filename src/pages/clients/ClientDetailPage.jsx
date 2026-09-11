@@ -210,6 +210,11 @@ function ClientDetailPage() {
           <Descriptions.Item label={t('common.address')} span={3}>
             {client.address || '-'}
           </Descriptions.Item>
+          {client.notes && (
+            <Descriptions.Item label={t('clients.notes')} span={3}>
+              <div style={{ whiteSpace: 'pre-wrap' }}>{client.notes}</div>
+            </Descriptions.Item>
+          )}
         </Descriptions>
       </Card>
 

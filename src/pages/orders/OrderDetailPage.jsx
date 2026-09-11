@@ -1237,6 +1237,30 @@ function OrderDetailPage() {
         </Row>
       </Card>
 
+      {/* Примітки про авто та власника */}
+      {(order.truck?.notes || order.client?.notes) && (
+        <Card size="small" style={{ marginBottom: 16 }}>
+          <Row gutter={24}>
+            {order.truck?.notes && (
+              <Col xs={24} md={12}>
+                <div className="order-notes-block">
+                  <div className="order-notes-title">{t('orderDetail.truckNotes')}</div>
+                  <div className="order-notes-text">{order.truck.notes}</div>
+                </div>
+              </Col>
+            )}
+            {order.client?.notes && (
+              <Col xs={24} md={12}>
+                <div className="order-notes-block order-notes-owner">
+                  <div className="order-notes-title">{t('orderDetail.clientNotes')}</div>
+                  <div className="order-notes-text">{order.client.notes}</div>
+                </div>
+              </Col>
+            )}
+          </Row>
+        </Card>
+      )}
+
       {/* Відлік регламентних робіт */}
       <Card
         title={t('orderDetail.maintenanceRegular')}

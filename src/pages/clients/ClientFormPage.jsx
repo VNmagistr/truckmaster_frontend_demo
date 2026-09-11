@@ -115,6 +115,10 @@ function ClientFormPage() {
             <Input.TextArea rows={3} placeholder={t('clients.addressPlaceholder')} />
           </Form.Item>
 
+          <Form.Item name="notes" label={t('clients.notes')}>
+            <Input.TextArea rows={3} placeholder={t('clients.notesPlaceholder')} />
+          </Form.Item>
+
           <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
             <Space>
               <Button

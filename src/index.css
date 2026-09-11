@@ -233,6 +233,35 @@ html { scroll-behavior: smooth; }
   height: 100%;
 }
 
+/* ══ Notes block (OrderDetailPage) ══ */
+.order-notes-block {
+  background: #f0f5ff;
+  border-left: 4px solid #1890ff;
+  padding: 10px 14px;
+  border-radius: 4px;
+  min-height: 48px;
+}
+.order-notes-block.order-notes-owner {
+  background: #fff7e6;
+  border-left-color: #fa8c16;
+}
+.order-notes-title {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: #595959;
+}
+.order-notes-text {
+  white-space: pre-wrap;
+  font-size: 13px;
+  color: #1a1a1a;
+}
+@media (max-width: 767px) {
+  .order-notes-block {
+    margin-bottom: 8px;
+  }
+}
+
 /* ══ QR Card Page ══ */
 .qr-page {
   min-height: 100vh;

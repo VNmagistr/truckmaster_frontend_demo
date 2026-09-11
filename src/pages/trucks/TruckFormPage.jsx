@@ -264,6 +264,13 @@ function TruckFormPage() {
             />
           </Form.Item>
 
+          <Form.Item
+            name="notes"
+            label={t('truckDetail.notes')}
+          >
+            <Input.TextArea rows={3} placeholder={t('trucks.notesPlaceholder')} />
+          </Form.Item>
+
           <Form.Item style={{ marginBottom: 0, marginTop: 24 }}>
             <Space>
               <Button

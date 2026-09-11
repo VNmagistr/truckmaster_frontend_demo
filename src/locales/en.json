@@ -303,7 +303,9 @@
     "noOrders": "No orders",
     "telegram": "Telegram",
     "connected": "Connected",
-    "notConnected": "Not connected"
+    "notConnected": "Not connected",
+    "notes": "Notes",
+    "notesPlaceholder": "Client specifics, preferences, working conditions..."
   },
 
   "trucks": {
@@ -350,10 +352,12 @@
     "enterLicensePlate": "Enter license plate",
     "enterVin": "Enter VIN code",
     "enterModel": "Enter model",
-    "vinLength17": "17 characters"
+    "vinLength17": "17 characters",
+    "notesPlaceholder": "Vehicle specifics, issues, technical notes..."
   },
 
   "truckDetail": {
+    "notes": "Notes",
     "ordersCount": "Order history ({{count}})",
     "noOrders": "No orders",
     "last20": "Showing last 20",
@@ -586,6 +590,8 @@
     "partPrice": "Price",
     "partAmount": "Amount",
     "partWork": "Work",
+    "truckNotes": "Truck notes",
+    "clientNotes": "Owner notes",
     "maintenanceRegular": "Maintenance schedule",
     "maintenanceWorkType": "Work type",
     "maintenanceInterval": "Interval",

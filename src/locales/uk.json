@@ -303,7 +303,9 @@
     "noOrders": "Немає замовлень",
     "telegram": "Telegram",
     "connected": "Підключено",
-    "notConnected": "Не підключено"
+    "notConnected": "Не підключено",
+    "notes": "Примітки",
+    "notesPlaceholder": "Особливості клієнта, побажання, умови роботи..."
   },
 
   "trucks": {
@@ -350,10 +352,12 @@
     "enterLicensePlate": "Введіть номерний знак",
     "enterVin": "Введіть VIN код",
     "enterModel": "Введіть модель",
-    "vinLength17": "17 символів"
+    "vinLength17": "17 символів",
+    "notesPlaceholder": "Особливості авто, зауваження, технічні нюанси..."
   },
 
   "truckDetail": {
+    "notes": "Примітки",
     "ordersCount": "Історія замовлень ({{count}})",
     "noOrders": "Немає замовлень",
     "last20": "Показано останні 20",
@@ -586,6 +590,8 @@
     "partPrice": "Ціна",
     "partAmount": "Сума",
     "partWork": "Робота",
+    "truckNotes": "Примітки про автомобіль",
+    "clientNotes": "Примітки про власника",
     "maintenanceRegular": "Регламентні роботи",
     "maintenanceWorkType": "Вид роботи",
     "maintenanceInterval": "Інтервал",
