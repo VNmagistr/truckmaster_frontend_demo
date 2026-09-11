@@ -72,6 +72,9 @@ const QrCodesPage = lazy(() => import('./pages/settings/QrCodesPage'));
 // QR Card
 const QrCardPage = lazy(() => import('./pages/qr/QrCardPage'));
 
+// Public truck info page (for QR codes)
+const TruckInfoPage = lazy(() => import('./pages/trucks/TruckInfoPage'));
+
 // Cabinet
 const CabinetLoginPage = lazy(() => import('./pages/cabinet/CabinetLoginPage'));
 const CabinetRegisterPage = lazy(() => import('./pages/cabinet/CabinetRegisterPage'));
@@ -165,6 +168,9 @@ function AppRoutes() {
 
       {/* QR Card — digital business card */}
       <Route path="/qr" element={<QrCardPage />} />
+
+      {/* Public truck info — QR code redirect for unauthorized users */}
+      <Route path="/truck-info/:id" element={<TruckInfoPage />} />
 
       {/* Cabinet — client portal */}
       <Route path="/cabinet/login" element={<CabinetLoginPage />} />

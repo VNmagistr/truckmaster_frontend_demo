@@ -901,7 +901,7 @@ function TruckDetailPage() {
         <div style={{ textAlign: 'center', padding: '16px 0' }}>
           <QRCodeCanvas
             id="truck-qr-canvas"
-            value={`https://ital-truck.com.ua/trucks/${truck?.id}`}
+            value={`https://ital-truck.com.ua/truck-info/${truck?.id}`}
             size={220}
             includeMargin
           />

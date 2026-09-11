@@ -262,6 +262,87 @@ html { scroll-behavior: smooth; }
   }
 }
 
+/* ══ Truck Info Page (public QR landing) ══ */
+.truck-info-page {
+  min-height: 100vh;
+  background: linear-gradient(170deg, #111 0%, #1a1a1a 50%, #2a2a2a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+.truck-info-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 40px 32px;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+}
+.truck-info-logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-bottom: 20px;
+  border: 3px solid #f5c518;
+}
+.truck-info-title {
+  font-size: 16px;
+  font-weight: 400;
+  color: #666;
+  margin: 0 0 4px;
+}
+.truck-info-service-name {
+  font-size: 28px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 4px;
+}
+.truck-info-subtitle {
+  font-size: 14px;
+  color: #999;
+  margin: 0 0 28px;
+}
+.truck-info-contacts {
+  border-top: 2px solid #f5c518;
+  padding-top: 20px;
+}
+.truck-info-contacts-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 12px;
+}
+.truck-info-phone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 8px;
+  background: #f7f7f7;
+  border-radius: 10px;
+  text-decoration: none;
+  color: #1a1a1a;
+  font-size: 17px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+.truck-info-phone:hover {
+  background: #fff8e1;
+}
+.truck-info-phone svg {
+  color: #f5c518;
+  flex-shrink: 0;
+}
+.truck-info-phone-label {
+  font-size: 12px;
+  color: #999;
+  font-weight: 400;
+}
+
 /* ══ QR Card Page ══ */
 .qr-page {
   min-height: 100vh;
