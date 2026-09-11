@@ -1,5 +1,5 @@
 import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, Navigate } from 'react-router-dom';
 import useAuthStore from '../../store/authStore';
 import logoImg from '../../assets/logo.jpg';
 
@@ -15,12 +15,10 @@ function formatPhone(phone) {
 
 function TruckInfoPage() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   if (isAuthenticated) {
-    navigate(`/trucks/${id}`, { replace: true });
-    return null;
+    return <Navigate to={`/trucks/${id}`} replace />;
   }
 
   return (
