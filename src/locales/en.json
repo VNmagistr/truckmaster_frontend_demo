@@ -441,7 +441,12 @@
     "intervalsSaved": "Intervals saved",
     "intervalsSaveError": "Failed to save intervals",
     "belts": "Belts/rollers",
-    "chains": "Chains"
+    "chains": "Chains",
+    "ownershipHistory": "Ownership history",
+    "previousOwner": "Previous owner",
+    "previousPlate": "Previous plate",
+    "changeDate": "Change date",
+    "noOwnershipHistory": "No ownership changes recorded"
   },
 
   "orders": {

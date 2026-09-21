@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Descriptions, Button, Table, Tag, message, Tabs, Modal, Form, Select, Input, InputNumber, Space, Typography, Spin, Empty, Popconfirm, DatePicker, Row, Col } from 'antd';
-import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, HistoryOutlined, DashboardOutlined, BellOutlined, CheckOutlined, StopOutlined, QrcodeOutlined, DownloadOutlined } from '@ant-design/icons';
+import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, HistoryOutlined, DashboardOutlined, BellOutlined, CheckOutlined, StopOutlined, QrcodeOutlined, DownloadOutlined, SwapOutlined } from '@ant-design/icons';
 import { QRCodeCanvas } from 'qrcode.react';
 import dayjs from 'dayjs';
 
@@ -35,7 +35,7 @@ function getIntervalTypes(transmissionType, t) {
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { trucksAPI, ordersAPI, baseModelsAPI, clientsAPI, maintenanceAPI } from '../../api';
 import { PageHeader, LoadingSpinner, StatusTag } from '../../components';
-import { formatDate } from '../../utils/formatters';
+import { formatDate, formatDateTime } from '../../utils/formatters';
 import useEnumsStore from '../../store/enumsStore';
 import { useTranslation } from 'react-i18next';
 
@@ -649,6 +649,45 @@ function TruckDetailPage() {
             ]}
           />
         </Spin>
+      ),
+    },
+    {
+      key: 'ownership',
+      label: (
+        <span>
+          <SwapOutlined />
+          {t('truckDetail.ownershipHistory')}
+        </span>
+      ),
+      children: (
+        <Table
+          columns={[
+            {
+              title: t('truckDetail.previousOwner'),
+              key: 'client',
+              render: (_, record) => record.client_id ? (
+                <Link to={`/clients/${record.client_id}`}>{record.client_name}</Link>
+              ) : (record.client_name || '—'),
+            },
+            {
+              title: t('truckDetail.previousPlate'),
+              dataIndex: 'license_plate',
+              key: 'license_plate',
+              render: (v) => <strong>{v}</strong>,
+            },
+            {
+              title: t('truckDetail.changeDate'),
+              dataIndex: 'change_date',
+              key: 'change_date',
+              render: (d) => formatDateTime(d),
+            },
+          ]}
+          dataSource={truck?.ownership_history || []}
+          rowKey="id"
+          pagination={false}
+          scroll={{ x: 'max-content' }}
+          locale={{ emptyText: t('truckDetail.noOwnershipHistory') }}
+        />
       ),
     },
     {

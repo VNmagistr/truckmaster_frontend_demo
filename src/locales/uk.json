@@ -441,7 +441,12 @@
     "intervalsSaved": "Інтервали збережено",
     "intervalsSaveError": "Помилка збереження інтервалів",
     "belts": "Ремені/ролики",
-    "chains": "Ланцюги"
+    "chains": "Ланцюги",
+    "ownershipHistory": "Історія володіння",
+    "previousOwner": "Попередній власник",
+    "previousPlate": "Попередній номерний знак",
+    "changeDate": "Дата зміни",
+    "noOwnershipHistory": "Немає записів про зміни"
   },
 
   "orders": {
