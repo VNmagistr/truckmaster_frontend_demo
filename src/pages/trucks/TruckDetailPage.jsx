@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Descriptions, Button, Table, Tag, message, Tabs, Modal, Form, Select, Input, InputNumber, Space, Typography, Spin, Empty, Popconfirm, DatePicker, Row, Col } from 'antd';
-import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, HistoryOutlined, DashboardOutlined, BellOutlined, CheckOutlined, StopOutlined, QrcodeOutlined, DownloadOutlined, SwapOutlined } from '@ant-design/icons';
+import { EditOutlined, FileTextOutlined, ToolOutlined, PlusOutlined, HistoryOutlined, DashboardOutlined, BellOutlined, CheckOutlined, StopOutlined, QrcodeOutlined, DownloadOutlined, SwapOutlined, DeleteOutlined } from '@ant-design/icons';
 import { QRCodeCanvas } from 'qrcode.react';
 import dayjs from 'dayjs';
 
@@ -171,6 +171,17 @@ function TruckDetailPage() {
       // не критично
     } finally {
       setKitLoading(false);
+    }
+  };
+
+  const handleDeleteKitFilter = async (filterId) => {
+    if (!kit) return;
+    try {
+      await maintenanceAPI.removeKitFilter(kit.id, filterId);
+      message.success(t('truckDetail.filterDeleted'));
+      loadKit();
+    } catch {
+      message.error(t('truckDetail.filterDeleteError'));
     }
   };
 
@@ -544,6 +555,21 @@ function TruckDetailPage() {
                         dataIndex: 'change_interval_km',
                         width: 120,
                         render: (val) => val ? `${val.toLocaleString()} ${t('common.km')}` : '—',
+                      },
+                      {
+                        title: '',
+                        key: 'actions',
+                        width: 50,
+                        render: (_, record) => (
+                          <Popconfirm
+                            title={t('truckDetail.deleteFilterConfirm')}
+                            onConfirm={() => handleDeleteKitFilter(record.id)}
+                            okText={t('common.yes')}
+                            cancelText={t('common.no')}
+                          >
+                            <Button type="text" danger icon={<DeleteOutlined />} size="small" />
+                          </Popconfirm>
+                        ),
                       },
                     ]}
                   />
