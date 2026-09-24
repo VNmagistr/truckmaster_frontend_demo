@@ -91,7 +91,7 @@ Accessible only to users with `admin` role or superusers. Menu item "For Directo
 ### v2.27 — 2026-09-24
 - **Direct order photos**: upload/replace/delete car, odometer and dashboard photos from order detail without entering edit mode
 - **Admin reports section**: role-based "For Director" menu item visible only to admin/superuser users
-- **Vehicle count report**: table-format report showing unique vehicles per period (week/month/year) with daily or monthly breakdown
+- **Vehicle count report**: styled table with inline progress bars, stat cards, dark header, zebra striping and hover highlight; period selector (week/month/year)
 
 ### v2.17 — 2026-08-18
 - **QR codes management page**: new `/qr-codes` page with toggle switches to enable/disable QR codes; disabled codes show a stub page instead of redirecting
