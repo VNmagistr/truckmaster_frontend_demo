@@ -1528,6 +1528,8 @@
     "dayOfMonth": "День",
     "monthCol": "Місяць",
     "total": "Разом",
+    "activeDays": "Днів з авто",
+    "activePeriods": "Місяців з авто",
     "week": "Тиждень",
     "month": "Місяць",
     "year": "Рік",

@@ -1528,6 +1528,8 @@
     "dayOfMonth": "Day",
     "monthCol": "Month",
     "total": "Total",
+    "activeDays": "Days with vehicles",
+    "activePeriods": "Months with vehicles",
     "week": "Week",
     "month": "Month",
     "year": "Year",
