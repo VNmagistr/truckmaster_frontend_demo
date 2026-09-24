@@ -42,6 +42,7 @@ src/
 │   ├── maintenance/   — Maintenance templates
 │   ├── orders/        — Service orders
 │   ├── appointments/  — Service bookings
+│   ├── reports/       — Admin-only reports (For Director)
 │   ├── settings/      — Backup/restore, QR codes management
 │   └── welcome/       — Public landing page
 └── store/         — Zustand stores (auth, cabinetAuth, modules)
@@ -77,7 +78,20 @@ Need to order → (toggle) → Ordered → (button) → Received
 | BG | `#ffffff` | Background |
 | BG2 | `#f7f7f7` | Secondary background |
 
+## Reports (Admin-only)
+
+Accessible only to users with `admin` role or superusers. Menu item "For Director" is filtered via `authStore.isAdmin()`.
+
+| Report | Description |
+|--------|-------------|
+| Vehicle count | Unique vehicles per period (week/month/year) displayed as a table with totals |
+
 ## Changelog
+
+### v2.27 — 2026-09-24
+- **Direct order photos**: upload/replace/delete car, odometer and dashboard photos from order detail without entering edit mode
+- **Admin reports section**: role-based "For Director" menu item visible only to admin/superuser users
+- **Vehicle count report**: table-format report showing unique vehicles per period (week/month/year) with daily or monthly breakdown
 
 ### v2.17 — 2026-08-18
 - **QR codes management page**: new `/qr-codes` page with toggle switches to enable/disable QR codes; disabled codes show a stub page instead of redirecting
