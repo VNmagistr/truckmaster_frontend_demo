@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Card, Radio, Statistic, Row, Col, message } from 'antd';
+import { Card, Radio, Table, Statistic, Row, Col, message } from 'antd';
 import { CarOutlined } from '@ant-design/icons';
-import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-} from 'recharts';
 import { useTranslation } from 'react-i18next';
 import { PageHeader, LoadingSpinner } from '../../components';
 import { ordersAPI } from '../../api';
@@ -28,7 +25,30 @@ function ReportsPage() {
 
   useEffect(() => { loadVehicleReport(period); }, [period]);
 
-  const handlePeriodChange = (e) => setPeriod(e.target.value);
+  const periodLabel = period === 'year'
+    ? t('reports.monthCol')
+    : period === 'week'
+      ? t('reports.dayOfWeek')
+      : t('reports.dayOfMonth');
+
+  const columns = [
+    {
+      title: periodLabel,
+      dataIndex: 'name',
+      key: 'name',
+    },
+    {
+      title: t('reports.vehicleCount'),
+      dataIndex: 'count',
+      key: 'count',
+      width: 160,
+      render: (val) => (
+        <span style={{ fontWeight: val > 0 ? 600 : 400, color: val > 0 ? '#1a1a1a' : '#bfbfbf' }}>
+          {val}
+        </span>
+      ),
+    },
+  ];
 
   return (
     <div>
@@ -37,7 +57,7 @@ function ReportsPage() {
       <Card
         title={t('reports.vehiclesTitle')}
         extra={
-          <Radio.Group value={period} onChange={handlePeriodChange} size="small">
+          <Radio.Group value={period} onChange={(e) => setPeriod(e.target.value)} size="small">
             <Radio.Button value="week">{t('reports.week')}</Radio.Button>
             <Radio.Button value="month">{t('reports.month')}</Radio.Button>
             <Radio.Button value="year">{t('reports.year')}</Radio.Button>
@@ -48,7 +68,7 @@ function ReportsPage() {
           <LoadingSpinner />
         ) : vehicleData ? (
           <>
-            <Row gutter={16} style={{ marginBottom: 24 }}>
+            <Row style={{ marginBottom: 16 }}>
               <Col>
                 <Statistic
                   title={t('reports.uniqueVehicles')}
@@ -58,22 +78,21 @@ function ReportsPage() {
                 />
               </Col>
             </Row>
-            <div style={{ height: 300 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={vehicleData.chart}>
-                  <CartesianGrid stroke="#f5f5f5" />
-                  <XAxis dataKey="name" tick={{ fontSize: 12 }} />
-                  <YAxis allowDecimals={false} tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar
-                    dataKey="count"
-                    name={t('reports.vehicles')}
-                    fill="#f5c518"
-                    radius={[4, 4, 0, 0]}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <Table
+              dataSource={vehicleData.chart?.map((item, i) => ({ ...item, key: i }))}
+              columns={columns}
+              pagination={false}
+              size="small"
+              bordered
+              summary={() => (
+                <Table.Summary.Row>
+                  <Table.Summary.Cell><strong>{t('reports.total')}</strong></Table.Summary.Cell>
+                  <Table.Summary.Cell>
+                    <strong>{vehicleData.total}</strong>
+                  </Table.Summary.Cell>
+                </Table.Summary.Row>
+              )}
+            />
           </>
         ) : null}
       </Card>
