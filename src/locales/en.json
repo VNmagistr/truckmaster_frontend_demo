@@ -72,6 +72,7 @@
     "alpr": "Vehicle Log",
     "qrCodes": "QR codes",
     "backups": "Backups",
+    "reports": "For Director",
     "addTooltip": "Add",
     "settings": "Settings",
     "logout": "Logout",
@@ -1516,6 +1517,11 @@
     "postpone14d": "14 days",
     "postpone30d": "30 days",
     "postponed": "Order postponed for {{days}} days"
+  },
+
+  "reports": {
+    "title": "For Director",
+    "comingSoon": "Reports will be available soon"
   },
 
   "qrCodes": {

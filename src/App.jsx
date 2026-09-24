@@ -69,6 +69,9 @@ const InvoiceDetailPage = lazy(() => import('./pages/invoices/InvoiceDetailPage'
 const BackupPage = lazy(() => import('./pages/settings/BackupPage'));
 const QrCodesPage = lazy(() => import('./pages/settings/QrCodesPage'));
 
+// Reports
+const ReportsPage = lazy(() => import('./pages/reports/ReportsPage'));
+
 // QR Card
 const QrCardPage = lazy(() => import('./pages/qr/QrCardPage'));
 
@@ -164,6 +167,7 @@ function AppRoutes() {
         <Route path="/invoices/:id" element={<InvoiceDetailPage />} />
         <Route path="/backups" element={<BackupPage />} />
         <Route path="/qr-codes" element={<QrCodesPage />} />
+        <Route path="/reports" element={<ReportsPage />} />
       </Route>
 
       {/* QR Card — digital business card */}

@@ -3,7 +3,7 @@ import { Form, Input, Button, message } from 'antd';
 import { UserOutlined, LockOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { authAPI } from '../../api';
+import { authAPI, userAPI } from '../../api';
 import useAuthStore from '../../store/authStore';
 
 function LoginPage() {
@@ -21,15 +21,25 @@ function LoginPage() {
       // Axios повертає дані всередині об'єкта .data
       // Було: response.access (це undefined)
       // Стало: response.data.access
-      const { access, refresh } = response.data; 
+      const { access, refresh } = response.data;
 
       localStorage.setItem('access_token', access);
       localStorage.setItem('refresh_token', refresh);
-      
+
       const userData = { username: values.username };
-      
       setAuth(userData, access, refresh);
-      
+
+      try {
+        const meRes = await userAPI.getMe();
+        const me = meRes.data || meRes;
+        useAuthStore.getState().updateUser({
+          role_key: me.role_key,
+          is_superuser: me.is_superuser,
+          full_name: me.full_name,
+          role: me.role,
+        });
+      } catch { /* ignore — role will be unavailable */ }
+
       message.success(t('auth.loginSuccess'));
       navigate('/dashboard', { replace: true });
     } catch (error) {

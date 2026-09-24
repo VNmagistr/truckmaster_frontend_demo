@@ -5,7 +5,7 @@ import {
   AppstoreOutlined, RobotOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
   LogoutOutlined, SettingOutlined, MenuOutlined, PlusOutlined, CalendarOutlined,
   CameraOutlined, BellOutlined, FileDoneOutlined, DownloadOutlined,
-  ToolOutlined, GlobalOutlined, CloudServerOutlined, QrcodeOutlined,
+  ToolOutlined, GlobalOutlined, CloudServerOutlined, QrcodeOutlined, BarChartOutlined,
 } from '@ant-design/icons';
 import PWAUpdatePrompt from '../components/PWAUpdatePrompt';
 import { Outlet, useNavigate, useLocation } from 'react-router-dom';
@@ -14,6 +14,7 @@ import useAuthStore from '../store/authStore';
 import useUIStore from '../store/uiStore';
 import useModulesStore from '../store/modulesStore';
 import useEnumsStore from '../store/enumsStore';
+import { userAPI } from '../api';
 import logoImg from '../assets/logo.jpg';
 
 const { Header, Sider, Content } = Layout;
@@ -26,7 +27,7 @@ function MainLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, i18n } = useTranslation();
-  const { logout, user } = useAuthStore();
+  const { logout, user, isAdmin, updateUser } = useAuthStore();
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
 
   const toggleLanguage = () => {
@@ -65,7 +66,16 @@ function MainLayout() {
     }
   };
 
-  useEffect(() => { fetchModules(); fetchEnums(); }, []);
+  useEffect(() => {
+    fetchModules();
+    fetchEnums();
+    if (user && user.role_key === undefined) {
+      userAPI.getMe().then(res => {
+        const me = res.data || res;
+        updateUser({ role_key: me.role_key, is_superuser: me.is_superuser, full_name: me.full_name, role: me.role });
+      }).catch(() => {});
+    }
+  }, []);
 
   const handleMenuClick = ({ key }) => {
     navigate(key);
@@ -103,11 +113,15 @@ function MainLayout() {
     { key: '/alpr',         module: 'alpr',        icon: <CameraOutlined />,    label: t('nav.alpr') },
     { key: '/qr-codes',     module: null,          icon: <QrcodeOutlined />,      label: t('nav.qrCodes') },
     { key: '/backups',      module: null,          icon: <CloudServerOutlined />, label: t('nav.backups') },
+    { key: '/reports',      module: null,          icon: <BarChartOutlined />,    label: t('nav.reports'), adminOnly: true },
   ];
 
   const menuItems = ALL_MENU_ITEMS
-    .filter(({ module }) => module === null || isEnabled(module))
-    .map(({ module: _m, ...item }) => item);
+    .filter(({ module, adminOnly }) => {
+      if (adminOnly && !isAdmin()) return false;
+      return module === null || isEnabled(module);
+    })
+    .map(({ module: _m, adminOnly: _a, ...item }) => item);
 
   const selectedKey = '/' + location.pathname.split('/')[1];
 
