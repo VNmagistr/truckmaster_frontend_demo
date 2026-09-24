@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Descriptions, Button, Table, message, Tabs, Space, Modal, Form, Select, InputNumber, Alert, Image, Row, Col, Empty, Input, Dropdown, Upload, Typography } from 'antd';
 const { Text } = Typography;
-import { EditOutlined, FilePdfOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined, ScanOutlined } from '@ant-design/icons';
+import { EditOutlined, FilePdfOutlined, PlusOutlined, ToolOutlined, DeleteOutlined, ExclamationCircleOutlined, DownOutlined, CheckCircleOutlined, ClockCircleOutlined, ScanOutlined, CameraOutlined } from '@ant-design/icons';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ordersAPI, worksAPI, employeesAPI, inventoryAPI, maintenanceAPI, repairPhotosAPI } from '../../api';
@@ -72,6 +72,7 @@ function OrderDetailPage() {
   const [suggestLoading, setSuggestLoading] = useState(false);
 
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [orderPhotoLoading, setOrderPhotoLoading] = useState({});
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -241,6 +242,47 @@ function OrderDetailPage() {
           } catch { /* ignore */ }
         } catch {
           message.error(t('orderDetail.photoDeleteError'));
+        }
+      },
+    });
+  };
+
+  const handleUploadOrderPhoto = async (field, file) => {
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (file.size > MAX_SIZE) { message.error(t('orders.photoTooBig')); return; }
+    setOrderPhotoLoading(prev => ({ ...prev, [field]: true }));
+    try {
+      const formData = new FormData();
+      formData.append(field, file);
+      await ordersAPI.update(id, formData);
+      message.success(t('orderDetail.photoUploaded'));
+      const response = await ordersAPI.getById(id);
+      setOrder(response.data || response);
+    } catch {
+      message.error(t('orderDetail.photoUploadError'));
+    } finally {
+      setOrderPhotoLoading(prev => ({ ...prev, [field]: false }));
+    }
+  };
+
+  const handleDeleteOrderPhoto = (field) => {
+    Modal.confirm({
+      title: t('orderDetail.deletePhotoConfirm'),
+      icon: <ExclamationCircleOutlined />,
+      okText: t('common.delete'),
+      okType: 'danger',
+      cancelText: t('common.cancel'),
+      onOk: async () => {
+        setOrderPhotoLoading(prev => ({ ...prev, [field]: true }));
+        try {
+          await ordersAPI.update(id, { [field]: null });
+          message.success(t('orderDetail.photoDeleted'));
+          const response = await ordersAPI.getById(id);
+          setOrder(response.data || response);
+        } catch {
+          message.error(t('orderDetail.photoDeleteError'));
+        } finally {
+          setOrderPhotoLoading(prev => ({ ...prev, [field]: false }));
         }
       },
     });
@@ -847,33 +889,60 @@ function OrderDetailPage() {
       label: t('orderDetail.carPhotos', { count: [carPhoto, odometerPhoto, dashboardPhoto].filter(Boolean).length }),
       children: (
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={8}>
-            <Card size="small" title={t('orderDetail.carPhotoLabel')} style={{ textAlign: 'center' }}>
-              {carPhoto ? (
-                <Image src={carPhoto} alt={t('orderDetail.carPhotoLabel')} style={{ maxHeight: 200, objectFit: 'contain' }} />
-              ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('orderDetail.noPhoto')} />
-              )}
-            </Card>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Card size="small" title={t('orderDetail.odometerPhotoLabel')} style={{ textAlign: 'center' }}>
-              {odometerPhoto ? (
-                <Image src={odometerPhoto} alt={t('orderDetail.odometerPhotoLabel')} style={{ maxHeight: 200, objectFit: 'contain' }} />
-              ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('orderDetail.noPhoto')} />
-              )}
-            </Card>
-          </Col>
-          <Col xs={24} sm={8}>
-            <Card size="small" title={t('orderDetail.dashboardPhotoLabel')} style={{ textAlign: 'center' }}>
-              {dashboardPhoto ? (
-                <Image src={dashboardPhoto} alt={t('orderDetail.dashboardPhotoLabel')} style={{ maxHeight: 200, objectFit: 'contain' }} />
-              ) : (
-                <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('orderDetail.noPhoto')} />
-              )}
-            </Card>
-          </Col>
+          {[
+            { field: 'car_photo', label: t('orderDetail.carPhotoLabel'), photo: carPhoto },
+            { field: 'odometer_photo', label: t('orderDetail.odometerPhotoLabel'), photo: odometerPhoto },
+            { field: 'dashboard_photo', label: t('orderDetail.dashboardPhotoLabel'), photo: dashboardPhoto },
+          ].map(({ field, label, photo }) => (
+            <Col xs={24} sm={8} key={field}>
+              <Card size="small" title={label} style={{ textAlign: 'center' }}>
+                {photo ? (
+                  <>
+                    <Image src={photo} alt={label} style={{ maxHeight: 200, objectFit: 'contain' }} />
+                    {!isDeleted && (
+                      <div style={{ marginTop: 8, display: 'flex', justifyContent: 'center', gap: 8 }}>
+                        <Upload
+                          showUploadList={false}
+                          beforeUpload={(file) => { handleUploadOrderPhoto(field, file); return false; }}
+                          accept="image/*"
+                        >
+                          <Button size="small" icon={<CameraOutlined />} loading={orderPhotoLoading[field]}>
+                            {t('orderDetail.changePhoto')}
+                          </Button>
+                        </Upload>
+                        <Button
+                          size="small"
+                          danger
+                          icon={<DeleteOutlined />}
+                          onClick={() => handleDeleteOrderPhoto(field)}
+                          loading={orderPhotoLoading[field]}
+                        />
+                      </div>
+                    )}
+                  </>
+                ) : !isDeleted ? (
+                  <Upload
+                    showUploadList={false}
+                    beforeUpload={(file) => { handleUploadOrderPhoto(field, file); return false; }}
+                    accept="image/*"
+                  >
+                    <div className="order-photo-upload-area">
+                      {orderPhotoLoading[field] ? (
+                        <LoadingSpinner />
+                      ) : (
+                        <>
+                          <CameraOutlined style={{ fontSize: 36, color: '#d9d9d9' }} />
+                          <div style={{ marginTop: 8, color: '#999' }}>{t('orderDetail.uploadPhoto')}</div>
+                        </>
+                      )}
+                    </div>
+                  </Upload>
+                ) : (
+                  <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={t('orderDetail.noPhoto')} />
+                )}
+              </Card>
+            </Col>
+          ))}
         </Row>
       ),
     },

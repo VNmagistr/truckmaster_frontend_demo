@@ -233,6 +233,18 @@ html { scroll-behavior: smooth; }
   height: 100%;
 }
 
+/* ══ Order photo upload area ══ */
+.order-photo-upload-area {
+  padding: 28px 0;
+  cursor: pointer;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  transition: border-color 0.2s;
+}
+.order-photo-upload-area:hover {
+  border-color: #f5c518;
+}
+
 /* ══ Notes block (OrderDetailPage) ══ */
 .order-notes-block {
   background: #f0f5ff;
