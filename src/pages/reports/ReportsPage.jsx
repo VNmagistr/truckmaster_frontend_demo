@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, Radio, Table, Statistic, Row, Col, message, Empty } from 'antd';
-import { CarOutlined, CalendarOutlined } from '@ant-design/icons';
+import { CarOutlined, FileTextOutlined, CalendarOutlined } from '@ant-design/icons';
 import { useTranslation } from 'react-i18next';
 import { PageHeader, LoadingSpinner } from '../../components';
 import { ordersAPI } from '../../api';
@@ -17,14 +17,14 @@ const cardStyle = {
 function ReportsPage() {
   const { t } = useTranslation();
   const [period, setPeriod] = useState('month');
-  const [vehicleData, setVehicleData] = useState(null);
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  const loadVehicleReport = async (p) => {
+  const loadReport = async (p) => {
     setLoading(true);
     try {
       const res = await ordersAPI.reportVehicles(p);
-      setVehicleData(res.data || res);
+      setData(res.data || res);
     } catch {
       message.error(t('reports.loadError'));
     } finally {
@@ -32,7 +32,7 @@ function ReportsPage() {
     }
   };
 
-  useEffect(() => { loadVehicleReport(period); }, [period]);
+  useEffect(() => { loadReport(period); }, [period]);
 
   const periodLabel = period === 'year'
     ? t('reports.monthCol')
@@ -40,9 +40,16 @@ function ReportsPage() {
       ? t('reports.dayOfWeek')
       : t('reports.dayOfMonth');
 
-  const maxCount = vehicleData?.chart
-    ? Math.max(...vehicleData.chart.map((r) => r.count), 1)
-    : 1;
+  const { maxCount, totalSum, activeDays } = useMemo(() => {
+    if (!data?.chart) return { maxCount: 1, totalSum: 0, activeDays: 0 };
+    let max = 0, sum = 0, active = 0;
+    for (const r of data.chart) {
+      if (r.count > max) max = r.count;
+      sum += r.count;
+      if (r.count > 0) active++;
+    }
+    return { maxCount: max || 1, totalSum: sum, activeDays: active };
+  }, [data]);
 
   const columns = [
     {
@@ -52,10 +59,10 @@ function ReportsPage() {
       render: (val) => <span style={{ fontWeight: 500 }}>{val}</span>,
     },
     {
-      title: t('reports.vehicleCount'),
+      title: t('reports.ordersCount'),
       dataIndex: 'count',
       key: 'count',
-      width: 180,
+      width: 200,
       render: (val) => {
         const pct = (val / maxCount) * 100;
         return (
@@ -87,10 +94,6 @@ function ReportsPage() {
     },
   ];
 
-  const periodDays = vehicleData?.chart
-    ? vehicleData.chart.filter((r) => r.count > 0).length
-    : 0;
-
   return (
     <div>
       <PageHeader title={t('reports.title')} />
@@ -112,14 +115,24 @@ function ReportsPage() {
 
         {loading ? (
           <LoadingSpinner />
-        ) : vehicleData ? (
+        ) : data ? (
           <>
             <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+              <Col xs={24} sm={8}>
+                <div className="reports-stat-card">
+                  <Statistic
+                    title={t('reports.totalOrders')}
+                    value={data.total_orders}
+                    prefix={<FileTextOutlined />}
+                    valueStyle={{ color: INK, fontWeight: 700, fontSize: 28 }}
+                  />
+                </div>
+              </Col>
               <Col xs={12} sm={8}>
                 <div className="reports-stat-card">
                   <Statistic
                     title={t('reports.uniqueVehicles')}
-                    value={vehicleData.total}
+                    value={data.unique_vehicles}
                     prefix={<CarOutlined />}
                     valueStyle={{ color: Y, fontWeight: 700, fontSize: 28 }}
                   />
@@ -129,9 +142,9 @@ function ReportsPage() {
                 <div className="reports-stat-card">
                   <Statistic
                     title={period === 'year' ? t('reports.activePeriods') : t('reports.activeDays')}
-                    value={periodDays}
+                    value={activeDays}
                     prefix={<CalendarOutlined />}
-                    valueStyle={{ color: INK, fontWeight: 700, fontSize: 28 }}
+                    valueStyle={{ color: '#8c8c8c', fontWeight: 700, fontSize: 28 }}
                   />
                 </div>
               </Col>
@@ -139,7 +152,7 @@ function ReportsPage() {
 
             <Table
               className="reports-table"
-              dataSource={vehicleData.chart?.map((item, i) => ({ ...item, key: i }))}
+              dataSource={data.chart?.map((item, i) => ({ ...item, key: i }))}
               columns={columns}
               pagination={false}
               size="middle"
@@ -156,7 +169,7 @@ function ReportsPage() {
                         fontWeight: 700, fontSize: 16, color: INK,
                         minWidth: 28, textAlign: 'right',
                       }}>
-                        {vehicleData.total}
+                        {totalSum}
                       </span>
                     </div>
                   </Table.Summary.Cell>
