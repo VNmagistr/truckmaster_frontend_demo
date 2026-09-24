@@ -208,6 +208,7 @@ export const ordersAPI = {
   getMaintenanceCountdown: (orderId) => instance.get(`/orders/${orderId}/maintenance-countdown/`),
   getStatusHistory: (id) => instance.get(`/orders/${id}/status-history/`),
   getPdfMechanic: (id) => instance.get(`/orders/${id}/pdf-mechanic/`, { responseType: 'blob' }),
+  reportVehicles: (period) => instance.get('/orders/report-vehicles/', { params: { period } }),
 };
 
 export const repairPhotosAPI = {

@@ -1521,7 +1521,13 @@
 
   "reports": {
     "title": "For Director",
-    "comingSoon": "Reports will be available soon"
+    "vehiclesTitle": "Vehicle count",
+    "uniqueVehicles": "Unique vehicles for period",
+    "vehicles": "Vehicles",
+    "week": "Week",
+    "month": "Month",
+    "year": "Year",
+    "loadError": "Failed to load report"
   },
 
   "qrCodes": {
