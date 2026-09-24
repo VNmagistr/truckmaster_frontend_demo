@@ -84,14 +84,14 @@ Accessible only to users with `admin` role or superusers. Menu item "For Directo
 
 | Report | Description |
 |--------|-------------|
-| Vehicle count | Unique vehicles per period (week/month/year) displayed as a table with totals |
+| Service visits | Order count + unique vehicles per period (week/month/year); styled table with progress bars and stat cards |
 
 ## Changelog
 
 ### v2.27 — 2026-09-24
 - **Direct order photos**: upload/replace/delete car, odometer and dashboard photos from order detail without entering edit mode
 - **Admin reports section**: role-based "For Director" menu item visible only to admin/superuser users
-- **Vehicle count report**: styled table with inline progress bars, stat cards, dark header, zebra striping and hover highlight; period selector (week/month/year)
+- **Service visits report**: table showing order counts (not distinct) per day/month with progress bars; stat cards for total orders, unique vehicles and active days; summary row with order sum
 
 ### v2.17 — 2026-08-18
 - **QR codes management page**: new `/qr-codes` page with toggle switches to enable/disable QR codes; disabled codes show a stub page instead of redirecting
