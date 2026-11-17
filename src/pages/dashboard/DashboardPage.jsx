@@ -1,10 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Row, Col, Card, Table, message, Button, Steps, Typography, Modal, List, Checkbox } from 'antd';
+import { Row, Col, Card, Table, message, Button, Steps, Typography, Modal, List, Checkbox, Empty, Tag } from 'antd';
 import {
   UserOutlined,
   CarOutlined,
   FileTextOutlined,
-  DollarOutlined,
   ClockCircleOutlined,
   ToolOutlined,
   RobotOutlined,
@@ -150,6 +149,9 @@ function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [maintenanceModalOpen, setMaintenanceModalOpen] = useState(false);
+  const [maintenanceDueList, setMaintenanceDueList] = useState([]);
+  const [maintenanceLoading, setMaintenanceLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -184,13 +186,10 @@ function DashboardPage() {
         clientsAddedWeek: dash.clients_added_week || 0,
         monthlyOrders: dash.monthly_orders || 0,
         prevMonthlyOrders: dash.prev_monthly_orders || 0,
-        monthlyRevenue: dash.monthly_revenue || 0,
-        prevMonthlyRevenue: dash.prev_monthly_revenue || 0,
         clientsChart: dash.clients_chart || [],
-        revenueTrend: dash.revenue_trend || [],
         ordersTrendDays: dash.orders_trend_days || [],
         ordersTrendMonths: dash.orders_trend_months || [],
-        mileageToday: botStatsRes ? (botStatsRes.data?.mileage_today ?? null) : null,
+        mileageToday: botStatsRes ? (botStatsRes.data?.mileage_today ?? 0) : 0,
       });
 
       setRecentOrders((ordersData.results || []).slice(0, 5));
@@ -198,6 +197,19 @@ function DashboardPage() {
       message.error(t('dashboard.statsError'));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openMaintenanceModal = async () => {
+    setMaintenanceModalOpen(true);
+    setMaintenanceLoading(true);
+    try {
+      const res = await ordersAPI.getMaintenanceDueTrucks();
+      setMaintenanceDueList(res.data || res);
+    } catch {
+      message.error(t('dashboard.statsError'));
+    } finally {
+      setMaintenanceLoading(false);
     }
   };
 
@@ -273,7 +285,7 @@ function DashboardPage() {
       link: { label: t('dashboard.openAdminPanel'), href: `${adminBase}/orders/workgroup/add/` },
     },
     {
-      icon: <DollarOutlined style={{ color: Y, fontSize: 20 }} />,
+      icon: <AppstoreOutlined style={{ color: Y, fontSize: 20 }} />,
       title: t('dashboard.setupWorkPrices'),
       description: t('dashboard.setupWorkPricesDesc'),
       link: { label: t('dashboard.openAdminPanel'), href: `${adminBase}/orders/workprice/add/` },
@@ -442,7 +454,6 @@ function DashboardPage() {
     );
   }
 
-  const revenueTrend = computeTrend(stats.monthlyRevenue, stats.prevMonthlyRevenue);
   const ordersTrend = computeTrend(stats.monthlyOrders, stats.prevMonthlyOrders);
 
   return (
@@ -460,7 +471,7 @@ function DashboardPage() {
           sparkline={stats.ordersTrendDays}
           sparklineColor={Y}
           sparklineType="bar"
-          onClick={() => navigate('/orders')}
+          onClick={() => navigate('/orders?active=true')}
           actionLabel={t('dashboard.toList')}
         />
 
@@ -479,18 +490,12 @@ function DashboardPage() {
         />
 
         <KpiCard
-          icon={<DollarOutlined />}
-          title={t('dashboard.monthRevenue')}
-          value={Number(stats.monthlyRevenue).toLocaleString('uk-UA', { maximumFractionDigits: 0 })}
-          suffix="₴"
-          valueColor={SUCCESS}
-          trend={revenueTrend}
-          trendLabel={t('dashboard.sinceLastMonth')}
-          sparkline={stats.revenueTrend}
-          sparklineColor={SUCCESS}
-          sparklineType="area"
-          onClick={() => navigate('/reports')}
-          actionLabel={t('dashboard.openReport')}
+          icon={<RobotOutlined />}
+          title={t('dashboard.botMileageToday')}
+          value={stats.mileageToday ?? 0}
+          suffix={t('dashboard.reports')}
+          valueColor={INK}
+          trendLabel={t('dashboard.botMileageHint')}
         />
 
         <KpiCard
@@ -499,7 +504,7 @@ function DashboardPage() {
           value={stats.staleOrders}
           valueColor={stats.staleOrders > 0 ? DANGER : INK}
           trendLabel={t('dashboard.staleOrdersHint')}
-          onClick={() => navigate('/orders')}
+          onClick={() => navigate('/orders?active=true')}
           actionLabel={stats.staleOrders > 0 ? t('dashboard.needsAttention') : t('dashboard.toList')}
           tone={stats.staleOrders > 0 ? 'warning' : 'default'}
         />
@@ -510,7 +515,7 @@ function DashboardPage() {
           value={stats.maintenanceDue}
           valueColor={stats.maintenanceDue > 0 ? '#faad14' : INK}
           trendLabel={t('dashboard.maintenanceDueHint')}
-          onClick={() => navigate('/reminders')}
+          onClick={openMaintenanceModal}
           actionLabel={t('dashboard.toList')}
           tone={stats.maintenanceDue > 0 ? 'info' : 'default'}
         />
@@ -528,6 +533,77 @@ function DashboardPage() {
           actionLabel={t('dashboard.toList')}
         />
       </div>
+
+      <Modal
+        open={maintenanceModalOpen}
+        onCancel={() => setMaintenanceModalOpen(false)}
+        title={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <ClockCircleOutlined style={{ color: '#faad14', fontSize: 20 }} />
+            <span>{t('dashboard.maintenanceDue')}</span>
+          </div>
+        }
+        footer={[
+          <Button key="close" onClick={() => setMaintenanceModalOpen(false)}>
+            {t('common.close')}
+          </Button>,
+        ]}
+        width={720}
+      >
+        {maintenanceLoading ? (
+          <div style={{ textAlign: 'center', padding: '40px 0' }}>
+            <LoadingSpinner />
+          </div>
+        ) : maintenanceDueList.length === 0 ? (
+          <Empty description={t('dashboard.maintenanceDueEmpty')} />
+        ) : (
+          <Table
+            dataSource={maintenanceDueList}
+            rowKey="truck_id"
+            pagination={false}
+            size="small"
+            scroll={{ x: 'max-content' }}
+            onRow={(record) => ({
+              onClick: () => {
+                setMaintenanceModalOpen(false);
+                navigate(`/trucks/${record.truck_id}`);
+              },
+              style: { cursor: 'pointer' },
+            })}
+            columns={[
+              {
+                title: t('common.truck'),
+                dataIndex: 'license_plate',
+                key: 'plate',
+                render: (plate, record) => (
+                  <div>
+                    <strong style={{ color: INK }}>{plate}</strong>
+                    {record.model && (
+                      <div style={{ fontSize: 12, color: MUTED }}>{record.model}</div>
+                    )}
+                  </div>
+                ),
+              },
+              {
+                title: t('dashboard.maintenanceCategory'),
+                dataIndex: 'category_label',
+                key: 'category',
+              },
+              {
+                title: t('dashboard.remainingKm'),
+                dataIndex: 'remaining_km',
+                key: 'remaining',
+                align: 'right',
+                render: (km) => (
+                  <Tag color={km <= 0 ? 'red' : km <= 500 ? 'orange' : 'gold'}>
+                    {km.toLocaleString('uk-UA')} км
+                  </Tag>
+                ),
+              },
+            ]}
+          />
+        )}
+      </Modal>
 
       <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
         <Col xs={24} lg={16}>
@@ -565,22 +641,6 @@ function DashboardPage() {
         </Col>
       </Row>
 
-      {stats.mileageToday !== null && (
-        <Row gutter={[16, 16]} style={{ marginTop: 16 }}>
-          <Col xs={24} sm={12} md={8}>
-            <div className="kpi-card kpi-card--compact">
-              <div className="kpi-card__header">
-                <div className="kpi-card__icon"><RobotOutlined /></div>
-                <div className="kpi-card__title">{t('dashboard.botMileageToday')}</div>
-              </div>
-              <div className="kpi-card__value" style={{ color: INK }}>
-                {stats.mileageToday}
-                <span className="kpi-card__suffix">{t('dashboard.reports')}</span>
-              </div>
-            </div>
-          </Col>
-        </Row>
-      )}
     </div>
   );
 }

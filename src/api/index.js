@@ -192,6 +192,7 @@ export const ordersAPI = {
   unmarkForDeletion: (id) => instance.post(`/orders/${id}/unmark_for_deletion/`),
   getDashboardStats: () => instance.get('/orders/dashboard_stats/'),
   getStaleInProgress: () => instance.get('/orders/stale_in_progress/'),
+  getMaintenanceDueTrucks: (params) => instance.get('/orders/maintenance-due-trucks/', { params }),
   exportPdf: (id) => instance.get(`/orders/${id}/pdf/`, { responseType: 'blob' }),
   getStats: () => instance.get('/orders/stats/'),
   getWeekDetail: () => instance.get('/orders/week_detail/'),

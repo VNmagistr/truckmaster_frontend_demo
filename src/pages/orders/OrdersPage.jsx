@@ -12,7 +12,7 @@ import {
   FileTextOutlined,
   HourglassOutlined,
 } from '@ant-design/icons';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ordersAPI } from '../../api';
 import { PageHeader, LoadingSpinner } from '../../components';
@@ -33,8 +33,10 @@ function OrdersPage() {
     total: 0,
   });
   
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState(null);
+  const [activeOnly, setActiveOnly] = useState(searchParams.get('active') === 'true');
   const [dateFilter, setDateFilter] = useState(null);
   const [showDeleted, setShowDeleted] = useState(false);
 
@@ -156,7 +158,11 @@ function OrdersPage() {
 
   useEffect(() => {
     fetchOrders(pagination.current, pagination.pageSize, statusFilter, searchText);
-  }, [pagination.current, pagination.pageSize, statusFilter, showDeleted, dateFilter]);
+  }, [pagination.current, pagination.pageSize, statusFilter, showDeleted, dateFilter, activeOnly]);
+
+  useEffect(() => {
+    setActiveOnly(searchParams.get('active') === 'true');
+  }, [searchParams]);
 
   useEffect(() => {
     ordersAPI.getStats()
@@ -237,6 +243,10 @@ function OrdersPage() {
       // Якщо показуємо видалені - додаємо фільтр
       if (showDeleted) {
         params.marked_for_deletion = true;
+      }
+
+      if (activeOnly && !status) {
+        params.active = 'true';
       }
 
       const response = await ordersAPI.getAll(params);
@@ -608,6 +618,24 @@ function OrdersPage() {
               allowClear
               style={{ width: 170 }}
             />
+
+            {activeOnly && (
+              <Tag
+                color="gold"
+                closable
+                onClose={(e) => {
+                  e.preventDefault();
+                  setActiveOnly(false);
+                  const next = new URLSearchParams(searchParams);
+                  next.delete('active');
+                  setSearchParams(next, { replace: true });
+                  setPagination(prev => ({ ...prev, current: 1 }));
+                }}
+                style={{ padding: '4px 10px' }}
+              >
+                {t('dashboard.activeOrders')}
+              </Tag>
+            )}
 
             <Button
               type={showDeleted ? 'primary' : 'default'}
