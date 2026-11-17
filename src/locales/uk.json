@@ -268,7 +268,19 @@
     "staleOrdersTitle": "Наряди довго в роботі",
     "staleOrdersDesc": "Наступні наряди перебувають у статусі «В роботі» більше тижня. Перевірте, будь ласка.",
     "staleOrderNumber": "№ наряду",
-    "staleInProgressSince": "В роботі з"
+    "staleInProgressSince": "В роботі з",
+    "activeOrders": "Активні наряди",
+    "activeOrdersHint": "Відкриті та в роботі",
+    "staleOrders": "Прострочені",
+    "staleOrdersHint": "Без руху більше тижня",
+    "maintenanceDue": "ТО незабаром",
+    "maintenanceDueHint": "Авто потребують ТО",
+    "clientsHint": "Активна база",
+    "sinceLastMonth": "до минулого місяця",
+    "newThisWeek": "нових цього тижня",
+    "needsAttention": "потребують уваги",
+    "toList": "До списку",
+    "openReport": "Відкрити звіт"
   },
 
   "clients": {

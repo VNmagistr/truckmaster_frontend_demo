@@ -268,7 +268,19 @@
     "staleOrdersTitle": "Orders long in progress",
     "staleOrdersDesc": "The following orders have been in \"In Progress\" status for over a week. Please review.",
     "staleOrderNumber": "Order #",
-    "staleInProgressSince": "In progress since"
+    "staleInProgressSince": "In progress since",
+    "activeOrders": "Active orders",
+    "activeOrdersHint": "Open and in progress",
+    "staleOrders": "Stale",
+    "staleOrdersHint": "No movement over a week",
+    "maintenanceDue": "Service soon",
+    "maintenanceDueHint": "Vehicles need service",
+    "clientsHint": "Active base",
+    "sinceLastMonth": "vs last month",
+    "newThisWeek": "new this week",
+    "needsAttention": "need attention",
+    "toList": "To list",
+    "openReport": "Open report"
   },
 
   "clients": {
